@@ -1,0 +1,109 @@
+.formulario2Container {
+  max-width: 1600px;
+  margin: 1.5rem auto;
+  padding: 1.5rem 2rem;
+  background-color: #f5f6fa;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+  font-family: 'Segoe UI', sans-serif;
+  color: #333;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin-bottom: 1.2rem;
+  text-align: center;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.formRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.formGroup {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: #222;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+input[type="file"] {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+input[readonly] {
+  background-color: #ebedf0;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+}
+
+.cancelBtn,
+.clearBtn,
+.submitBtn {
+  padding: 0.4rem 1.2rem;
+  font-size: 0.85rem;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+.cancelBtn {
+  background-color: #f44336;
+  color: #fff;
+}
+
+.clearBtn {
+  background-color: #f0ad4e;
+  color: #fff;
+}
+
+.submitBtn {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.cancelBtn:hover {
+  background-color: #d32f2f;
+}
+.clearBtn:hover {
+  background-color: #ec9a00;
+}
+.submitBtn:hover {
+  background-color: #218838;
+}
+
+@media (max-width: 768px) {
+  .formRow {
+    flex-direction: column;
+  }
+
+  .formulario2Container {
+    padding: 1rem;
+  }
+}
