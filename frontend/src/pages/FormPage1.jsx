@@ -1,81 +1,118 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import styles from '../styles/FormPage1.module.css';
 
-const cuentasPredefinidas = {
-  '467893': { cif: 'B12345678', nombre: 'Proveedor A', cp: '28001' },
-  '467894': { cif: 'B87654321', nombre: 'Proveedor B', cp: '08001' },
-  '467895': { cif: 'B11112222', nombre: 'Proveedor C', cp: '46001' }
-};
-
-const nombresCuenta = {
-  '467893': 'Corte Inglés',
-  '467894': 'Mediamarkt',
-  '467895': 'Alcampo',
-  '4000': 'Nuevo Proveedor'
-};
-
-const FormPage1 = () => {
+const FormPage1 = ({ user }) => {
+  // Estado para el número de asiento
+  const [numAsiento, setNumAsiento] = useState('');
+  
+  // Estados principales del formulario
   const [tipo, setTipo] = useState('factura');
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '' });
   const [pagoEfectivo, setPagoEfectivo] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [proveedores, setProveedores] = useState([]);
 
-  const [detalles, setDetalles] = useState([
-    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 },
-    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 },
-    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }
-  ]);
-
+  // Estados para inputs de búsqueda/autocompletado
   const [inputCuenta, setInputCuenta] = useState('');
   const [inputCIF, setInputCIF] = useState('');
   const [inputNombre, setInputNombre] = useState('');
   const [inputCP, setInputCP] = useState('');
 
+  // Estados para datos del documento - usando datos del usuario
+  const [serie, setSerie] = useState(user?.serie || 'EM');
+  const [numDocumento, setNumDocumento] = useState('');
+  const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaOper, setFechaOper] = useState('');
+  const [vencimiento, setVencimiento] = useState('');
+  const [numFRA, setNumFRA] = useState('');
+  const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
+  const [archivo, setArchivo] = useState(null);
+
+  // Estado para las líneas de detalle
+  const [detalles, setDetalles] = useState([
+    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }
+  ]);
+
   const isNuevoProveedor = cuentaP === '4000';
 
+  // Obtener siguiente número de asiento al cargar el componente
+  useEffect(() => {
+    const fetchContador = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/contador');
+        setNumAsiento(response.data.contador);
+      } catch (error) {
+        console.error('Error obteniendo contador:', error);
+      }
+    };
+    
+    fetchContador();
+  }, []);
+
+  // Cargar proveedores desde la base de datos
+  useEffect(() => {
+    const fetchProveedores = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/proveedores');
+        setProveedores(response.data || []);
+      } catch (error) {
+        console.error('Error cargando proveedores:', error);
+        setProveedores([]);
+      }
+    };
+    
+    fetchProveedores();
+  }, []);
+
+  // Efecto para autocompletar datos del proveedor
   useEffect(() => {
     if (cuentaP && cuentaP !== '4000') {
-      const datos = cuentasPredefinidas[cuentaP] || { cif: '', nombre: '', cp: '' };
-      setDatosCuentaP(datos);
-      setInputCuenta(cuentaP);
-      setInputCIF(''); // no se muestran, pero mantenemos vacíos
-      setInputNombre('');
-      setInputCP('');
-      setPagoEfectivo(false); // ocultar y resetear
+      const proveedor = proveedores.find(p => p.codigo === cuentaP);
+      if (proveedor) {
+        setDatosCuentaP({
+          cif: proveedor.cif || '',
+          nombre: proveedor.nombre || '',
+          cp: proveedor.cp || ''
+        });
+        setInputCIF(proveedor.cif || '');
+        setInputNombre(proveedor.nombre || '');
+        setInputCP(proveedor.cp || '');
+      }
+      setPagoEfectivo(false);
       return;
     }
 
     if (isNuevoProveedor) {
       setDatosCuentaP({ cif: '', nombre: '', cp: '' });
-      setInputCuenta('4000');
       setInputCIF('');
       setInputNombre('');
       setInputCP('');
       return;
     }
 
-    // Autocompletar sólo si no hay selección explícita
-    const foundKey = Object.keys(cuentasPredefinidas).find((key) => {
-      const { cif, nombre } = cuentasPredefinidas[key];
-      return (
-        key === inputCuenta ||
-        cif.toLowerCase().includes(inputCIF.toLowerCase()) ||
-        nombre.toLowerCase().includes(inputNombre.toLowerCase())
-      );
-    });
+    // Autocompletar basado en inputs
+    const proveedorEncontrado = proveedores.find(p => 
+      p.codigo === inputCuenta || 
+      (p.cif && p.cif.toLowerCase().includes(inputCIF.toLowerCase())) || 
+      (p.nombre && p.nombre.toLowerCase().includes(inputNombre.toLowerCase()))
+    );
 
-    if (foundKey) {
-      const datos = cuentasPredefinidas[foundKey];
-      setCuentaP(foundKey);
-      setDatosCuentaP(datos);
-      setInputCIF(datos.cif);
-      setInputNombre(datos.nombre);
-      setInputCP(datos.cp);
+    if (proveedorEncontrado) {
+      setCuentaP(proveedorEncontrado.codigo);
+      setDatosCuentaP({
+        cif: proveedorEncontrado.cif || '',
+        nombre: proveedorEncontrado.nombre || '',
+        cp: proveedorEncontrado.cp || ''
+      });
     } else {
       setDatosCuentaP({ cif: inputCIF, nombre: inputNombre, cp: inputCP });
     }
-  }, [cuentaP, inputCuenta, inputCIF, inputNombre, inputCP]);
+  }, [cuentaP, inputCuenta, inputCIF, inputNombre, inputCP, proveedores]);
 
+  // Manejadores de cambios
   const handleCuentaPChange = (e) => {
     const val = e.target.value;
     setCuentaP(val);
@@ -87,16 +124,19 @@ const FormPage1 = () => {
 
   const handleInputCuenta = (e) => {
     setInputCuenta(e.target.value);
-    setCuentaP(''); // anula selección explícita para permitir autocompletar
+    setCuentaP('');
   };
+
   const handleInputCIF = (e) => {
     setInputCIF(e.target.value);
     setCuentaP('');
   };
+
   const handleInputNombre = (e) => {
     setInputNombre(e.target.value);
     setCuentaP('');
   };
+
   const handleInputCP = (e) => {
     setInputCP(e.target.value);
     setCuentaP('');
@@ -106,9 +146,9 @@ const FormPage1 = () => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
 
-    const baseNum = parseFloat(newDetalles[index].base);
-    const tipoIVANum = parseFloat(newDetalles[index].tipoIVA);
-    const retencionNum = parseFloat(newDetalles[index].retencion);
+    const baseNum = parseFloat(newDetalles[index].base) || 0;
+    const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
+    const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
 
     if (!isNaN(baseNum)) {
       newDetalles[index].cuotaIVA = (baseNum * tipoIVANum) / 100;
@@ -120,259 +160,480 @@ const FormPage1 = () => {
     setDetalles(newDetalles);
   };
 
+  const addDetalleLine = () => {
+    setDetalles([...detalles, { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }]);
+  };
+
+  const removeDetalleLine = (index) => {
+    if (detalles.length > 1) {
+      const newDetalles = [...detalles];
+      newDetalles.splice(index, 1);
+      setDetalles(newDetalles);
+    }
+  };
+
   const handleDateInput = (e) => {
     const input = e.target;
     if (!input.value) return;
     const parts = input.value.split('-');
-    // Limitar el año a 4 dígitos
     if (parts[0].length > 4) {
       parts[0] = parts[0].slice(0, 4);
     }
-    // Reconstruir (si faltan segmentos no hace nada extraño porque el input tipo date siempre da yyyy-mm-dd)
     input.value = parts.map((p, i) => (i === 0 ? parts[0] : p)).join('-');
   };
 
+  const handleFileChange = (e) => {
+    setArchivo(e.target.files[0]);
+  };
+
+  // Calcular totales
+  const calcularTotales = () => {
+    return detalles.reduce((acc, detalle) => {
+      const base = parseFloat(detalle.base) || 0;
+      const iva = parseFloat(detalle.cuotaIVA) || 0;
+      const retencion = parseFloat(detalle.cuotaRetencion) || 0;
+      
+      return {
+        base: acc.base + base,
+        iva: acc.iva + iva,
+        retencion: acc.retencion + retencion,
+        total: acc.total + base + iva - retencion
+      };
+    }, { base: 0, iva: 0, retencion: 0, total: 0 });
+  };
+
+  const totales = calcularTotales();
+
+  // Reiniciar formulario después de éxito
+  const resetForm = () => {
+    setCuentaP('');
+    setInputCuenta('');
+    setInputCIF('');
+    setInputNombre('');
+    setInputCP('');
+    setNumDocumento('');
+    setFechaReg(new Date().toISOString().split('T')[0]);
+    setFechaFactura(new Date().toISOString().split('T')[0]);
+    setFechaOper('');
+    setVencimiento('');
+    setNumFRA('');
+    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }]);
+    setArchivo(null);
+    setPagoEfectivo(false);
+    
+    // Obtener nuevo número de asiento
+    const fetchNewContador = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/contador');
+        setNumAsiento(response.data.contador);
+      } catch (error) {
+        console.error('Error obteniendo contador:', error);
+      }
+    };
+    
+    fetchNewContador();
+  };
+
+  // Enviar formulario
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const asientoData = {
+        tipo,
+        serie,
+        numDocumento,
+        fechaReg: fechaReg || new Date().toISOString().split('T')[0],
+        fechaFactura: fechaFactura || new Date().toISOString().split('T')[0],
+        fechaOper: fechaOper || new Date().toISOString().split('T')[0],
+        vencimiento: vencimiento || new Date().toISOString().split('T')[0],
+        numFRA,
+        proveedor: {
+          cuentaProveedor: cuentaP,
+          cif: inputCIF,
+          nombre: inputNombre,
+          cp: inputCP
+        },
+        pagoEfectivo,
+        analitico,
+        detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
+        usuario: user?.UsuarioLogicNet || 'admin',
+        totales
+      };
+
+      const response = await axios.post('http://localhost:5000/api/asiento/factura', asientoData);
+      
+      if (response.data.success) {
+        alert(`✅ Asiento contable #${response.data.asiento} creado correctamente`);
+        resetForm();
+      } else {
+        alert('❌ Error al crear el asiento: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error creando asiento:', error);
+      
+      if (error.response?.data?.error) {
+        alert('❌ Error al crear el asiento: ' + error.response.data.error);
+      } else if (error.code === 'ERR_NETWORK') {
+        alert('❌ Error de conexión. Verifica que el servidor backend esté ejecutándose.');
+      } else {
+        alert('❌ Error al crear el asiento. Verifica la conexión y los datos.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className={styles.formulario1Container}>
-      <h2>Factura Recibida / Gasto</h2>
-
-      <div className={styles.section}>
-        <h3>Tipo de Documento</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Tipo</label>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-              <option value="factura">Factura Recibida</option>
-              <option value="gasto">Gasto</option>
-            </select>
-          </div>
+    <div className={styles.fp1Container}>
+      <div className={styles.fp1Header}>
+        <h2>📋 Factura Recibida / Gasto</h2>
+        <div className={styles.fp1AsientoInfo}>
+          <span>Asiento: <strong>#{numAsiento}</strong></span>
+          <span>Usuario: <strong>{user?.UsuarioLogicNet}</strong></span>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>Datos del Documento</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Serie</label>
-            <input type="text" value="EM" readOnly />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Nº Documento</label>
-            <input type="text" />
-          </div>
-          <div className={styles.formGroup}>
-            <label>F. Reg</label>
-            <input type="date" onInput={handleDateInput} />
-          </div>
-          <div className={styles.formGroup}>
-            <label>F. F</label>
-            <input type="date" onInput={handleDateInput} />
-          </div>
-          <div className={styles.formGroup}>
-            <label>F. Oper</label>
-            <input type="date" onInput={handleDateInput} />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Vencimiento</label>
-            <input type="date" onInput={handleDateInput} />
+      <form onSubmit={handleSubmit} className={styles.fp1Form}>
+        <div className={styles.fp1Section}>
+          <h3>📄 Tipo de Documento</h3>
+          <div className={styles.fp1FormRow}>
+            <div className={styles.fp1FormGroup}>
+              <label>Tipo</label>
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                <option value="factura">Factura Recibida</option>
+                <option value="gasto">Gasto</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.section}>
-        <h3>Proveedor</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Nº FRA</label>
-            <input type="text" />
+        <div className={styles.fp1Section}>
+          <h3>📅 Datos del Documento</h3>
+          <div className={styles.fp1FormRow}>
+            <div className={styles.fp1FormGroup}>
+              <label>Serie</label>
+              <input 
+                type="text" 
+                value={serie} 
+                onChange={(e) => setSerie(e.target.value)}
+                readOnly 
+              />
+            </div>
+            <div className={styles.fp1FormGroup}>
+              <label>Nº Documento *</label>
+              <input 
+                type="text" 
+                value={numDocumento}
+                onChange={(e) => setNumDocumento(e.target.value)}
+                required 
+              />
+            </div>
+            <div className={styles.fp1FormGroup}>
+              <label>F. Registro *</label>
+              <input 
+                type="date" 
+                value={fechaReg}
+                onChange={(e) => setFechaReg(e.target.value)}
+                onInput={handleDateInput}
+                required 
+              />
+            </div>
+            <div className={styles.fp1FormGroup}>
+              <label>F. Factura *</label>
+              <input 
+                type="date" 
+                value={fechaFactura}
+                onChange={(e) => setFechaFactura(e.target.value)}
+                onInput={handleDateInput}
+                required 
+              />
+            </div>
+            <div className={styles.fp1FormGroup}>
+              <label>F. Operación</label>
+              <input 
+                type="date" 
+                value={fechaOper}
+                onChange={(e) => setFechaOper(e.target.value)}
+                onInput={handleDateInput}
+              />
+            </div>
+            <div className={styles.fp1FormGroup}>
+              <label>Vencimiento</label>
+              <input 
+                type="date" 
+                value={vencimiento}
+                onChange={(e) => setVencimiento(e.target.value)}
+                onInput={handleDateInput}
+              />
+            </div>
           </div>
+        </div>
 
-          <div className={styles.formGroup}>
-            <label>Cuenta</label>
-            <input
-              type="text"
-              value={inputCuenta}
-              onChange={handleInputCuenta}
-              placeholder="Buscar cuenta..."
-              list="cuentas-list"
-            />
-            <datalist id="cuentas-list">
-              {Object.entries(nombresCuenta)
-                .filter(
-                  ([key, nombre]) =>
-                    key.startsWith(inputCuenta) ||
-                    nombre.toLowerCase().startsWith(inputCuenta.toLowerCase())
-                )
-                .map(([key, nombre]) => (
-                  <option key={key} value={key}>
-                    {key} - {nombre}
+        <div className={styles.fp1Section}>
+          <h3>🏢 Proveedor</h3>
+          <div className={styles.fp1FormRow}>
+            <div className={styles.fp1FormGroup}>
+              <label>Nº FRA</label>
+              <input 
+                type="text" 
+                value={numFRA}
+                onChange={(e) => setNumFRA(e.target.value)}
+                placeholder="Número de factura"
+              />
+            </div>
+
+            <div className={styles.fp1FormGroup}>
+              <label>Buscar Cuenta</label>
+              <input
+                type="text"
+                value={inputCuenta}
+                onChange={handleInputCuenta}
+                placeholder="Buscar por código..."
+                list="cuentas-list"
+              />
+              <datalist id="cuentas-list">
+                {proveedores
+                  .filter(proveedor => 
+                    proveedor.codigo.startsWith(inputCuenta) ||
+                    (proveedor.nombre && proveedor.nombre.toLowerCase().includes(inputCuenta.toLowerCase()))
+                  )
+                  .map(proveedor => (
+                    <option key={proveedor.codigo} value={proveedor.codigo}>
+                      {proveedor.codigo} - {proveedor.nombre}
+                    </option>
+                  ))}
+              </datalist>
+            </div>
+
+            <div className={styles.fp1FormGroup}>
+              <label>Seleccionar Cuenta *</label>
+              <select value={cuentaP} onChange={handleCuentaPChange} required>
+                <option value="">-- Seleccionar proveedor --</option>
+                {proveedores.map(proveedor => (
+                  <option key={proveedor.codigo} value={proveedor.codigo}>
+                    {proveedor.codigo} - {proveedor.nombre}
                   </option>
                 ))}
-            </datalist>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Cuenta P.</label>
-            <select value={cuentaP} onChange={handleCuentaPChange}>
-              <option value="">Seleccionar</option>
-              {Object.entries(nombresCuenta).map(([key, nombre]) => (
-                <option key={key} value={key}>
-                  {key} - {nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {isNuevoProveedor && (
-            <>
-              <div className={styles.formGroup}>
-                <label>CIF</label>
-                <input
-                  type="text"
-                  value={inputCIF}
-                  onChange={handleInputCIF}
-                  placeholder="CIF proveedor"
-                  list="cif-list"
-                />
-                <datalist id="cif-list">
-                  {Object.values(cuentasPredefinidas)
-                    .map(({ cif }) => cif)
-                    .filter((cif) => cif.toLowerCase().startsWith(inputCIF.toLowerCase()))
-                    .map((cif) => (
-                      <option key={cif} value={cif} />
-                    ))}
-                </datalist>
-              </div>
-              <div className={styles.formGroup}>
-                <label>Nombre</label>
-                <input
-                  type="text"
-                  value={inputNombre}
-                  onChange={handleInputNombre}
-                  placeholder="Nombre proveedor"
-                  list="nombre-list"
-                />
-                <datalist id="nombre-list">
-                  {Object.values(cuentasPredefinidas)
-                    .map(({ nombre }) => nombre)
-                    .filter((nombre) =>
-                      nombre.toLowerCase().startsWith(inputNombre.toLowerCase())
-                    )
-                    .map((nombre) => (
-                      <option key={nombre} value={nombre} />
-                    ))}
-                </datalist>
-              </div>
-              <div className={styles.formGroup}>
-                <label>CP</label>
-                <input
-                  type="text"
-                  value={inputCP}
-                  onChange={handleInputCP}
-                  placeholder="Código Postal"
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.section}>
-        <h3>Detalles Económicos</h3>
-        <div className={styles.dualGrid}>
-          <div>
-            <div className={styles.formGroup}>
-              <label>Analítico</label>
-              <input type="text" value="EM" readOnly />
+                <option value="4000">➕ Nuevo Proveedor</option>
+              </select>
             </div>
 
-            {detalles.map((line, i) => (
-              <div className={`${styles.formRow} ${styles.detalleLinea}`} key={i}>
-                <div className={styles.formGroup}>
-                  <label>Base{i + 1}</label>
+            {isNuevoProveedor && (
+              <>
+                <div className={styles.fp1FormGroup}>
+                  <label>CIF *</label>
                   <input
-                    type="number"
-                    value={line.base}
-                    onChange={(e) => handleDetalleChange(i, 'base', e.target.value)}
+                    type="text"
+                    value={inputCIF}
+                    onChange={handleInputCIF}
+                    placeholder="CIF proveedor"
+                    required
                   />
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Tipo IVA</label>
-                  <select
-                    value={line.tipoIVA}
-                    onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
-                  >
-                    <option value="21">21%</option>
-                    <option value="10">10%</option>
-                    <option value="4">4%</option>
-                    <option value="0">0%</option>
-                  </select>
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Cuota IVA</label>
-                  <input type="number" readOnly value={line.cuotaIVA.toFixed(2)} />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Retención</label>
-                  <select
-                    value={line.retencion}
-                    onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
-                  >
-                    <option value="15">15%</option>
-                    <option value="7">7%</option>
-                    <option value="1">1%</option>
-                    <option value="0">0%</option>
-                  </select>
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Cuota Retención</label>
-                  <input type="number" readOnly value={line.cuotaRetencion.toFixed(2)} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.derecha}>
-            {isNuevoProveedor && (
-              <div className={styles.formGroup}>
-                <label>
+                <div className={styles.fp1FormGroup}>
+                  <label>Nombre *</label>
                   <input
-                    type="checkbox"
-                    checked={pagoEfectivo}
-                    onChange={(e) => setPagoEfectivo(e.target.checked)}
-                  />{' '}
-                  Se ha pagado en efectivo
-                </label>
-              </div>
+                    type="text"
+                    value={inputNombre}
+                    onChange={handleInputNombre}
+                    placeholder="Nombre proveedor"
+                    required
+                  />
+                </div>
+                <div className={styles.fp1FormGroup}>
+                  <label>CP</label>
+                  <input
+                    type="text"
+                    value={inputCP}
+                    onChange={handleInputCP}
+                    placeholder="Código Postal"
+                  />
+                </div>
+              </>
             )}
+          </div>
+        </div>
 
-            {isNuevoProveedor && pagoEfectivo && (
-              <div className={styles.formGroup}>
-                <label>Cuenta</label>
-                <input type="text" />
+        <div className={styles.fp1Section}>
+          <h3>💰 Detalles Económicos</h3>
+          <div className={styles.fp1DualGrid}>
+            <div className={styles.fp1LeftColumn}>
+              <div className={styles.fp1FormGroup}>
+                <label>Analítico</label>
+                <input 
+                  type="text" 
+                  value={analitico} 
+                  onChange={(e) => setAnalitico(e.target.value)}
+                  readOnly 
+                />
               </div>
-            )}
 
-            <div className={`${styles.formGroup} ${styles.wide}`}>
-              <label>Adjuntar archivo</label>
-              <input type="file" />
+              {detalles.map((line, i) => (
+                <div className={styles.fp1DetalleLinea} key={i}>
+                  <div className={styles.fp1FormRow}>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Base {i + 1} *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={line.base}
+                        onChange={(e) => handleDetalleChange(i, 'base', e.target.value)}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Tipo IVA</label>
+                      <select
+                        value={line.tipoIVA}
+                        onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
+                      >
+                        <option value="21">21%</option>
+                        <option value="10">10%</option>
+                        <option value="4">4%</option>
+                        <option value="0">0%</option>
+                      </select>
+                    </div>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Cuota IVA</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        readOnly 
+                        value={line.cuotaIVA.toFixed(2)} 
+                        className={styles.fp1Readonly}
+                      />
+                    </div>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Retención</label>
+                      <select
+                        value={line.retencion}
+                        onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
+                      >
+                        <option value="15">15%</option>
+                        <option value="7">7%</option>
+                        <option value="1">1%</option>
+                        <option value="0">0%</option>
+                      </select>
+                    </div>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Cuota Ret.</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        readOnly 
+                        value={line.cuotaRetencion.toFixed(2)} 
+                        className={styles.fp1Readonly}
+                      />
+                    </div>
+                    <div className={styles.fp1FormGroup}>
+                      <label>Acción</label>
+                      <button 
+                        type="button" 
+                        className={styles.fp1RemoveBtn}
+                        onClick={() => removeDetalleLine(i)}
+                        disabled={detalles.length <= 1}
+                        title="Eliminar línea"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button type="button" className={styles.fp1AddBtn} onClick={addDetalleLine}>
+                ➕ Añadir línea
+              </button>
+
+              {/* Resumen de totales */}
+              <div className={styles.fp1Totales}>
+                <h4>📊 Totales:</h4>
+                <div className={styles.fp1TotalItem}>
+                  <span>Base Imponible:</span>
+                  <span>{totales.base.toFixed(2)} €</span>
+                </div>
+                <div className={styles.fp1TotalItem}>
+                  <span>IVA:</span>
+                  <span>{totales.iva.toFixed(2)} €</span>
+                </div>
+                <div className={styles.fp1TotalItem}>
+                  <span>Retención:</span>
+                  <span>-{totales.retencion.toFixed(2)} €</span>
+                </div>
+                <div className={styles.fp1TotalItem + ' ' + styles.fp1TotalFinal}>
+                  <span>Total:</span>
+                  <span>{totales.total.toFixed(2)} €</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.fp1RightColumn}>
+              {isNuevoProveedor && (
+                <div className={styles.fp1FormGroup}>
+                  <label className={styles.fp1CheckboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={pagoEfectivo}
+                      onChange={(e) => setPagoEfectivo(e.target.checked)}
+                    />
+                    <span>💵 Se ha pagado en efectivo</span>
+                  </label>
+                </div>
+              )}
+
+              {isNuevoProveedor && pagoEfectivo && (
+                <div className={styles.fp1FormGroup}>
+                  <label>Cuenta Caja</label>
+                  <input type="text" value="570000000" readOnly className={styles.fp1Readonly} />
+                </div>
+              )}
+
+              <div className={styles.fp1FormGroup}>
+                <label>📎 Adjuntar archivo</label>
+                <input 
+                  type="file" 
+                  onChange={handleFileChange}
+                  className={styles.fp1FileInput}
+                />
+                {archivo && (
+                  <span className={styles.fp1FileName}>{archivo.name}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* BOTONES FINALES */}
-      <div className={styles.buttonGroup}>
-        <button className={styles.cancelBtn} onClick={() => window.history.back()}>
-          Cancelar
-        </button>
-        <button className={styles.clearBtn} onClick={() => window.location.reload()}>
-          Limpiar
-        </button>
-        <button className={styles.submitBtn} onClick={() => alert('Formulario enviado')}>
-          Aceptar
-        </button>
-      </div>
+        {/* BOTONES FINALES */}
+        <div className={styles.fp1ButtonGroup}>
+          <button 
+            type="button" 
+            className={styles.fp1CancelBtn} 
+            onClick={() => window.history.back()}
+            disabled={loading}
+          >
+            ❌ Cancelar
+          </button>
+          <button 
+            type="button" 
+            className={styles.fp1ClearBtn} 
+            onClick={resetForm}
+            disabled={loading}
+          >
+            🧹 Limpiar
+          </button>
+          <button 
+            type="submit" 
+            className={styles.fp1SubmitBtn} 
+            disabled={loading || totales.total <= 0}
+          >
+            {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

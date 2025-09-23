@@ -1,30 +1,55 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import styles from './Layout.module.css';
+import { Link, useLocation } from 'react-router-dom';
+import styles from '../styles/Layout.module.css';
 
-const Layout = ({ user, onLogout }) => {
+const Layout = ({ children, isLoggedIn, onLogout, user }) => {
+  const location = useLocation();
+
+  if (!isLoggedIn) {
+    return children;
+  }
+
   return (
     <div className={styles.layout}>
-      <aside className={styles.sidebar}>
-        <h2>Contabilidad</h2>
-        <nav>
-          <NavLink to="/dashboard">Inicio</NavLink>
-          <NavLink to="/form1">Facturas</NavLink>
-          <NavLink to="/form2">Ingresos</NavLink>
-        </nav>
-
-        {/* Usuario y logout abajo */}
-        <div className={styles.userInfo}>
-          <p>Hola, <strong>{user?.name || 'Invitado'}</strong></p>
-          {user && (
-            <button onClick={onLogout} className={styles.logoutBtn}>
-              Cerrar sesión
-            </button>
-          )}
+      <nav className={styles.navbar}>
+        <div className={styles.navBrand}>
+          <h2>🧮 Sage200 Contabilidad</h2>
+          <span className={styles.userInfo}>Usuario: {user?.UsuarioLogicNet}</span>
         </div>
-      </aside>
-      <main className={styles.main}>
-        <Outlet />
+        <ul className={styles.navMenu}>
+          <li>
+            <Link 
+              to="/dashboard" 
+              className={location.pathname === '/dashboard' ? styles.active : ''}
+            >
+              📊 Inicio
+            </Link>
+          </li>
+          <li>
+            <Link 
+              to="/form1" 
+              className={location.pathname === '/form1' ? styles.active : ''}
+            >
+              📋 Facturas/Gastos
+            </Link>
+          </li>
+          <li>
+            <Link 
+              to="/form2" 
+              className={location.pathname === '/form2' ? styles.active : ''}
+            >
+              💰 Ingresos
+            </Link>
+          </li>
+          <li>
+            <button onClick={onLogout} className={styles.logoutBtn}>
+              🔒 Cerrar Sesión
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <main className={styles.mainContent}>
+        {children}
       </main>
     </div>
   );

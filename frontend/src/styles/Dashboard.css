@@ -1,56 +1,150 @@
 .dashboardContainer {
-  max-width: 900px;
-  margin: 2rem auto;
-  background-color: #f9f9fb;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  font-family: 'Segoe UI', sans-serif;
-  color: #333;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-h2 {
-  font-weight: 700;
-  font-size: 1.8rem;
-  margin-bottom: 1.5rem;
-  color: #1a1a1a;
-}
-
-.section {
-  margin-bottom: 2rem;
-}
-
-h3 {
-  font-weight: 600;
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-  color: #334155;
-}
-
-.summaryGrid {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.card {
-  background: white;
-  flex: 1 1 250px;
-  border-radius: 8px;
-  padding: 1.2rem;
-  box-shadow: 0 0 6px rgba(0,0,0,0.08);
+.dashboardHeader {
   text-align: center;
+  margin-bottom: 3rem;
 }
 
-.cardTitle {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #475569;
+.dashboardHeader h1 {
+  color: #2c3e50;
+  font-size: 2.5rem;
   margin-bottom: 0.5rem;
 }
 
-.cardValue {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #3b82f6;
+.dashboardHeader p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.dashboardCard {
+  background: white;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.dashboardCard:hover {
+  transform: translateY(-5px);
+}
+
+.cardIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.dashboardCard h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.dashboardCard p {
+  color: #7f8c8d;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.cardButton {
+  display: inline-block;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.cardButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.disabledButton {
+  background: #95a5a6 !important;
+  cursor: not-allowed;
+}
+
+.disabledButton:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.dashboardInfo {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+.infoSection {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.infoSection h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5rem;
+}
+
+.infoSection ul {
+  list-style: none;
+  padding: 0;
+}
+
+.infoSection li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.infoSection li:last-child {
+  border-bottom: none;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.statItem {
+  text-align: center;
+  padding: 1rem;
+}
+
+.statNumber {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #3498db;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboardInfo {
+    grid-template-columns: 1fr;
+  }
+  
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
