@@ -21,15 +21,20 @@ const Login = ({ onLogin }) => {
         contrasena: password
       });
       
+      console.log('Respuesta del login:', response.data); // Para debug
+      
       if (response.data.success) {
         onLogin(response.data.user);
         navigate('/dashboard');
       } else {
-        setError('Credenciales inválidas');
+        setError(response.data.message || 'Credenciales inválidas');
       }
     } catch (err) {
-      if (err.response?.status === 401) {
-        setError('Usuario o contraseña incorrectos');
+      console.error('Error completo:', err);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Error de conexión. Verifica que el servidor esté ejecutándose.');
       } else {
         setError('Error en la conexión con el servidor');
       }
@@ -56,7 +61,7 @@ const Login = ({ onLogin }) => {
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={loading}
-              placeholder="Ingrese su usuario"
+              placeholder="UsuarioLogicNet"
             />
           </div>
           
@@ -69,7 +74,7 @@ const Login = ({ onLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              placeholder="Ingrese su contraseña"
+              placeholder="ContraseñaLogicNet"
             />
           </div>
           
@@ -86,6 +91,7 @@ const Login = ({ onLogin }) => {
         
         <div className={styles.loginFooter}>
           <p>Sistema conectado con Sage200</p>
+          <p><small>Usuario: UsuarioLogicNet | Contraseña: ContraseñaLogicNet</small></p>
         </div>
       </div>
     </div>

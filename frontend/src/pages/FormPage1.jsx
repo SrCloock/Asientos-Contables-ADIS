@@ -22,7 +22,7 @@ const CUENTAS_GASTO = [
   { id: '600300000', nombre: 'Gastos varios' }
 ];
 
-const FormPage1 = () => {
+const FormPage1 = ({ user }) => {
   const [tipo, setTipo] = useState('factura');
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '' });

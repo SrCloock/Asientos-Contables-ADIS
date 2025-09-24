@@ -2,12 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/Dashboard.css';
 
-const Dashboard = () => {
+const Dashboard = ({ user }) => {
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.dashboardHeader}>
         <h1>🏠 Inicio - Sage200</h1>
         <p>Sistema de Gestión Contable Integrado</p>
+        <div className={styles.userWelcome}>
+          <p>Bienvenido, <strong>{user?.razonSocial || user?.username || 'Usuario'}</strong></p>
+          <p><small>CIF: {user?.cifDni} | Empresa: {user?.codigoCliente}</small></p>
+        </div>
       </div>
 
       <div className={styles.dashboardGrid}>
@@ -61,20 +65,26 @@ const Dashboard = () => {
         </div>
 
         <div className={styles.infoSection}>
-          <h3>📈 Estadísticas Rápidas</h3>
+          <h3>📈 Información de Usuario</h3>
           <div className={styles.statsGrid}>
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>2</span>
-              <span className={styles.statLabel}>Módulos Activos</span>
+              <span className={styles.statLabel}>Usuario</span>
+              <span className={styles.statNumber}>{user?.username}</span>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>✓</span>
-              <span className={styles.statLabel}>Sistema Online</span>
+              <span className={styles.statLabel}>Empresa</span>
+              <span className={styles.statNumber}>{user?.codigoCliente}</span>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statNumber}>24/7</span>
-              <span className={styles.statLabel}>Disponibilidad</span>
+              <span className={styles.statLabel}>CIF</span>
+              <span className={styles.statNumber}>{user?.cifDni}</span>
             </div>
+            {user?.isAdmin && (
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Rol</span>
+                <span className={styles.statNumber}>Administrador</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import styles from '../styles/Layout.module.css';
 
 const Layout = ({ children, isLoggedIn, onLogout, user }) => {
   const location = useLocation();
 
+  // Si no está logueado, redirigir al login
   if (!isLoggedIn) {
-    return children;
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -14,7 +15,10 @@ const Layout = ({ children, isLoggedIn, onLogout, user }) => {
       <nav className={styles.navbar}>
         <div className={styles.navBrand}>
           <h2>🧮 Sage200 Contabilidad</h2>
-          <span className={styles.userInfo}>Usuario: {user?.UsuarioLogicNet}</span>
+          <span className={styles.userInfo}>
+            Usuario: {user?.username || user?.UsuarioLogicNet || 'Invitado'}
+            {user?.isAdmin && ' (Admin)'}
+          </span>
         </div>
         <ul className={styles.navMenu}>
           <li>

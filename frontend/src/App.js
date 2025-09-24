@@ -10,15 +10,25 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [user, setUser] = React.useState(null);
 
+  // Verificar si hay sesión al cargar la aplicación
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      setIsLoggedIn(true);
+    }
+  }, []);
+
   const handleLogin = (userData) => {
     setIsLoggedIn(true);
     setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUser(null);
-    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   return (
@@ -26,12 +36,18 @@ function App() {
       <Routes>
         <Route path="/" element={
           isLoggedIn ? <Navigate to="/dashboard" /> : 
-          <Login setIsLoggedIn={setIsLoggedIn} onLogin={handleLogin} />
+          <Login onLogin={handleLogin} />
         } />
-        <Route element={<Layout user={user} onLogout={handleLogout} />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/form1" element={isLoggedIn ? <FormPage1 /> : <Navigate to="/" />} />
-          <Route path="/form2" element={isLoggedIn ? <FormPage2 /> : <Navigate to="/" />} />
+        <Route element={<Layout user={user} onLogout={handleLogout} isLoggedIn={isLoggedIn} />}>
+          <Route path="/dashboard" element={
+            isLoggedIn ? <Dashboard user={user} /> : <Navigate to="/" />
+          } />
+          <Route path="/form1" element={
+            isLoggedIn ? <FormPage1 user={user} /> : <Navigate to="/" />
+          } />
+          <Route path="/form2" element={
+            isLoggedIn ? <FormPage2 user={user} /> : <Navigate to="/" />
+          } />
         </Route>
       </Routes>
     </Router>
