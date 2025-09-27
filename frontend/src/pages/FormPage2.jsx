@@ -1,125 +1,274 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import styles from '../styles/FormPage2.module.css';
 
-const CUENTAS_CAJA = [
-  { id: '6001', nombre: 'Compras generales' },
-  { id: '6002', nombre: 'Servicios externos' },
-  { id: '6010', nombre: 'Suministros oficina' },
-  { id: '6011', nombre: 'Gastos transporte' },
-  { id: '6020', nombre: 'Publicidad' },
-  { id: '6031', nombre: 'Mantenimiento técnico' },
-];
-
-const CUENTAS_INGRESO = [
-  { id: '519634', nombre: 'Ingreso por ventas' },
-  { id: '519719', nombre: 'Ingreso por servicios' },
-  { id: '519820', nombre: 'Ingreso por alquileres' },
-  { id: '519901', nombre: 'Otros ingresos' },
-];
-
-const FormPage2 = () => {
+const FormPage2 = ({ user }) => {
+  const [numAsiento, setNumAsiento] = useState('');
   const [tipoIngreso, setTipoIngreso] = useState('caja');
-  const [fechaFactura, setFechaFactura] = useState('');
+  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState('');
+  const [importe, setImporte] = useState('');
+  const [concepto, setConcepto] = useState('');
+  const [serie, setSerie] = useState('ING');
+  const [numDocumento, setNumDocumento] = useState('');
+  const [archivo, setArchivo] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const cuentasDisponibles = tipoIngreso === 'caja' ? CUENTAS_CAJA : CUENTAS_INGRESO;
+  const CUENTAS_INGRESO = [
+    { id: '700000000', nombre: 'Ventas de mercaderías' },
+    { id: '701000000', nombre: 'Ventas de productos terminados' },
+    { id: '702000000', nombre: 'Ventas de productos semi-terminados' },
+    { id: '703000000', nombre: 'Ventas de subproductos y residuos' },
+    { id: '704000000', nombre: 'Ventas de envases y embalajes' },
+    { id: '705000000', nombre: 'Prestaciones de servicios' },
+    { id: '706000000', nombre: 'Descuentos sobre ventas por pronto pago' },
+    { id: '708000000', nombre: 'Devoluciones de ventas y operaciones similares' },
+    { id: '709000000', nombre: 'Rappels sobre ventas' },
+    { id: '759000000', nombre: 'Ingresos por arrendamientos' },
+    { id: '760000000', nombre: 'Ingresos por propiedad intelectual' },
+    { id: '761000000', nombre: 'Ingresos por servicios al personal' },
+    { id: '762000000', nombre: 'Ingresos por servicios profesionales' },
+    { id: '769000000', nombre: 'Otros ingresos de gestión' }
+  ];
+
+  // Obtener siguiente número de asiento al cargar el componente
+  useEffect(() => {
+    const fetchContador = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/contador');
+        setNumAsiento(response.data.contador);
+      } catch (error) {
+        console.error('Error obteniendo contador:', error);
+      }
+    };
+    
+    fetchContador();
+  }, []);
+
+  const handleFileChange = (e) => {
+    setArchivo(e.target.files[0]);
+  };
+
+  // Reiniciar formulario
+  const resetForm = () => {
+    setCuentaSeleccionada('');
+    setImporte('');
+    setConcepto('');
+    setNumDocumento('');
+    setFechaFactura(new Date().toISOString().split('T')[0]);
+    setArchivo(null);
+    
+    // Obtener nuevo número de asiento
+    const fetchNewContador = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/contador');
+        setNumAsiento(response.data.contador);
+      } catch (error) {
+        console.error('Error obteniendo contador:', error);
+      }
+    };
+    
+    fetchNewContador();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const asientoData = {
+        tipoIngreso,
+        cuentaSeleccionada,
+        importe: parseFloat(importe),
+        concepto,
+        serie,
+        numDocumento,
+        usuario: user?.UsuarioLogicNet || 'admin'
+      };
+
+      const response = await axios.post('http://localhost:5000/api/asiento/ingreso', asientoData);
+      
+      if (response.data.success) {
+        alert(`✅ Asiento de ingreso #${response.data.asiento} creado correctamente`);
+        resetForm();
+      } else {
+        alert('❌ Error al crear el asiento: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error creando asiento de ingreso:', error);
+      
+      if (error.response?.data?.error) {
+        alert('❌ Error al crear el asiento: ' + error.response.data.error);
+      } else if (error.code === 'ERR_NETWORK') {
+        alert('❌ Error de conexión. Verifica que el servidor backend esté ejecutándose.');
+      } else {
+        alert('❌ Error al crear el asiento. Verifica la conexión y los datos.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className={styles.formulario2Container}>
-      <h2>Formulario de Ingreso / Caja</h2>
-
-      <div className={styles.section}>
-        <h3>Tipo</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Tipo</label>
-            <select
-              value={tipoIngreso}
-              onChange={(e) => {
-                setTipoIngreso(e.target.value);
-                setCuentaSeleccionada(''); // resetea cuenta al cambiar tipo
-              }}
-            >
-              <option value="caja">Caja</option>
-              <option value="ingreso">Ingreso</option>
-            </select>
-          </div>
+    <div className={styles.fp2Container}>
+      <div className={styles.fp2Header}>
+        <h2>💰 Formulario de Ingreso</h2>
+        <div className={styles.fp2AsientoInfo}>
+          <span>Asiento: <strong>#{numAsiento}</strong></span>
+          <span>Usuario: <strong>{user?.UsuarioLogicNet}</strong></span>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>Datos</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Serie</label>
-            <input type="text" value="CEM" readOnly />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Nº Documento</label>
-            <input type="text" />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Fecha Factura</label>
-            <input
-              type="date"
-              value={fechaFactura}
-              onChange={(e) => setFechaFactura(e.target.value)}
-              min="2000-01-01"
-              max="2099-12-31"
-            />
+      <form onSubmit={handleSubmit} className={styles.fp2Form}>
+        <div className={styles.fp2Section}>
+          <h3>💳 Tipo de Ingreso</h3>
+          <div className={styles.fp2FormRow}>
+            <div className={styles.fp2FormGroup}>
+              <label>Tipo *</label>
+              <select
+                value={tipoIngreso}
+                onChange={(e) => {
+                  setTipoIngreso(e.target.value);
+                  setCuentaSeleccionada('');
+                }}
+                required
+              >
+                <option value="caja">💵 Ingreso en Caja</option>
+                <option value="cliente">👥 Ingreso por Cliente</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.section}>
-        <h3>Importe y Cuenta</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Concepto</label>
-            <input type="text" />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Importe</label>
-            <input type="number" />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Cuenta</label>
-            <select
-              value={cuentaSeleccionada}
-              onChange={(e) => setCuentaSeleccionada(e.target.value)}
-            >
-              <option value="">-- Seleccionar cuenta --</option>
-              {cuentasDisponibles.map((cuenta) => (
-                <option key={cuenta.id} value={cuenta.id}>
-                  {cuenta.id} - {cuenta.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Cuenta Caja</label>
-            <input type="text" value="4563" readOnly />
+        <div className={styles.fp2Section}>
+          <h3>📄 Datos del Documento</h3>
+          <div className={styles.fp2FormRow}>
+            <div className={styles.fp2FormGroup}>
+              <label>Serie</label>
+              <input 
+                type="text" 
+                value={serie}
+                onChange={(e) => setSerie(e.target.value)}
+              />
+            </div>
+            <div className={styles.fp2FormGroup}>
+              <label>Nº Documento *</label>
+              <input 
+                type="text" 
+                value={numDocumento}
+                onChange={(e) => setNumDocumento(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.fp2FormGroup}>
+              <label>Fecha *</label>
+              <input
+                type="date"
+                value={fechaFactura}
+                onChange={(e) => setFechaFactura(e.target.value)}
+                required
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.section}>
-        <h3>Archivo</h3>
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label>Adjuntar Archivo</label>
-            <input type="file" />
+        <div className={styles.fp2Section}>
+          <h3>💰 Importe y Cuenta</h3>
+          <div className={styles.fp2FormRow}>
+            <div className={styles.fp2FormGroup}>
+              <label>Concepto *</label>
+              <input 
+                type="text" 
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                placeholder="Descripción del ingreso"
+                required
+              />
+            </div>
+            <div className={styles.fp2FormGroup}>
+              <label>Importe *</label>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0.01"
+                value={importe}
+                onChange={(e) => setImporte(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div className={styles.fp2FormGroup}>
+              <label>Cuenta de Ingreso *</label>
+              <select
+                value={cuentaSeleccionada}
+                onChange={(e) => setCuentaSeleccionada(e.target.value)}
+                required
+              >
+                <option value="">-- Seleccionar cuenta --</option>
+                {CUENTAS_INGRESO.map((cuenta) => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.id} - {cuenta.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.fp2FormGroup}>
+              <label>Cuenta de Contrapartida</label>
+              <input 
+                type="text" 
+                value={tipoIngreso === 'caja' ? '570000000' : '430000000'} 
+                readOnly 
+                className={styles.fp2Readonly}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.buttonGroup}>
-        <button className={styles.cancelBtn}>Cancelar</button>
-        <button className={styles.clearBtn}>Limpiar</button>
-        <button className={styles.submitBtn}>Aceptar</button>
-      </div>
+        <div className={styles.fp2Section}>
+          <h3>📎 Archivo</h3>
+          <div className={styles.fp2FormRow}>
+            <div className={styles.fp2FormGroup}>
+              <label>Adjuntar Archivo</label>
+              <input 
+                type="file" 
+                onChange={handleFileChange}
+                className={styles.fp2FileInput}
+              />
+              {archivo && (
+                <span className={styles.fp2FileName}>{archivo.name}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.fp2ButtonGroup}>
+          <button 
+            type="button" 
+            className={styles.fp2CancelBtn} 
+            onClick={() => window.history.back()}
+            disabled={loading}
+          >
+            ❌ Cancelar
+          </button>
+          <button 
+            type="button" 
+            className={styles.fp2ClearBtn} 
+            onClick={resetForm}
+            disabled={loading}
+          >
+            🧹 Limpiar
+          </button>
+          <button 
+            type="submit" 
+            className={styles.fp2SubmitBtn} 
+            disabled={loading || !importe || !cuentaSeleccionada || !concepto}
+          >
+            {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
