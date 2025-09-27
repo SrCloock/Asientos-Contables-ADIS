@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate, Outlet } from 'react-router-dom';
 import styles from '../styles/Layout.module.css';
 
-const Layout = ({ children, isLoggedIn, onLogout, user }) => {
+const Layout = ({ user, onLogout, isLoggedIn }) => {
   const location = useLocation();
 
   // Si no está logueado, redirigir al login
@@ -16,8 +16,7 @@ const Layout = ({ children, isLoggedIn, onLogout, user }) => {
         <div className={styles.navBrand}>
           <h2>🧮 Sage200 Contabilidad</h2>
           <span className={styles.userInfo}>
-            Usuario: {user?.username || user?.UsuarioLogicNet || 'Invitado'}
-            {user?.isAdmin && ' (Admin)'}
+            Usuario: {user?.username || 'Invitado'}
           </span>
         </div>
         <ul className={styles.navMenu}>
@@ -53,7 +52,8 @@ const Layout = ({ children, isLoggedIn, onLogout, user }) => {
         </ul>
       </nav>
       <main className={styles.mainContent}>
-        {children}
+        {/* Outlet renderiza el componente hijo de la ruta */}
+        <Outlet />
       </main>
     </div>
   );
