@@ -1,12 +1,179 @@
+const express = require('express');
+const session = require('express-session');
+const cors = require('cors');
+const sql = require('mssql');
+const { v4: uuidv4 } = require('uuid');
+
+const app = express();
+const PORT = 5000;
+
+// Configuración de la base de datos
+const dbConfig = {
+  server: 'SVRALANDALUS',
+  database: 'demos',
+  user: 'Logic',
+  password: 'Sage2024+',
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+    appName: 'GestorComprasWeb',
+    connectTimeout: 30000,
+    requestTimeout: 30000,
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000
+    }
+  }
+};
+
+let pool;
+
+// Conectar a la base de datos
+const connectDB = async () => {
+  try {
+    pool = await sql.connect(dbConfig);
+    console.log('✅ Conexión a Sage200 establecida');
+  } catch (err) {
+    console.error('❌ Fallo de conexión a Sage200:', err.message);
+    process.exit(1);
+  }
+};
+
+connectDB();
+
+// Middleware
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configuración de sesión
+app.use(session({
+  secret: 'sage200-secret-key-2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Cambiar a true en producción con HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  }
+}));
+
+// Middleware de autenticación
+const requireAuth = (req, res, next) => {
+  if (req.session.user) {
+    next();
+  } else {
+    res.status(401).json({ error: 'No autenticado' });
+  }
+};
 
 // ============================================
-// ✅ 5. ENDPOINTS DE PROVEEDORES
+// ✅ ENDPOINTS DE AUTENTICACIÓN
+// ============================================
+
+// POST /login - Iniciar sesión
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    const result = await pool.request()
+      .input('username', sql.VarChar, username)
+      .input('password', sql.VarChar, password)
+      .query(`
+        SELECT 
+          CodigoCliente, 
+          CifDni, 
+          UsuarioLogicNet,
+          RazonSocial,
+          Domicilio,
+          CodigoPostal,
+          Municipio,
+          Provincia,
+          CodigoProvincia,
+          CodigoNacion,
+          Nacion,
+          SiglaNacion,
+          StatusAdministrador
+        FROM CLIENTES 
+        WHERE UsuarioLogicNet = @username 
+        AND ContraseñaLogicNet = @password
+        AND CodigoCategoriaCliente_ = 'EMP'
+      `);
+
+    if (result.recordset.length > 0) {
+      const userData = result.recordset[0];
+      const isAdmin = userData.StatusAdministrador === -1;
+      
+      // Guardar usuario en la sesión
+      req.session.user = {
+        codigoCliente: userData.CodigoCliente?.trim() || '',
+        cifDni: userData.CifDni?.trim() || '',
+        usuario: userData.UsuarioLogicNet,
+        nombre: userData.RazonSocial,
+        domicilio: userData.Domicilio || '',
+        codigoPostal: userData.CodigoPostal || '',
+        municipio: userData.Municipio || '',
+        provincia: userData.Provincia || '',
+        codigoProvincia: userData.CodigoProvincia || '',
+        codigoNacion: userData.CodigoNacion || 'ES',
+        nacion: userData.Nacion || '',
+        siglaNacion: userData.SiglaNacion || 'ES',
+        isAdmin: isAdmin
+      };
+
+      return res.status(200).json({ 
+        success: true, 
+        user: req.session.user
+      });
+    } else {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciales incorrectas o no tiene permisos' 
+      });
+    }
+  } catch (error) {
+    console.error('Error en login:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error del servidor' 
+    });
+  }
+});
+
+// POST /logout - Cerrar sesión
+app.post('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).json({ success: false });
+    }
+    res.clearCookie('connect.sid');
+    return res.status(200).json({ success: true });
+  });
+});
+
+// GET /api/session - Verificar sesión
+app.get('/api/session', (req, res) => {
+  if (req.session.user) {
+    res.json({ 
+      authenticated: true, 
+      user: req.session.user 
+    });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+// ============================================
+// ✅ ENDPOINTS DE PROVEEDORES
 // ============================================
 
 // GET /api/proveedores - Obtener lista de proveedores
 app.get('/api/proveedores', requireAuth, async (req, res) => {
   try {
-    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT 
         CodigoProveedor as codigo,
@@ -32,7 +199,6 @@ app.get('/api/proveedores', requireAuth, async (req, res) => {
 // GET /api/proveedores/cuentas - Obtener cuentas contables de proveedores
 app.get('/api/proveedores/cuentas', requireAuth, async (req, res) => {
   try {
-    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT 
         p.CodigoProveedor as codigo,
@@ -54,13 +220,12 @@ app.get('/api/proveedores/cuentas', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ 6. ENDPOINTS DE CONTADORES
+// ✅ ENDPOINTS DE CONTADORES
 // ============================================
 
 // GET /api/contador - Obtener siguiente número de asiento
 app.get('/api/contador', requireAuth, async (req, res) => {
   try {
-    const pool = await getPool();
     const result = await pool.request()
       .query(`
         SELECT sysContadorValor 
@@ -85,12 +250,12 @@ app.get('/api/contador', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ 7. ENDPOINTS DE ASIENTOS CONTABLES - FACTURAS/GASTOS
+// ✅ ENDPOINTS DE ASIENTOS CONTABLES - FACTURAS/GASTOS
 // ============================================
 
 // POST /api/asiento/factura - Crear asiento de factura/gasto
 app.post('/api/asiento/factura', requireAuth, async (req, res) => {
-  const transaction = new sql.Transaction(await getPool());
+  const transaction = new sql.Transaction(pool);
   
   try {
     await transaction.begin();
@@ -113,7 +278,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
     
     const siguienteAsiento = contadorResult.recordset[0].sysContadorValor;
     const fechaAsiento = new Date();
-    const usuario = req.session.user?.username || 'Sistema';
+    const usuario = req.session.user?.usuario || 'Sistema';
     
     console.log(`📝 Asiento #${siguienteAsiento} - Usuario: ${usuario}`);
     
@@ -374,12 +539,12 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ 8. ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS
+// ✅ ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS
 // ============================================
 
 // POST /api/asiento/ingreso - Crear asiento de ingreso
 app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
-  const transaction = new sql.Transaction(await getPool());
+  const transaction = new sql.Transaction(pool);
   
   try {
     await transaction.begin();
@@ -470,12 +635,12 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
   }
 });
 
-
 // ============================================
-// ✅ 10. INICIALIZACIÓN DEL SERVIDOR
+// ✅ INICIALIZACIÓN DEL SERVIDOR
 // ============================================
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
 });
+
 module.exports = app;

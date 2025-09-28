@@ -1,27 +1,61 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import FormPage1 from './pages/FormPage1';
 import FormPage2 from './pages/FormPage2';
-import Dashboard from './pages/Dashboard';
-import Layout from './components/Layout';
+import Login from './pages/Login';
+
+const ProtectedRoute = ({ children }) => {
+  const { isLoggedIn, loading, checkSession } = useAuth();
+
+  // Revisamos la sesión cuando el ProtectedRoute se monta
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div style={{ fontSize: '2rem' }}>⏳</div>
+        <p>Verificando autenticación...</p>
+      </div>
+    );
+  }
+
+  return isLoggedIn ? children : <Navigate to="/login" />;
+};
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={
-          isLoggedIn ? <Navigate to="/dashboard" /> : <Login setIsLoggedIn={setIsLoggedIn} />
-        } />
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/form1" element={isLoggedIn ? <FormPage1 /> : <Navigate to="/" />} />
-          <Route path="/form2" element={isLoggedIn ? <FormPage2 /> : <Navigate to="/" />} />
-        </Route>
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="form1" element={<FormPage1 />} />
+            <Route path="form2" element={<FormPage2 />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
