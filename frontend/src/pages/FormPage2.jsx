@@ -35,7 +35,9 @@ const FormPage2 = ({ user }) => {
   useEffect(() => {
     const fetchContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador');
+        const response = await axios.get('http://localhost:5000/api/contador', {
+          withCredentials: true
+        });
         setNumAsiento(response.data.contador);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -61,7 +63,9 @@ const FormPage2 = ({ user }) => {
     // Obtener nuevo número de asiento
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador');
+        const response = await axios.get('http://localhost:5000/api/contador', {
+          withCredentials: true
+        });
         setNumAsiento(response.data.contador);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -83,10 +87,12 @@ const FormPage2 = ({ user }) => {
         concepto,
         serie,
         numDocumento,
-        usuario: user?.UsuarioLogicNet || 'admin'
+        usuario: user?.usuario || user?.UsuarioLogicNet || 'admin'
       };
 
-      const response = await axios.post('http://localhost:5000/api/asiento/ingreso', asientoData);
+      const response = await axios.post('http://localhost:5000/api/asiento/ingreso', asientoData, {
+        withCredentials: true
+      });
       
       if (response.data.success) {
         alert(`✅ Asiento de ingreso #${response.data.asiento} creado correctamente`);
@@ -115,7 +121,7 @@ const FormPage2 = ({ user }) => {
         <h2>💰 Formulario de Ingreso</h2>
         <div className={styles.fp2AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
-          <span>Usuario: <strong>{user?.UsuarioLogicNet}</strong></span>
+          <span>Usuario: <strong>{user?.usuario || user?.UsuarioLogicNet}</strong></span>
         </div>
       </div>
 
@@ -263,7 +269,7 @@ const FormPage2 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp2SubmitBtn} 
-            disabled={loading || !importe || !cuentaSeleccionada || !concepto}
+            disabled={loading || !importe || !cuentaSeleccionada || !concepto || !numDocumento}
           >
             {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
           </button>

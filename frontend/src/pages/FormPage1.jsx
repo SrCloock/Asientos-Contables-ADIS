@@ -43,7 +43,9 @@ const FormPage1 = ({ user }) => {
   useEffect(() => {
     const fetchContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador');
+        const response = await axios.get('http://localhost:5000/api/contador', {
+          withCredentials: true
+        });
         setNumAsiento(response.data.contador);
         console.log('✅ Contador de asiento obtenido:', response.data.contador);
       } catch (error) {
@@ -60,8 +62,12 @@ const FormPage1 = ({ user }) => {
     const fetchProveedores = async () => {
       try {
         const [proveedoresRes, cuentasRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/proveedores'),
-          axios.get('http://localhost:5000/api/proveedores/cuentas')
+          axios.get('http://localhost:5000/api/proveedores', {
+            withCredentials: true
+          }),
+          axios.get('http://localhost:5000/api/proveedores/cuentas', {
+            withCredentials: true
+          })
         ]);
         
         setProveedores(proveedoresRes.data || []);
@@ -122,7 +128,7 @@ const FormPage1 = ({ user }) => {
     }
   }, [cuentaP, inputCuenta, inputCIF, inputNombre, inputCP, proveedores]);
 
-  // Validar datos antes de enviar - MEJORADO
+  // Validar datos antes de enviar
   const validarDatos = () => {
     const errores = [];
     
@@ -241,7 +247,7 @@ const FormPage1 = ({ user }) => {
     setArchivo(e.target.files[0]);
   };
 
-  // Calcular totales - MEJORADO
+  // Calcular totales
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -263,7 +269,7 @@ const FormPage1 = ({ user }) => {
 
   const totales = calcularTotales();
 
-  // Reiniciar formulario después de éxito - MEJORADO
+  // Reiniciar formulario después de éxito
   const resetForm = () => {
     setCuentaP('');
     setInputCuenta('');
@@ -283,7 +289,9 @@ const FormPage1 = ({ user }) => {
     // Obtener nuevo número de asiento
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador');
+        const response = await axios.get('http://localhost:5000/api/contador', {
+          withCredentials: true
+        });
         setNumAsiento(response.data.contador);
         console.log('🔄 Contador actualizado:', response.data.contador);
       } catch (error) {
@@ -294,7 +302,7 @@ const FormPage1 = ({ user }) => {
     fetchNewContador();
   };
 
-  // Enviar formulario - COMPLETAMENTE CORREGIDO
+  // Enviar formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -331,7 +339,9 @@ const FormPage1 = ({ user }) => {
 
       console.log('📤 Enviando datos del asiento:', asientoData);
 
-      const response = await axios.post('http://localhost:5000/api/asiento/factura', asientoData);
+      const response = await axios.post('http://localhost:5000/api/asiento/factura', asientoData, {
+        withCredentials: true
+      });
       
       if (response.data.success) {
         const mensaje = `✅ Asiento contable #${response.data.asiento} creado correctamente\n\n` +
@@ -799,34 +809,20 @@ const FormPage1 = ({ user }) => {
           >
             ❌ Cancelar
           </button>
-          
           <button 
             type="button" 
             className={styles.fp1ClearBtn} 
             onClick={resetForm}
             disabled={loading}
           >
-            🧹 Limpiar Formulario
+            🧹 Limpiar
           </button>
-          
           <button 
             type="submit" 
             className={styles.fp1SubmitBtn} 
-            disabled={loading || totales.total <= 0}
-            title={totales.total <= 0 ? "Agregue al menos una línea con importe positivo" : ""}
+            disabled={loading || !numDocumento || (!cuentaP && !isNuevoProveedor) || totales.total <= 0}
           >
-            {loading ? (
-              <>
-                <span className={styles.loadingSpinner}>⏳</span>
-                Procesando Asiento...
-              </>
-            ) : (
-              <>
-                💾 Crear Asiento Contable
-                <br />
-                <small>Total: {totales.total.toFixed(2)} €</small>
-              </>
-            )}
+            {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
           </button>
         </div>
       </form>

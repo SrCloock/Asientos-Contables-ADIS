@@ -1,9 +1,9 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import styles from '../styles/Layout.module.css';
 import { useAuth } from '../context/AuthContext';
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isLoggedIn, logout } = useAuth();
@@ -61,7 +61,7 @@ const Layout = ({ children }) => {
         </ul>
       </nav>
       <main className={styles.mainContent}>
-        {children}
+        <Outlet /> {/* Esto es lo que falta */}
       </main>
     </div>
   );
