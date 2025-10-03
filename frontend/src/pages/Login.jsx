@@ -111,7 +111,6 @@ const Login = () => {
           <div className="login-input-group">
             <label htmlFor="username" className="login-label">Usuario</label>
             <div className="login-input-container">
-              <span className="login-input-icon">👤</span>
               <input
                 id="username"
                 type="text"
@@ -128,7 +127,6 @@ const Login = () => {
           <div className="login-input-group">
             <label htmlFor="password" className="login-label">Contraseña</label>
             <div className="login-input-container">
-              <span className="login-input-icon">🔒</span>
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -145,7 +143,7 @@ const Login = () => {
                 className="login-password-toggle"
                 disabled={isLoading}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
           </div>

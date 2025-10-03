@@ -95,20 +95,20 @@ const FormPage2 = ({ user }) => {
       });
       
       if (response.data.success) {
-        alert(`✅ Asiento de ingreso #${response.data.asiento} creado correctamente`);
+        alert(`Asiento de ingreso #${response.data.asiento} creado correctamente`);
         resetForm();
       } else {
-        alert('❌ Error al crear el asiento: ' + response.data.message);
+        alert('Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
       console.error('Error creando asiento de ingreso:', error);
       
       if (error.response?.data?.error) {
-        alert('❌ Error al crear el asiento: ' + error.response.data.error);
+        alert('Error al crear el asiento: ' + error.response.data.error);
       } else if (error.code === 'ERR_NETWORK') {
-        alert('❌ Error de conexión. Verifica que el servidor backend esté ejecutándose.');
+        alert('Error de conexión. Verifica que el servidor backend esté ejecutándose.');
       } else {
-        alert('❌ Error al crear el asiento. Verifica la conexión y los datos.');
+        alert('Error al crear el asiento. Verifica la conexión y los datos.');
       }
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ const FormPage2 = ({ user }) => {
   return (
     <div className={styles.fp2Container}>
       <div className={styles.fp2Header}>
-        <h2>💰 Formulario de Ingreso</h2>
+        <h2>Formulario de Ingreso</h2>
         <div className={styles.fp2AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario || user?.UsuarioLogicNet}</strong></span>
@@ -127,7 +127,7 @@ const FormPage2 = ({ user }) => {
 
       <form onSubmit={handleSubmit} className={styles.fp2Form}>
         <div className={styles.fp2Section}>
-          <h3>💳 Tipo de Ingreso</h3>
+          <h3>Tipo de Ingreso</h3>
           <div className={styles.fp2FormRow}>
             <div className={styles.fp2FormGroup}>
               <label>Tipo *</label>
@@ -139,15 +139,15 @@ const FormPage2 = ({ user }) => {
                 }}
                 required
               >
-                <option value="caja">💵 Ingreso en Caja</option>
-                <option value="cliente">👥 Ingreso por Cliente</option>
+                <option value="caja">Ingreso en Caja</option>
+                <option value="cliente">Ingreso por Cliente</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className={styles.fp2Section}>
-          <h3>📄 Datos del Documento</h3>
+          <h3>Datos del Documento</h3>
           <div className={styles.fp2FormRow}>
             <div className={styles.fp2FormGroup}>
               <label>Serie</label>
@@ -179,7 +179,7 @@ const FormPage2 = ({ user }) => {
         </div>
 
         <div className={styles.fp2Section}>
-          <h3>💰 Importe y Cuenta</h3>
+          <h3>Importe y Cuenta</h3>
           <div className={styles.fp2FormRow}>
             <div className={styles.fp2FormGroup}>
               <label>Concepto *</label>
@@ -233,7 +233,7 @@ const FormPage2 = ({ user }) => {
         </div>
 
         <div className={styles.fp2Section}>
-          <h3>📎 Archivo</h3>
+          <h3>Archivo</h3>
           <div className={styles.fp2FormRow}>
             <div className={styles.fp2FormGroup}>
               <label>Adjuntar Archivo</label>
@@ -256,7 +256,7 @@ const FormPage2 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            ❌ Cancelar
+            Cancelar
           </button>
           <button 
             type="button" 
@@ -264,14 +264,14 @@ const FormPage2 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            🧹 Limpiar
+            Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp2SubmitBtn} 
             disabled={loading || !importe || !cuentaSeleccionada || !concepto || !numDocumento}
           >
-            {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
+            {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
         </div>
       </form>

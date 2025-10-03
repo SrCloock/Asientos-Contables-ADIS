@@ -21,7 +21,7 @@ const Layout = () => {
     <div className={styles.layout}>
       <nav className={styles.navbar}>
         <div className={styles.navBrand}>
-          <h2>🧮 Sage200 Contabilidad</h2>
+          <h2>Sage200 Contabilidad</h2>
           <div className={styles.userInfo}>
             <span>Usuario: <strong>{user?.usuario}</strong></span>
             <span>Nombre: <strong>{user?.nombre}</strong></span>
@@ -34,7 +34,7 @@ const Layout = () => {
               to="/dashboard" 
               className={location.pathname === '/dashboard' ? styles.active : ''}
             >
-              📊 Dashboard
+              Dashboard
             </Link>
           </li>
           <li>
@@ -42,7 +42,7 @@ const Layout = () => {
               to="/form1" 
               className={location.pathname === '/form1' ? styles.active : ''}
             >
-              📋 Facturas/Gastos
+              Facturas y Gastos
             </Link>
           </li>
           <li>
@@ -50,18 +50,18 @@ const Layout = () => {
               to="/form2" 
               className={location.pathname === '/form2' ? styles.active : ''}
             >
-              💰 Ingresos
+              Ingresos
             </Link>
           </li>
           <li>
             <button onClick={handleLogout} className={styles.logoutBtn}>
-              🔒 Cerrar Sesión
+              Cerrar Sesión
             </button>
           </li>
         </ul>
       </nav>
       <main className={styles.mainContent}>
-        <Outlet /> {/* Esto es lo que falta */}
+        <Outlet />
       </main>
     </div>
   );

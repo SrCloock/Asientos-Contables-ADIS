@@ -1,0 +1,170 @@
+/* ===== Dashboard.css ===== */
+
+.dashboardContainer {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 2rem;
+  background: #f5f7fa;
+  min-height: 100vh;
+  color: #2c3e50;
+}
+
+/* ==== HEADER ==== */
+.dashboardHeader {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.dashboardHeader h1 {
+  font-size: 2.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: #1a2a3a;
+}
+
+.dashboardHeader p {
+  font-size: 1.1rem;
+  color: #6c7a89;
+  margin-top: 0.3rem;
+}
+
+/* ==== GRID ==== */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.dashboardCard {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.8rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dashboardCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.cardIcon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #0078d7, #00b4d8);
+  border-radius: 8px;
+}
+
+/* ==== CARD TEXT ==== */
+.dashboardCard h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1a2a3a;
+}
+
+.dashboardCard p {
+  margin: 0.6rem 0 1.2rem;
+  font-size: 0.95rem;
+  color: #6c7a89;
+}
+
+/* ==== BUTTONS ==== */
+.cardButton {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  background: #0078d7;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.cardButton:hover {
+  background: #005fa3;
+}
+
+.disabledButton {
+  background: #b0b8c1 !important;
+  cursor: not-allowed;
+}
+
+/* ==== INFO SECTIONS ==== */
+.dashboardInfo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.infoSection {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.8rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.infoSection h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #1a2a3a;
+}
+
+.infoSection ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.infoSection li {
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  color: #4a5a68;
+}
+
+/* ==== STATS ==== */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.statItem {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.statNumber {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0078d7;
+  margin-bottom: 0.3rem;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: #6c7a89;
+}
+
+/* ==== RESPONSIVE ==== */
+@media (max-width: 600px) {
+  .dashboardHeader h1 {
+    font-size: 1.7rem;
+  }
+  .dashboardCard {
+    padding: 1.2rem;
+  }
+  .infoSection {
+    padding: 1.2rem;
+  }
+}

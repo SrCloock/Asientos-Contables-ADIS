@@ -2,29 +2,42 @@
   max-width: 1200px;
   margin: 0 auto;
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
 .fp2Header {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  background: linear-gradient(135deg, #1e293b, #334155);
   color: white;
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .fp2Header h2 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .fp2AsientoInfo {
   display: flex;
   gap: 2rem;
-  font-size: 1rem;
+  font-size: 0.9rem;
+}
+
+.fp2AsientoInfo span {
+  display: flex;
+  flex-direction: column;
+}
+
+.fp2AsientoInfo strong {
+  font-weight: 600;
+  color: #f8fafc;
 }
 
 .fp2Form {
@@ -32,25 +45,29 @@
 }
 
 .fp2Section {
-  background: #f8f9fa;
+  background: #f8fafc;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1.75rem;
   margin-bottom: 1.5rem;
-  border-left: 4px solid #9b59b6;
+  border-left: 4px solid #8b5cf6;
+  border: 1px solid #e2e8f0;
 }
 
 .fp2Section h3 {
-  color: #2c3e50;
+  color: #1e293b;
   margin-bottom: 1.5rem;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .fp2FormRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .fp2FormGroup {
@@ -61,39 +78,52 @@
 .fp2FormGroup label {
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #2c3e50;
+  color: #374151;
   font-size: 0.9rem;
 }
 
 .fp2FormGroup input,
 .fp2FormGroup select {
   padding: 0.75rem;
-  border: 2px solid #e9ecef;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.95rem;
   transition: all 0.3s ease;
+  background: white;
 }
 
 .fp2FormGroup input:focus,
 .fp2FormGroup select:focus {
   outline: none;
-  border-color: #9b59b6;
-  box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.1);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 .fp2Readonly {
-  background-color: #f8f9fa;
-  color: #6c757d;
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
 }
 
 .fp2FileInput {
-  padding: 0.5rem;
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  transition: all 0.3s ease;
+}
+
+.fp2FileInput:hover {
+  border-color: #8b5cf6;
+  background: #faf5ff;
 }
 
 .fp2FileName {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #7c3aed;
+  font-weight: 500;
+  display: block;
+  margin-top: 0.5rem;
 }
 
 .fp2ButtonGroup {
@@ -101,54 +131,58 @@
   gap: 1rem;
   justify-content: flex-end;
   margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  padding-top: 1.75rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 .fp2CancelBtn {
-  background: #95a5a6;
+  background: #6b7280;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .fp2CancelBtn:hover:not(:disabled) {
-  background: #7f8c8d;
+  background: #4b5563;
 }
 
 .fp2ClearBtn {
-  background: #f39c12;
+  background: #f59e0b;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .fp2ClearBtn:hover:not(:disabled) {
-  background: #d35400;
+  background: #d97706;
 }
 
 .fp2SubmitBtn {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  background: #8b5cf6;
   color: white;
   border: none;
   padding: 0.75rem 2rem;
   border-radius: 6px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .fp2SubmitBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+  background: #7c3aed;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .fp2SubmitBtn:disabled {
@@ -159,6 +193,22 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .fp2Form {
+    padding: 1.5rem;
+  }
+  
+  .fp2Header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .fp2AsientoInfo {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
   .fp2FormRow {
     grid-template-columns: 1fr;
   }

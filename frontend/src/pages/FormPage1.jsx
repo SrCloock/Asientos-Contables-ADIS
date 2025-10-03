@@ -47,9 +47,9 @@ const FormPage1 = ({ user }) => {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
-        console.log('✅ Contador de asiento obtenido:', response.data.contador);
+        console.log('Contador de asiento obtenido:', response.data.contador);
       } catch (error) {
-        console.error('❌ Error obteniendo contador:', error);
+        console.error('Error obteniendo contador:', error);
         alert('Error al obtener el número de asiento. Verifique la conexión.');
       }
     };
@@ -72,9 +72,9 @@ const FormPage1 = ({ user }) => {
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
-        console.log('✅ Proveedores cargados:', proveedoresRes.data.length);
+        console.log('Proveedores cargados:', proveedoresRes.data.length);
       } catch (error) {
-        console.error('❌ Error cargando proveedores:', error);
+        console.error('Error cargando proveedores:', error);
         setProveedores([]);
         setProveedoresCuentas([]);
       }
@@ -158,7 +158,7 @@ const FormPage1 = ({ user }) => {
     });
     
     if (errores.length > 0) {
-      alert('❌ Errores en el formulario:\n' + errores.join('\n• '));
+      alert('Errores en el formulario:\n' + errores.join('\n• '));
       return false;
     }
     
@@ -293,9 +293,9 @@ const FormPage1 = ({ user }) => {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
-        console.log('🔄 Contador actualizado:', response.data.contador);
+        console.log('Contador actualizado:', response.data.contador);
       } catch (error) {
-        console.error('❌ Error actualizando contador:', error);
+        console.error('Error actualizando contador:', error);
       }
     };
     
@@ -337,15 +337,15 @@ const FormPage1 = ({ user }) => {
         usuario: user?.usuario || user?.UsuarioLogicNet || 'admin'
       };
 
-      console.log('📤 Enviando datos del asiento:', asientoData);
+      console.log('Enviando datos del asiento:', asientoData);
 
       const response = await axios.post('http://localhost:5000/api/asiento/factura', asientoData, {
         withCredentials: true
       });
       
       if (response.data.success) {
-        const mensaje = `✅ Asiento contable #${response.data.asiento} creado correctamente\n\n` +
-                       `📊 Detalles:\n` +
+        const mensaje = `Asiento contable #${response.data.asiento} creado correctamente\n\n` +
+                       `Detalles:\n` +
                        `• Base imponible: ${response.data.detalles.base.toFixed(2)}€\n` +
                        `• IVA: ${response.data.detalles.iva.toFixed(2)}€\n` +
                        `• Retención: ${response.data.detalles.retencion.toFixed(2)}€\n` +
@@ -355,12 +355,12 @@ const FormPage1 = ({ user }) => {
         alert(mensaje);
         resetForm();
       } else {
-        alert('❌ Error al crear el asiento: ' + response.data.message);
+        alert('Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
-      console.error('❌ Error creando asiento:', error);
+      console.error('Error creando asiento:', error);
       
-      let mensajeError = '❌ Error al crear el asiento.';
+      let mensajeError = 'Error al crear el asiento.';
       
       if (error.response?.data?.error) {
         mensajeError += '\n' + error.response.data.error;
@@ -368,7 +368,7 @@ const FormPage1 = ({ user }) => {
           mensajeError += '\n' + error.response.data.detalles;
         }
       } else if (error.code === 'ERR_NETWORK') {
-        mensajeError = '❌ Error de conexión. Verifique que el servidor backend esté ejecutándose en el puerto 5000.';
+        mensajeError = 'Error de conexión. Verifique que el servidor backend esté ejecutándose en el puerto 5000.';
       } else if (error.message) {
         mensajeError += '\n' + error.message;
       }
@@ -382,7 +382,7 @@ const FormPage1 = ({ user }) => {
   return (
     <div className={styles.fp1Container}>
       <div className={styles.fp1Header}>
-        <h2>📋 Factura Recibida / Gasto</h2>
+        <h2>Factura Recibida / Gasto</h2>
         <div className={styles.fp1AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario || user?.UsuarioLogicNet}</strong></span>
@@ -393,13 +393,13 @@ const FormPage1 = ({ user }) => {
       <form onSubmit={handleSubmit} className={styles.fp1Form}>
         {/* SECCIÓN TIPO DE DOCUMENTO */}
         <div className={styles.fp1Section}>
-          <h3>📄 Tipo de Documento</h3>
+          <h3>Tipo de Documento</h3>
           <div className={styles.fp1FormRow}>
             <div className={styles.fp1FormGroup}>
               <label>Tipo de Documento *</label>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} required>
-                <option value="factura">📄 Factura Recibida (Cuenta 600)</option>
-                <option value="gasto">💳 Gasto (Cuenta 622)</option>
+                <option value="factura">Factura Recibida (Cuenta 600)</option>
+                <option value="gasto">Gasto (Cuenta 622)</option>
               </select>
               <small>{tipo === 'factura' ? 'Cuenta 600000000 - Compras' : 'Cuenta 622000000 - Servicios'}</small>
             </div>
@@ -408,7 +408,7 @@ const FormPage1 = ({ user }) => {
 
         {/* SECCIÓN DATOS DEL DOCUMENTO */}
         <div className={styles.fp1Section}>
-          <h3>📅 Datos del Documento</h3>
+          <h3>Datos del Documento</h3>
           <div className={styles.fp1FormRow}>
             <div className={styles.fp1FormGroup}>
               <label>Serie *</label>
@@ -490,7 +490,7 @@ const FormPage1 = ({ user }) => {
 
         {/* SECCIÓN PROVEEDOR */}
         <div className={styles.fp1Section}>
-          <h3>🏢 Datos del Proveedor</h3>
+          <h3>Datos del Proveedor</h3>
           
           <div className={styles.fp1FormRow}>
             <div className={styles.fp1FormGroup}>
@@ -520,7 +520,7 @@ const FormPage1 = ({ user }) => {
                     {proveedor.codigo} - {proveedor.nombre} ({proveedor.cif})
                   </option>
                 ))}
-                <option value="4000">➕ NUEVO PROVEEDOR (Cuenta 400)</option>
+                <option value="4000">NUEVO PROVEEDOR (Cuenta 400)</option>
               </select>
             </div>
           </div>
@@ -568,7 +568,7 @@ const FormPage1 = ({ user }) => {
                       checked={pagoEfectivo}
                       onChange={(e) => setPagoEfectivo(e.target.checked)}
                     />
-                    <span>💵 Pago en efectivo (Cuenta 570)</span>
+                    <span>Pago en efectivo (Cuenta 570)</span>
                   </label>
                 </div>
               </>
@@ -602,7 +602,7 @@ const FormPage1 = ({ user }) => {
               </>
             ) : (
               <div className={styles.fp1InfoBox}>
-                <p>👆 Seleccione un proveedor existente o cree uno nuevo</p>
+                <p>Seleccione un proveedor existente o cree uno nuevo</p>
               </div>
             )}
           </div>
@@ -610,7 +610,7 @@ const FormPage1 = ({ user }) => {
 
         {/* SECCIÓN DETALLES ECONÓMICOS */}
         <div className={styles.fp1Section}>
-          <h3>💰 Detalles Económicos</h3>
+          <h3>Detalles Económicos</h3>
           
           <div className={styles.fp1DualGrid}>
             <div className={styles.fp1LeftColumn}>
@@ -628,7 +628,7 @@ const FormPage1 = ({ user }) => {
 
               {/* LÍNEAS DE DETALLE */}
               <div className={styles.fp1DetallesContainer}>
-                <h4>📝 Líneas de Detalle:</h4>
+                <h4>Líneas de Detalle:</h4>
                 
                 {detalles.map((line, i) => (
                   <div className={styles.fp1DetalleLinea} key={i}>
@@ -641,7 +641,7 @@ const FormPage1 = ({ user }) => {
                           onClick={() => removeDetalleLine(i)}
                           title="Eliminar línea"
                         >
-                          🗑️ Eliminar
+                          Eliminar
                         </button>
                       )}
                     </div>
@@ -720,13 +720,13 @@ const FormPage1 = ({ user }) => {
                 ))}
                 
                 <button type="button" className={styles.fp1AddBtn} onClick={addDetalleLine}>
-                  ➕ Añadir otra línea
+                  Añadir otra línea
                 </button>
               </div>
 
               {/* RESUMEN DE TOTALES */}
               <div className={styles.fp1Totales}>
-                <h4>📊 Resumen de Totales:</h4>
+                <h4>Resumen de Totales:</h4>
                 <div className={styles.fp1TotalItem}>
                   <span>Base Imponible:</span>
                   <span>{totales.base.toFixed(2)} €</span>
@@ -750,7 +750,7 @@ const FormPage1 = ({ user }) => {
                 
                 {totales.total > 0 && (
                   <div className={styles.fp1Desglose}>
-                    <small>💡 Desglose contable:</small>
+                    <small>Desglose contable:</small>
                     <small>• Proveedor (400): {totales.total.toFixed(2)}€ HABER</small>
                     <small>• {tipo === 'factura' ? 'Compra (600)' : 'Gasto (622)'}: {totales.base.toFixed(2)}€ DEBE</small>
                     {totales.iva > 0 && <small>• IVA (472): {totales.iva.toFixed(2)}€ DEBE</small>}
@@ -764,14 +764,14 @@ const FormPage1 = ({ user }) => {
               {/* INFO PAGO EFECTIVO */}
               {isNuevoProveedor && pagoEfectivo && (
                 <div className={styles.fp1InfoBox}>
-                  <h4>💵 Pago en Efectivo</h4>
+                  <h4>Pago en Efectivo</h4>
                   <p>Se utilizará la cuenta <strong>570000000</strong> para el pago en efectivo.</p>
                 </div>
               )}
 
               {/* ADJUNTAR ARCHIVO */}
               <div className={styles.fp1FormGroup}>
-                <label>📎 Adjuntar archivo (Opcional)</label>
+                <label>Adjuntar archivo (Opcional)</label>
                 <input 
                   type="file" 
                   onChange={handleFileChange}
@@ -788,7 +788,7 @@ const FormPage1 = ({ user }) => {
 
               {/* INFO DEL ASIENTO */}
               <div className={styles.fp1InfoBox}>
-                <h4>ℹ️ Información del Asiento</h4>
+                <h4>Información del Asiento</h4>
                 <p><strong>Número:</strong> #{numAsiento}</p>
                 <p><strong>Ejercicio:</strong> 2025</p>
                 <p><strong>Empresa:</strong> 9999</p>
@@ -807,7 +807,7 @@ const FormPage1 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            ❌ Cancelar
+            Cancelar
           </button>
           <button 
             type="button" 
@@ -815,14 +815,14 @@ const FormPage1 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            🧹 Limpiar
+            Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp1SubmitBtn} 
             disabled={loading || !numDocumento || (!cuentaP && !isNuevoProveedor) || totales.total <= 0}
           >
-            {loading ? '⏳ Procesando...' : '💾 Crear Asiento'}
+            {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
         </div>
       </form>
