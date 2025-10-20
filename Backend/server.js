@@ -57,8 +57,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false, // Cambiar a true en producción con HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    secure: false,
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -75,7 +75,6 @@ const requireAuth = (req, res, next) => {
 // ✅ ENDPOINTS DE AUTENTICACIÓN
 // ============================================
 
-// POST /login - Iniciar sesión
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   
@@ -108,7 +107,6 @@ app.post('/login', async (req, res) => {
       const userData = result.recordset[0];
       const isAdmin = userData.StatusAdministrador === -1;
       
-      // Guardar usuario en la sesión
       req.session.user = {
         codigoCliente: userData.CodigoCliente?.trim() || '',
         cifDni: userData.CifDni?.trim() || '',
@@ -144,7 +142,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// POST /logout - Cerrar sesión
 app.post('/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
@@ -155,7 +152,6 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// GET /api/session - Verificar sesión
 app.get('/api/session', (req, res) => {
   if (req.session.user) {
     res.json({ 
@@ -168,10 +164,9 @@ app.get('/api/session', (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE PROVEEDORES - CORREGIDOS
+// ✅ ENDPOINTS DE PROVEEDORES
 // ============================================
 
-// GET /api/proveedores - Obtener lista de proveedores
 app.get('/api/proveedores', requireAuth, async (req, res) => {
   try {
     const result = await pool.request().query(`
@@ -196,7 +191,6 @@ app.get('/api/proveedores', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/proveedores/cuentas - Obtener cuentas contables de proveedores
 app.get('/api/proveedores/cuentas', requireAuth, async (req, res) => {
   try {
     const result = await pool.request().query(`
@@ -223,7 +217,6 @@ app.get('/api/proveedores/cuentas', requireAuth, async (req, res) => {
 // ✅ ENDPOINTS DE CONTADORES
 // ============================================
 
-// GET /api/contador - Obtener siguiente número de asiento
 app.get('/api/contador', requireAuth, async (req, res) => {
   try {
     const result = await pool.request()
@@ -253,7 +246,6 @@ app.get('/api/contador', requireAuth, async (req, res) => {
 // ✅ ENDPOINTS DE ASIENTOS CONTABLES - FACTURAS/GASTOS
 // ============================================
 
-// POST /api/asiento/factura - Crear asiento de factura/gasto - CORREGIDO COMPLETO
 app.post('/api/asiento/factura', requireAuth, async (req, res) => {
   let transaction;
   
@@ -262,7 +254,6 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
     await transaction.begin();
     console.log('🔨 Iniciando creación de asiento contable...');
     
-    // 1. Obtener siguiente número de asiento
     const contadorResult = await transaction.request()
       .query(`
         SELECT sysContadorValor 
@@ -283,7 +274,6 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
     
     console.log(`📝 Asiento #${siguienteAsiento} - Usuario: ${usuario}`);
     
-    // 2. Obtener y validar datos del formulario
     const { 
       detalles, 
       proveedor, 
@@ -293,7 +283,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       fechaFactura, 
       numFRA,
       pagoEfectivo,
-      vencimiento  // Añadimos vencimiento del body
+      vencimiento
     } = req.body;
     
     if (!detalles || !Array.isArray(detalles) || detalles.length === 0) {
@@ -308,8 +298,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       throw new Error('Datos del proveedor requeridos');
     }
     
-    // 3. Buscar la cuenta contable REAL del proveedor en ClientesConta
-    let cuentaContableReal = '400000000'; // Por defecto
+    let cuentaContableReal = '400000000';
     try {
       const cuentaContableResult = await transaction.request()
         .input('codigoProveedor', sql.VarChar, proveedor.cuentaProveedor)
@@ -328,15 +317,13 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       }
     } catch (error) {
       console.error('❌ Error buscando cuenta contable:', error);
-      // Continuamos con la cuenta por defecto
     }
     
-    // 4. Calcular totales
     let totalBase = 0;
     let totalIVA = 0;
     let totalRetencion = 0;
     
-    detalles.forEach((linea, index) => {
+    detalles.forEach((linea) => {
       const base = parseFloat(linea.base) || 0;
       const iva = parseFloat(linea.cuotaIVA) || 0;
       const retencion = parseFloat(linea.cuotaRetencion) || 0;
@@ -348,23 +335,19 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       }
     });
     
-    // CORRECCIÓN: Total factura = Base + IVA (sin restar retención) como en Sage200
     const totalFactura = totalBase + totalIVA;
     const numFactura = numDocumento;
     
     console.log(`💰 Totales: Base=${totalBase}, IVA=${totalIVA}, Retención=${totalRetencion}, Total=${totalFactura}`);
     
-    // 5. Determinar cuentas según los datos del formulario - USANDO CUENTA REAL
-    const cuentaProveedor = cuentaContableReal; // Usar la cuenta REAL de ClientesConta
-    const cuentaGasto = '621000000'; // SIEMPRE 621 como en Sage200
+    const cuentaProveedor = cuentaContableReal;
+    const cuentaGasto = '621000000';
     const cuentaCaja = '570000000';
     const cuentaContrapartida = pagoEfectivo ? cuentaCaja : cuentaProveedor;
     
-    // 6. Preparar fecha de vencimiento en formato correcto
     let fechaVencimientoFormateada = null;
     if (vencimiento) {
       try {
-        // Convertir la fecha de vencimiento al formato de Sage200
         const fechaVenc = new Date(vencimiento);
         fechaVencimientoFormateada = new Date(fechaVenc.getFullYear(), fechaVenc.getMonth(), fechaVenc.getDate(), 0, 0, 0, 0);
         console.log(`📅 Fecha vencimiento formateada: ${fechaVencimientoFormateada}`);
@@ -374,13 +357,10 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       }
     }
     
-    // 7. Comentario CORTO como en Sage200
     const comentarioCorto = `Factura n. ${numFactura}`.substring(0, 40);
     console.log(`📝 Comentario: ${comentarioCorto}`);
     
-    // 8. Insertar líneas del asiento en Movimientos - ESTRUCTURA SAGE200 CORREGIDA
-    
-    // Línea 1: Proveedor (HABER) - Total factura (base + IVA)
+    // Línea 1: Proveedor (HABER)
     const movPosicionProveedor = uuidv4();
     console.log('Insertando línea 1: Proveedor...');
     
@@ -392,17 +372,17 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       .input('Asiento', sql.Int, siguienteAsiento)
       .input('CargoAbono', sql.VarChar(1), 'H')
       .input('CodigoCuenta', sql.VarChar(15), cuentaContrapartida)
-      .input('Contrapartida', sql.VarChar(15), '') // VACÍO como en Sage200
+      .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
-      .input('TipoDocumento', sql.VarChar(6), '') // VACÍO
-      .input('DocumentoConta', sql.VarChar(9), '') // VACÍO
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
       .input('Comentario', sql.VarChar(40), comentarioCorto)
       .input('ImporteAsiento', sql.Decimal(18, 2), totalFactura)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), '') // VACÍO
-      .input('CodigoActividad', sql.VarChar(1), '') // VACÍO
-      .input('Previsiones', sql.VarChar(1), 'P') // SIEMPRE 'P' para la línea de proveedor
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), 'P')
       .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
       .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
       .input('StatusConciliacion', sql.TinyInt, 0)
@@ -423,7 +403,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
     
-    // Línea 2: IVA (DEBE) - Solo si hay IVA
+    // Línea 2: IVA (DEBE)
     let movPosicionIVA = null;
     if (totalIVA > 0) {
       movPosicionIVA = uuidv4();
@@ -437,7 +417,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         .input('Asiento', sql.Int, siguienteAsiento)
         .input('CargoAbono', sql.VarChar(1), 'D')
         .input('CodigoCuenta', sql.VarChar(15), '472000000')
-        .input('Contrapartida', sql.VarChar(15), cuentaContrapartida) // Contrapartida a proveedor como en Sage200
+        .input('Contrapartida', sql.VarChar(15), cuentaContrapartida)
         .input('FechaAsiento', sql.DateTime, fechaAsiento)
         .input('TipoDocumento', sql.VarChar(6), '')
         .input('DocumentoConta', sql.VarChar(9), '')
@@ -447,7 +427,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         .input('CodigoDiario', sql.TinyInt, 0)
         .input('CodigoCanal', sql.VarChar(10), '')
         .input('CodigoActividad', sql.VarChar(1), '')
-        .input('Previsiones', sql.VarChar(1), '') // CADENA VACÍA en lugar de NULL
+        .input('Previsiones', sql.VarChar(1), '')
         .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
         .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
         .input('StatusConciliacion', sql.TinyInt, 0)
@@ -469,7 +449,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         `);
     }
     
-    // Línea 3: Gasto/Compra (DEBE) - SIEMPRE 621 como en Sage200
+    // Línea 3: Gasto/Compra (DEBE)
     const movPosicionGasto = uuidv4();
     console.log('Insertando línea 3: Gasto/Compra...');
     
@@ -491,7 +471,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       .input('CodigoDiario', sql.TinyInt, 0)
       .input('CodigoCanal', sql.VarChar(10), '')
       .input('CodigoActividad', sql.VarChar(1), '')
-      .input('Previsiones', sql.VarChar(1), '') // CADENA VACÍA en lugar de NULL
+      .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
       .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
       .input('StatusConciliacion', sql.TinyInt, 0)
@@ -512,7 +492,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
     
-    // 9. Insertar en tablas relacionadas - ESTRUCTURA SAGE200 CORREGIDA
+    // Insertar en tablas relacionadas
     if (!pagoEfectivo) {
       const retencionPrincipal = detalles[0]?.retencion || (totalRetencion > 0 ? '15' : '0');
       console.log('Insertando en MovimientosFacturas...');
@@ -530,7 +510,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
         .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
         .input('Fecha347', sql.DateTime, fechaFactura || fechaAsiento)
-        .input('ImporteFactura', sql.Decimal(18, 2), totalFactura) // Base + IVA
+        .input('ImporteFactura', sql.Decimal(18, 2), totalFactura)
         .input('TipoFactura', sql.VarChar(1), 'R')
         .input('CodigoCuentaFactura', sql.VarChar(15), cuentaProveedor)
         .input('CifDni', sql.VarChar(13), (proveedor.cif || '').substring(0, 13))
@@ -551,7 +531,6 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         `);
     }
     
-    // Insertar en MovimientosIva - ESTRUCTURA SAGE200 CORREGIDA
     if (totalIVA > 0 && movPosicionIVA) {
       const tipoIVAPrincipal = detalles[0]?.tipoIVA || '21';
       console.log('Insertando en MovimientosIva...');
@@ -559,12 +538,12 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       await transaction.request()
         .input('CodigoEmpresa', sql.SmallInt, 9999)
         .input('Ejercicio', sql.SmallInt, 2025)
-        .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor) // MovPosicion del proveedor
+        .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
         .input('TipoMov', sql.TinyInt, 0)
         .input('Orden', sql.TinyInt, 1)
         .input('Año', sql.SmallInt, 2025)
         .input('CodigoIva', sql.SmallInt, parseInt(tipoIVAPrincipal))
-        .input('IvaPosicion', sql.UniqueIdentifier, movPosicionIVA) // MovPosicion del IVA
+        .input('IvaPosicion', sql.UniqueIdentifier, movPosicionIVA)
         .input('RecPosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
         .input('BasePosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
         .input('BaseIva', sql.Decimal(18, 2), totalBase)
@@ -573,9 +552,9 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         .input('CuotaIva', sql.Decimal(18, 2), totalIVA)
         .input('PorcentajeRecargoEquivalencia', sql.Decimal(18, 2), 0)
         .input('RecargoEquivalencia', sql.Decimal(18, 2), 0)
-        .input('CodigoTransaccion', sql.TinyInt, 1) // 1 como en Sage200
+        .input('CodigoTransaccion', sql.TinyInt, 1)
         .input('Deducible', sql.SmallInt, -1)
-        .input('BaseUtilizada', sql.Decimal(18, 2), totalFactura) // Base + IVA
+        .input('BaseUtilizada', sql.Decimal(18, 2), totalFactura)
         .query(`
           INSERT INTO MovimientosIva 
           (CodigoEmpresa, Ejercicio, MovPosicion, TipoMov, Orden, Año, CodigoIva, 
@@ -588,7 +567,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
         `);
     }
     
-    // 10. Actualizar contador
+    // Actualizar contador
     console.log('Actualizando contador...');
     await transaction.request()
       .query(`
@@ -608,7 +587,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       asiento: siguienteAsiento,
       message: `Asiento #${siguienteAsiento} creado correctamente`,
       detalles: {
-        lineas: 3, // 3 líneas como en Sage200
+        lineas: 3,
         base: totalBase,
         iva: totalIVA,
         retencion: totalRetencion,
@@ -645,15 +624,16 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS
+// ✅ ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS (FormPage2)
 // ============================================
 
-// POST /api/asiento/ingreso - Crear asiento de ingreso
 app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
-  const transaction = new sql.Transaction(pool);
+  let transaction;
   
   try {
+    transaction = new sql.Transaction(pool);
     await transaction.begin();
+    console.log('🔨 Iniciando creación de asiento de ingreso...');
     
     const contadorResult = await transaction.request()
       .query(`
@@ -665,58 +645,535 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
           AND sysNombreContador = 'ASIENTOS'
       `);
     
+    if (contadorResult.recordset.length === 0) {
+      throw new Error('Contador de asientos no encontrado');
+    }
+    
     const siguienteAsiento = contadorResult.recordset[0].sysContadorValor;
     const fechaAsiento = new Date();
+    const usuario = req.session.user?.usuario || 'Sistema';
     
-    const { tipoIngreso, cuentaSeleccionada, importe, concepto, serie, numDocumento } = req.body;
+    console.log(`📝 Asiento Ingreso #${siguienteAsiento} - Usuario: ${usuario}`);
     
-    if (!cuentaSeleccionada || !importe || !concepto) {
+    const { 
+      tipoIngreso, 
+      cuentaSeleccionada, 
+      importe, 
+      concepto, 
+      serie, 
+      numDocumento 
+    } = req.body;
+    
+    if (!cuentaSeleccionada || !importe || !concepto || !numDocumento) {
       throw new Error('Datos incompletos para el ingreso');
     }
     
-    const numDocumentoCompleto = `${serie}-${numDocumento}`;
+    const importeNum = parseFloat(importe);
+    if (importeNum <= 0) {
+      throw new Error('El importe debe ser mayor a 0');
+    }
+    
+    const cuentaIngreso = cuentaSeleccionada;
     const cuentaContrapartida = tipoIngreso === 'caja' ? '570000000' : '430000000';
     
-    // Línea de ingreso (Haber)
+    const comentarioCorto = `Ingreso ${numDocumento} - ${concepto}`.substring(0, 40);
+    console.log(`💰 Importe: ${importeNum}, Cuenta: ${cuentaIngreso}, Contrapartida: ${cuentaContrapartida}`);
+    
+    // Línea 1: Ingreso (HABER)
+    const movPosicionIngreso = uuidv4();
+    console.log('Insertando línea 1: Ingreso...');
+    
     await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionIngreso)
       .input('Ejercicio', sql.SmallInt, 2025)
       .input('CodigoEmpresa', sql.SmallInt, 9999)
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
-      .input('CargoAbono', sql.VarChar, 'H')
-      .input('CodigoCuenta', sql.VarChar, cuentaSeleccionada)
+      .input('CargoAbono', sql.VarChar(1), 'H')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaIngreso)
+      .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
-      .input('Comentario', sql.VarChar, `Ingreso ${numDocumentoCompleto} - ${concepto}`)
-      .input('ImporteAsiento', sql.Decimal(18, 2), importe)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioCorto)
+      .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), '')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, new Date())
       .query(`
         INSERT INTO Movimientos 
-        (Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
-         FechaAsiento, Comentario, ImporteAsiento, FechaGrabacion)
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
-        (@Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
-         @FechaAsiento, @Comentario, @ImporteAsiento, @FechaGrabacion)
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
     
-    // Línea de contrapartida (Débito)
+    // Línea 2: Contrapartida (DEBE)
+    const movPosicionContrapartida = uuidv4();
+    console.log('Insertando línea 2: Contrapartida...');
+    
     await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionContrapartida)
       .input('Ejercicio', sql.SmallInt, 2025)
       .input('CodigoEmpresa', sql.SmallInt, 9999)
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
-      .input('CargoAbono', sql.VarChar, 'D')
-      .input('CodigoCuenta', sql.VarChar, cuentaContrapartida)
+      .input('CargoAbono', sql.VarChar(1), 'D')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaContrapartida)
+      .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
-      .input('Comentario', sql.VarChar, `Contrapartida ingreso ${numDocumentoCompleto}`)
-      .input('ImporteAsiento', sql.Decimal(18, 2), importe)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioCorto)
+      .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), '')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, new Date())
       .query(`
         INSERT INTO Movimientos 
-        (Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
-         FechaAsiento, Comentario, ImporteAsiento, FechaGrabacion)
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
-        (@Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
-         @FechaAsiento, @Comentario, @ImporteAsiento, @FechaGrabacion)
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+    
+    // Insertar en MovimientosFacturas si es ingreso por cliente
+    if (tipoIngreso === 'cliente') {
+      console.log('Insertando en MovimientosFacturas para cliente...');
+      
+      await transaction.request()
+        .input('MovPosicion', sql.UniqueIdentifier, movPosicionContrapartida)
+        .input('TipoMov', sql.TinyInt, 0)
+        .input('CodigoEmpresa', sql.SmallInt, 9999)
+        .input('Ejercicio', sql.SmallInt, 2025)
+        .input('Año', sql.SmallInt, 2025)
+        .input('CodigoCanal', sql.VarChar(10), '')
+        .input('IdDelegacion', sql.VarChar(10), '')
+        .input('Serie', sql.VarChar(10), serie || '')
+        .input('Factura', sql.Int, parseInt(numDocumento) || 0)
+        .input('SuFacturaNo', sql.VarChar(40), numDocumento)
+        .input('FechaFactura', sql.DateTime, fechaAsiento)
+        .input('Fecha347', sql.DateTime, fechaAsiento)
+        .input('ImporteFactura', sql.Decimal(18, 2), importeNum)
+        .input('TipoFactura', sql.VarChar(1), 'I')
+        .input('CodigoCuentaFactura', sql.VarChar(15), cuentaContrapartida)
+        .input('CifDni', sql.VarChar(13), '')
+        .input('Nombre', sql.VarChar(35), 'INGRESO VARIOS')
+        .input('CodigoRetencion', sql.SmallInt, 0)
+        .input('BaseRetencion', sql.Decimal(18, 2), 0)
+        .input('PorcentajeRetencion', sql.Decimal(18, 2), 0)
+        .input('ImporteRetencion', sql.Decimal(18, 2), 0)
+        .query(`
+          INSERT INTO MovimientosFacturas 
+          (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
+           FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
+           CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
+          VALUES 
+          (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
+           @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
+           @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
+        `);
+    }
+    
+    // Actualizar contador
+    console.log('Actualizando contador...');
+    await transaction.request()
+      .query(`
+        UPDATE LsysContadores 
+        SET sysContadorValor = sysContadorValor + 1
+        WHERE sysAplicacion = 'CON' 
+          AND sysGrupo = '9999' 
+          AND sysEjercicio = 2025 
+          AND sysNombreContador = 'ASIENTOS'
+      `);
+    
+    await transaction.commit();
+    console.log(`🎉 Asiento Ingreso #${siguienteAsiento} creado exitosamente`);
+    
+    res.json({ 
+      success: true, 
+      asiento: siguienteAsiento,
+      message: `Asiento Ingreso #${siguienteAsiento} creado correctamente`,
+      detalles: {
+        lineas: 2,
+        importe: importeNum,
+        cuentaIngreso: cuentaIngreso,
+        cuentaContrapartida: cuentaContrapartida
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error detallado creando asiento de ingreso:', err);
+    
+    if (transaction) {
+      try {
+        console.log('Intentando rollback...');
+        await transaction.rollback();
+        console.log('Rollback completado');
+      } catch (rollbackErr) {
+        console.error('❌ Error durante el rollback:', rollbackErr);
+      }
+    }
+    
+    let errorMessage = 'Error creando asiento de ingreso: ' + err.message;
+    
+    if (err.code === 'EREQUEST') {
+      if (err.originalError && err.originalError.info) {
+        errorMessage += `\nDetalles SQL: ${err.originalError.info.message}`;
+      }
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: errorMessage,
+      detalles: err.details || null
+    });
+  }
+});
+
+// ============================================
+// ✅ ENDPOINTS DE ASIENTOS CONTABLES - ASIENTO DOBLE (FormPage3)
+// ============================================
+
+app.post('/api/asiento/doble', requireAuth, async (req, res) => {
+  let transaction;
+  
+  try {
+    transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    console.log('🔨 Iniciando creación de asiento doble...');
+    
+    const contadorResult = await transaction.request()
+      .query(`
+        SELECT sysContadorValor 
+        FROM LsysContadores 
+        WHERE sysAplicacion = 'CON' 
+          AND sysGrupo = '9999' 
+          AND sysEjercicio = 2025 
+          AND sysNombreContador = 'ASIENTOS'
+      `);
+    
+    if (contadorResult.recordset.length === 0) {
+      throw new Error('Contador de asientos no encontrado');
+    }
+    
+    const siguienteAsiento = contadorResult.recordset[0].sysContadorValor;
+    const fechaAsiento = new Date();
+    const usuario = req.session.user?.usuario || 'Sistema';
+    
+    console.log(`📝 Asiento Doble #${siguienteAsiento} - Usuario: ${usuario}`);
+    
+    const { 
+      ingreso,
+      factura,
+      tipoIngreso
+    } = req.body;
+    
+    if (!ingreso || !factura) {
+      throw new Error('Datos de ingreso y factura requeridos');
+    }
+    
+    if (!ingreso.cuentaSeleccionada || !ingreso.importe || !ingreso.concepto) {
+      throw new Error('Datos de ingreso incompletos');
+    }
+    
+    if (!factura.proveedor || !factura.detalles || !Array.isArray(factura.detalles) || factura.detalles.length === 0) {
+      throw new Error('Datos de factura incompletos');
+    }
+    
+    // Calcular totales de la factura
+    let totalBase = 0;
+    let totalIVA = 0;
+    let totalRetencion = 0;
+    
+    factura.detalles.forEach((linea) => {
+      const base = parseFloat(linea.base) || 0;
+      const iva = parseFloat(linea.cuotaIVA) || 0;
+      const retencion = parseFloat(linea.cuotaRetencion) || 0;
+      
+      if (base > 0) {
+        totalBase += base;
+        totalIVA += iva;
+        totalRetencion += retencion;
+      }
+    });
+    
+    const totalFactura = totalBase + totalIVA;
+    const importeIngreso = parseFloat(ingreso.importe);
+    
+    // Validar que los importes coincidan
+    if (Math.abs(totalFactura - importeIngreso) > 0.01) {
+      throw new Error(`Los importes no coinciden: Factura ${totalFactura.toFixed(2)} vs Ingreso ${importeIngreso.toFixed(2)}`);
+    }
+    
+    // Buscar cuenta contable del proveedor
+    let cuentaProveedor = '400000000';
+    try {
+      const cuentaContableResult = await transaction.request()
+        .input('codigoProveedor', sql.VarChar, factura.proveedor.cuentaProveedor)
+        .query(`
+          SELECT CodigoCuenta 
+          FROM ClientesConta 
+          WHERE CodigoClienteProveedor = @codigoProveedor
+            AND CodigoEmpresa = 9999
+        `);
+      
+      if (cuentaContableResult.recordset.length > 0) {
+        cuentaProveedor = cuentaContableResult.recordset[0].CodigoCuenta;
+        console.log(`✅ Cuenta contable encontrada: ${cuentaProveedor}`);
+      }
+    } catch (error) {
+      console.error('❌ Error buscando cuenta contable:', error);
+    }
+    
+    // Determinar cuentas
+    const cuentaIngreso = ingreso.cuentaSeleccionada;
+    const cuentaContrapartida = tipoIngreso === 'caja' ? '570000000' : '430000000';
+    const cuentaGasto = '621000000';
+    
+    // Comentarios
+    const comentarioIngreso = `Ingreso ${ingreso.numDocumento} - ${ingreso.concepto}`.substring(0, 40);
+    const comentarioFactura = `Factura ${factura.numDocumento}`.substring(0, 40);
+    
+    console.log(`💰 Asiento Doble: Ingreso=${importeIngreso}, Factura=${totalFactura}`);
+    
+    // PARTE INGRESO - 2 líneas
+    
+    // Línea 1: Ingreso (HABER)
+    const movPosicionIngreso = uuidv4();
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionIngreso)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('Asiento', sql.Int, siguienteAsiento)
+      .input('CargoAbono', sql.VarChar(1), 'H')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaIngreso)
+      .input('Contrapartida', sql.VarChar(15), '')
+      .input('FechaAsiento', sql.DateTime, fechaAsiento)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioIngreso)
+      .input('ImporteAsiento', sql.Decimal(18, 2), importeIngreso)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), '')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
+      .input('FechaGrabacion', sql.DateTime, new Date())
+      .query(`
+        INSERT INTO Movimientos 
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+        VALUES 
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+    
+    // Línea 2: Contrapartida Ingreso (DEBE)
+    const movPosicionContrapartida = uuidv4();
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionContrapartida)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('Asiento', sql.Int, siguienteAsiento)
+      .input('CargoAbono', sql.VarChar(1), 'D')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaContrapartida)
+      .input('Contrapartida', sql.VarChar(15), '')
+      .input('FechaAsiento', sql.DateTime, fechaAsiento)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioIngreso)
+      .input('ImporteAsiento', sql.Decimal(18, 2), importeIngreso)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), '')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
+      .input('FechaGrabacion', sql.DateTime, new Date())
+      .query(`
+        INSERT INTO Movimientos 
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+        VALUES 
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+    
+    // PARTE FACTURA - 3 líneas
+    
+    // Línea 3: Proveedor (HABER)
+    const movPosicionProveedor = uuidv4();
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('Asiento', sql.Int, siguienteAsiento)
+      .input('CargoAbono', sql.VarChar(1), 'H')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaProveedor)
+      .input('Contrapartida', sql.VarChar(15), '')
+      .input('FechaAsiento', sql.DateTime, fechaAsiento)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioFactura)
+      .input('ImporteAsiento', sql.Decimal(18, 2), totalFactura)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), 'P')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
+      .input('FechaGrabacion', sql.DateTime, new Date())
+      .query(`
+        INSERT INTO Movimientos 
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+        VALUES 
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+    
+    // Línea 4: IVA (DEBE)
+    let movPosicionIVA = null;
+    if (totalIVA > 0) {
+      movPosicionIVA = uuidv4();
+      await transaction.request()
+        .input('MovPosicion', sql.UniqueIdentifier, movPosicionIVA)
+        .input('Ejercicio', sql.SmallInt, 2025)
+        .input('CodigoEmpresa', sql.SmallInt, 9999)
+        .input('TipoMov', sql.TinyInt, 0)
+        .input('Asiento', sql.Int, siguienteAsiento)
+        .input('CargoAbono', sql.VarChar(1), 'D')
+        .input('CodigoCuenta', sql.VarChar(15), '472000000')
+        .input('Contrapartida', sql.VarChar(15), cuentaProveedor)
+        .input('FechaAsiento', sql.DateTime, fechaAsiento)
+        .input('TipoDocumento', sql.VarChar(6), '')
+        .input('DocumentoConta', sql.VarChar(9), '')
+        .input('Comentario', sql.VarChar(40), comentarioFactura)
+        .input('ImporteAsiento', sql.Decimal(18, 2), totalIVA)
+        .input('StatusAcumulacion', sql.Int, -1)
+        .input('CodigoDiario', sql.TinyInt, 0)
+        .input('CodigoCanal', sql.VarChar(10), '')
+        .input('CodigoActividad', sql.VarChar(1), '')
+        .input('Previsiones', sql.VarChar(1), '')
+        .input('FechaVencimiento', sql.DateTime, null)
+        .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+        .input('StatusConciliacion', sql.TinyInt, 0)
+        .input('StatusSaldo', sql.TinyInt, 0)
+        .input('StatusTraspaso', sql.TinyInt, 0)
+        .input('CodigoUsuario', sql.TinyInt, 1)
+        .input('FechaGrabacion', sql.DateTime, new Date())
+        .query(`
+          INSERT INTO Movimientos 
+          (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+           Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+           StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+           StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+          VALUES 
+          (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+           @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+           @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+           @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+        `);
+    }
+    
+    // Línea 5: Gasto (DEBE)
+    const movPosicionGasto = uuidv4();
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionGasto)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('Asiento', sql.Int, siguienteAsiento)
+      .input('CargoAbono', sql.VarChar(1), 'D')
+      .input('CodigoCuenta', sql.VarChar(15), cuentaGasto)
+      .input('Contrapartida', sql.VarChar(15), '')
+      .input('FechaAsiento', sql.DateTime, fechaAsiento)
+      .input('TipoDocumento', sql.VarChar(6), '')
+      .input('DocumentoConta', sql.VarChar(9), '')
+      .input('Comentario', sql.VarChar(40), comentarioFactura)
+      .input('ImporteAsiento', sql.Decimal(18, 2), totalBase)
+      .input('StatusAcumulacion', sql.Int, -1)
+      .input('CodigoDiario', sql.TinyInt, 0)
+      .input('CodigoCanal', sql.VarChar(10), '')
+      .input('CodigoActividad', sql.VarChar(1), '')
+      .input('Previsiones', sql.VarChar(1), '')
+      .input('FechaVencimiento', sql.DateTime, null)
+      .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
+      .input('StatusConciliacion', sql.TinyInt, 0)
+      .input('StatusSaldo', sql.TinyInt, 0)
+      .input('StatusTraspaso', sql.TinyInt, 0)
+      .input('CodigoUsuario', sql.TinyInt, 1)
+      .input('FechaGrabacion', sql.DateTime, new Date())
+      .query(`
+        INSERT INTO Movimientos 
+        (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
+         Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+        VALUES 
+        (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
+         @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
     
     // Actualizar contador
@@ -732,12 +1189,19 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
     
     await transaction.commit();
     
-    console.log(`✅ Asiento de ingreso #${siguienteAsiento} creado`);
-    res.json({ success: true, asiento: siguienteAsiento });
+    res.json({ 
+      success: true, 
+      asiento: siguienteAsiento,
+      message: `Asiento Doble #${siguienteAsiento} creado correctamente`
+    });
+    
   } catch (err) {
-    await transaction.rollback();
-    console.error('❌ Error creando asiento de ingreso:', err);
-    res.status(500).json({ error: 'Error creando asiento de ingreso: ' + err.message });
+    if (transaction) await transaction.rollback();
+    console.error('❌ Error creando asiento doble:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error creando asiento doble: ' + err.message
+    });
   }
 });
 

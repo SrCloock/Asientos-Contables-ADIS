@@ -31,7 +31,6 @@ const FormPage2 = ({ user }) => {
     { id: '769000000', nombre: 'Otros ingresos de gestión' }
   ];
 
-  // Obtener siguiente número de asiento al cargar el componente
   useEffect(() => {
     const fetchContador = async () => {
       try {
@@ -51,7 +50,6 @@ const FormPage2 = ({ user }) => {
     setArchivo(e.target.files[0]);
   };
 
-  // Reiniciar formulario
   const resetForm = () => {
     setCuentaSeleccionada('');
     setImporte('');
@@ -60,7 +58,6 @@ const FormPage2 = ({ user }) => {
     setFechaFactura(new Date().toISOString().split('T')[0]);
     setArchivo(null);
     
-    // Obtener nuevo número de asiento
     const fetchNewContador = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/contador', {
@@ -77,6 +74,17 @@ const FormPage2 = ({ user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!cuentaSeleccionada || !importe || !concepto || !numDocumento) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    if (parseFloat(importe) <= 0) {
+      alert('El importe debe ser mayor a 0');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -95,7 +103,14 @@ const FormPage2 = ({ user }) => {
       });
       
       if (response.data.success) {
-        alert(`Asiento de ingreso #${response.data.asiento} creado correctamente`);
+        const mensaje = `Asiento de ingreso #${response.data.asiento} creado correctamente\n\n` +
+                       `Detalles:\n` +
+                       `• Importe: ${response.data.detalles.importe.toFixed(2)}€\n` +
+                       `• Cuenta ingreso: ${response.data.detalles.cuentaIngreso}\n` +
+                       `• Cuenta contrapartida: ${response.data.detalles.cuentaContrapartida}\n` +
+                       `• Líneas: ${response.data.detalles.lineas}`;
+        
+        alert(mensaje);
         resetForm();
       } else {
         alert('Error al crear el asiento: ' + response.data.message);
@@ -103,13 +118,17 @@ const FormPage2 = ({ user }) => {
     } catch (error) {
       console.error('Error creando asiento de ingreso:', error);
       
+      let mensajeError = 'Error al crear el asiento.';
+      
       if (error.response?.data?.error) {
-        alert('Error al crear el asiento: ' + error.response.data.error);
+        mensajeError += '\n' + error.response.data.error;
       } else if (error.code === 'ERR_NETWORK') {
-        alert('Error de conexión. Verifica que el servidor backend esté ejecutándose.');
-      } else {
-        alert('Error al crear el asiento. Verifica la conexión y los datos.');
+        mensajeError = 'Error de conexión. Verifique que el servidor backend esté ejecutándose.';
+      } else if (error.message) {
+        mensajeError += '\n' + error.message;
       }
+      
+      alert(mensajeError);
     } finally {
       setLoading(false);
     }
@@ -139,8 +158,8 @@ const FormPage2 = ({ user }) => {
                 }}
                 required
               >
-                <option value="caja">Ingreso en Caja</option>
-                <option value="cliente">Ingreso por Cliente</option>
+                <option value="caja">Ingreso en Caja (Cuenta 570)</option>
+                <option value="cliente">Ingreso por Cliente (Cuenta 430)</option>
               </select>
             </div>
           </div>
@@ -155,6 +174,7 @@ const FormPage2 = ({ user }) => {
                 type="text" 
                 value={serie}
                 onChange={(e) => setSerie(e.target.value)}
+                placeholder="ING, FAC, etc."
               />
             </div>
             <div className={styles.fp2FormGroup}>
@@ -163,6 +183,7 @@ const FormPage2 = ({ user }) => {
                 type="text" 
                 value={numDocumento}
                 onChange={(e) => setNumDocumento(e.target.value)}
+                placeholder="Número de documento"
                 required
               />
             </div>

@@ -1,0 +1,500 @@
+.fp3Container {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.fp3Header {
+  background: linear-gradient(135deg, #7e22ce, #8b5cf6);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fp3Header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.fp3AsientoInfo {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.9rem;
+}
+
+.fp3AsientoInfo span {
+  display: flex;
+  flex-direction: column;
+}
+
+.fp3AsientoInfo strong {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.fp3Form {
+  padding: 2rem;
+}
+
+.fp3Section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.fp3Section:nth-child(1) {
+  border-left: 4px solid #10b981; /* Verde para ingreso */
+}
+
+.fp3Section:nth-child(2) {
+  border-left: 4px solid #ef4444; /* Rojo para factura */
+}
+
+.fp3Section h3 {
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fp3FormRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.fp3FormGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.fp3FormGroup label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.fp3FormGroup input,
+.fp3FormGroup select {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.fp3FormGroup input:focus,
+.fp3FormGroup select:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.fp3Readonly {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.fp3Detalles {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 1rem;
+}
+
+.fp3Detalles h4 {
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.fp3DetalleLinea {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1rem;
+}
+
+.fp3LineaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fp3LineaHeader span {
+  font-weight: 600;
+  color: #374151;
+}
+
+.fp3RemoveBtn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.fp3RemoveBtn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.fp3RemoveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fp3AddBtn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.fp3AddBtn:hover {
+  background: #059669;
+}
+
+.fp3Resumen {
+  background: white;
+  padding: 1.75rem;
+  border-radius: 8px;
+  border: 2px solid #8b5cf6;
+  margin-top: 1.5rem;
+}
+
+.fp3Resumen h4 {
+  color: #1e293b;
+  margin-bottom: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fp3Totales {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fp3Totales > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+}
+
+.fp3Totales strong {
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.fp3Coincide {
+  color: #10b981;
+  font-weight: 600;
+  padding: 0.5rem;
+  background: #ecfdf5;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+  margin-top: 0.5rem;
+}
+
+.fp3NoCoincide {
+  color: #ef4444;
+  font-weight: 600;
+  padding: 0.5rem;
+  background: #fef2f2;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+  margin-top: 0.5rem;
+}
+
+.fp3ButtonGroup {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.fp3CancelBtn {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.fp3CancelBtn:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.fp3ClearBtn {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.fp3ClearBtn:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.fp3SubmitBtn {
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.fp3SubmitBtn:hover:not(:disabled) {
+  background: #7c3aed;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.fp3SubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Estados de validación */
+.fp3FormGroup input:invalid {
+  border-color: #ef4444;
+}
+
+.fp3FormGroup input:valid {
+  border-color: #10b981;
+}
+
+/* Estilos para el select con opciones de cuentas */
+.fp3FormGroup select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Estilos para la sección de ingreso vs factura */
+.fp3Comparacion {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.fp3ComparacionItem {
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.fp3ComparacionItem.ingreso {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.fp3ComparacionItem.factura {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.fp3ComparacionItem.coincide {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+}
+
+.fp3ComparacionValor {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+/* Tooltip para información adicional */
+.fp3Tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5rem;
+  cursor: help;
+}
+
+.fp3Tooltip::after {
+  content: "ℹ️";
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.fp3Tooltip:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+/* Animaciones */
+@keyframes fp3Pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
+}
+
+.fp3Pulse {
+  animation: fp3Pulse 2s infinite;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .fp3Comparacion {
+    grid-template-columns: 1fr;
+  }
+  
+  .fp3FormRow {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .fp3Form {
+    padding: 1.5rem;
+  }
+  
+  .fp3Header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .fp3AsientoInfo {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .fp3FormRow {
+    grid-template-columns: 1fr;
+  }
+  
+  .fp3ButtonGroup {
+    flex-direction: column;
+  }
+  
+  .fp3Section {
+    padding: 1.25rem;
+  }
+  
+  .fp3DetalleLinea {
+    padding: 1rem;
+  }
+  
+  .fp3LineaHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp3RemoveBtn {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .fp3Container {
+    margin: 0.5rem;
+    border-radius: 8px;
+  }
+  
+  .fp3Form {
+    padding: 1rem;
+  }
+  
+  .fp3Header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .fp3AsientoInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fp3Section h3 {
+    font-size: 1.1rem;
+  }
+  
+  .fp3FormGroup input,
+  .fp3FormGroup select {
+    padding: 0.625rem;
+  }
+}

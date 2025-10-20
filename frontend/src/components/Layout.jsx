@@ -34,7 +34,7 @@ const Layout = () => {
               to="/dashboard" 
               className={location.pathname === '/dashboard' ? styles.active : ''}
             >
-              Dashboard
+              📊 Dashboard
             </Link>
           </li>
           <li>
@@ -42,7 +42,7 @@ const Layout = () => {
               to="/form1" 
               className={location.pathname === '/form1' ? styles.active : ''}
             >
-              Facturas y Gastos
+              📄 Facturas y Gastos
             </Link>
           </li>
           <li>
@@ -50,12 +50,20 @@ const Layout = () => {
               to="/form2" 
               className={location.pathname === '/form2' ? styles.active : ''}
             >
-              Ingresos
+              💰 Ingresos
+            </Link>
+          </li>
+          <li>
+            <Link 
+              to="/form3" 
+              className={location.pathname === '/form3' ? styles.active : ''}
+            >
+              🔄 Asiento Doble
             </Link>
           </li>
           <li>
             <button onClick={handleLogout} className={styles.logoutBtn}>
-              Cerrar Sesión
+              🚪 Cerrar Sesión
             </button>
           </li>
         </ul>

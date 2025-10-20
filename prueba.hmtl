@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sage200 - Sistema Contable</title>
+    <style>
+        /* Estilos generales */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 0;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .header-info span {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+        }
+
+        /* Pestañas */
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 0;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            border-bottom-color: #3b82f6;
+            background: #f8fafc;
+            color: #3b82f6;
+        }
+
+        .tab:hover:not(.active) {
+            background: #f1f5f9;
+        }
+
+        /* Contenido de formularios */
+        .form-container {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .form-content {
+            display: none;
+            padding: 2rem;
+        }
+
+        .form-content.active {
+            display: block;
+        }
+
+        /* Secciones de formulario */
+        .form-section {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #3b82f6;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-section h3 {
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .readonly {
+            background-color: #f9fafb;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+
+        /* Líneas de detalle */
+        .detalle-linea {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .linea-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .remove-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .remove-btn:hover {
+            background: #dc2626;
+        }
+
+        .add-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .add-btn:hover {
+            background: #059669;
+        }
+
+        /* Totales */
+        .totales {
+            background: white;
+            padding: 1.75rem;
+            border-radius: 8px;
+            border: 2px solid #10b981;
+            margin-top: 1.5rem;
+        }
+
+        .totales h4 {
+            color: #065f46;
+            margin-bottom: 1.25rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .total-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            align-items: center;
+        }
+
+        .total-final {
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: none;
+            border-top: 2px solid #10b981;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            color: #065f46;
+        }
+
+        /* Botones */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1.75rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .cancel-btn {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .cancel-btn:hover {
+            background: #4b5563;
+        }
+
+        .clear-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .clear-btn:hover {
+            background: #d97706;
+        }
+
+        .submit-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .submit-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Estilos específicos para Form3 */
+        .form3-section:nth-child(1) {
+            border-left-color: #10b981;
+        }
+
+        .form3-section:nth-child(2) {
+            border-left-color: #ef4444;
+        }
+
+        .form3-submit-btn {
+            background: #8b5cf6;
+        }
+
+        .form3-submit-btn:hover {
+            background: #7c3aed;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .coincide {
+            color: #10b981;
+            font-weight: 600;
+            padding: 0.5rem;
+            background: #ecfdf5;
+            border-radius: 4px;
+            border: 1px solid #a7f3d0;
+            margin-top: 0.5rem;
+        }
+
+        .no-coincide {
+            color: #ef4444;
+            font-weight: 600;
+            padding: 0.5rem;
+            background: #fef2f2;
+            border-radius: 4px;
+            border: 1px solid #fecaca;
+            margin-top: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-content {
+                padding: 1.5rem;
+            }
+            
+            .header {
+                padding: 1.25rem 1.5rem;
+            }
+            
+            .header-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                padding: 1rem;
+                text-align: center;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sage200 - Sistema Contable</h1>
+            <div class="header-info">
+                <span>Usuario: <strong>admin</strong></span>
+                <span>Empresa: <strong>9999</strong></span>
+                <span>Ejercicio: <strong>2025</strong></span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="form1">📄 Facturas y Gastos</div>
+            <div class="tab" data-tab="form2">💰 Ingresos</div>
+            <div class="tab" data-tab="form3">🔄 Asiento Doble</div>
+        </div>
+
+        <div class="form-container">
+            <!-- FORMULARIO 1: FACTURAS Y GASTOS -->
+            <div id="form1" class="form-content active">
+                <div class="form-section">
+                    <h3>Tipo de Documento</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo de Documento *</label>
+                            <select>
+                                <option value="factura">Factura Recibida (Cuenta 600)</option>
+                                <option value="gasto">Gasto (Cuenta 622)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Datos del Documento</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Serie *</label>
+                            <input type="text" value="EM" placeholder="EJ: EM, FAC, etc.">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº Documento *</label>
+                            <input type="text" placeholder="Número de factura">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº FRA Proveedor</label>
+                            <input type="text" placeholder="Número de factura del proveedor">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha Registro *</label>
+                            <input type="date" value="2024-01-15">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Factura *</label>
+                            <input type="date" value="2024-01-15">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Operación</label>
+                            <input type="date">
+                        </div>
+                        <div class="form-group">
+                            <label>Vencimiento</label>
+                            <input type="date">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Datos del Proveedor</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Buscar Proveedor</label>
+                            <input type="text" placeholder="Buscar por código o nombre...">
+                        </div>
+                        <div class="form-group">
+                            <label>Seleccionar Proveedor *</label>
+                            <select>
+                                <option value="">-- Seleccionar proveedor existente --</option>
+                                <option value="PROV001">PROV001 - Proveedor Ejemplo 1</option>
+                                <option value="PROV002">PROV002 - Proveedor Ejemplo 2</option>
+                                <option value="4000">NUEVO PROVEEDOR (Cuenta 400)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>CIF/NIF *</label>
+                            <input type="text" placeholder="A12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>Razón Social *</label>
+                            <input type="text" placeholder="Nombre del proveedor">
+                        </div>
+                        <div class="form-group">
+                            <label>Código Postal</label>
+                            <input type="text" placeholder="28001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Detalles Económicos</h3>
+                    <div class="detalle-linea">
+                        <div class="linea-header">
+                            <span>Línea 1</span>
+                            <button class="remove-btn">Eliminar</button>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Base Imponible *</label>
+                                <input type="number" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo IVA</label>
+                                <select>
+                                    <option value="21">21% General</option>
+                                    <option value="10">10% Reducido</option>
+                                    <option value="4">4% Superreducido</option>
+                                    <option value="0">0% Exento</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuota IVA</label>
+                                <input type="number" step="0.01" value="0.00" class="readonly" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>% Retención</label>
+                                <select>
+                                    <option value="15">15% Profesional</option>
+                                    <option value="7">7% Reducido</option>
+                                    <option value="1">1% Especial</option>
+                                    <option value="0">0% Sin retención</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuota Retención</label>
+                                <input type="number" step="0.01" value="0.00" class="readonly" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="add-btn">+ Añadir Línea</button>
+
+                    <div class="totales">
+                        <h4>Resumen de Totales</h4>
+                        <div class="total-item">
+                            <span>Base Imponible:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span>IVA:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span>Retención:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item total-final">
+                            <span>TOTAL:</span>
+                            <span>0.00 €</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="cancel-btn">Cancelar</button>
+                    <button class="clear-btn">Limpiar</button>
+                    <button class="submit-btn">Crear Asiento</button>
+                </div>
+            </div>
+
+            <!-- FORMULARIO 2: INGRESOS -->
+            <div id="form2" class="form-content">
+                <div class="form-section">
+                    <h3>Tipo de Ingreso</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo *</label>
+                            <select>
+                                <option value="caja">Ingreso en Caja (Cuenta 570)</option>
+                                <option value="cliente">Ingreso por Cliente (Cuenta 430)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Datos del Documento</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Serie</label>
+                            <input type="text" value="ING" placeholder="ING, FAC, etc.">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº Documento *</label>
+                            <input type="text" placeholder="Número de documento">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha *</label>
+                            <input type="date" value="2024-01-15">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Importe y Cuenta</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Concepto *</label>
+                            <input type="text" placeholder="Descripción del ingreso">
+                        </div>
+                        <div class="form-group">
+                            <label>Importe *</label>
+                            <input type="number" step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Cuenta de Ingreso *</label>
+                            <select>
+                                <option value="">-- Seleccionar cuenta --</option>
+                                <option value="700000000">700000000 - Ventas de mercaderías</option>
+                                <option value="701000000">701000000 - Ventas de productos terminados</option>
+                                <option value="705000000">705000000 - Prestaciones de servicios</option>
+                                <option value="759000000">759000000 - Ingresos por arrendamientos</option>
+                                <option value="762000000">762000000 - Ingresos por servicios profesionales</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cuenta de Contrapartida</label>
+                            <input type="text" value="570000000" class="readonly" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="cancel-btn">Cancelar</button>
+                    <button class="clear-btn">Limpiar</button>
+                    <button class="submit-btn">Crear Asiento</button>
+                </div>
+            </div>
+
+            <!-- FORMULARIO 3: ASIENTO DOBLE -->
+            <div id="form3" class="form-content">
+                <div class="form-section form3-section">
+                    <h3>📥 Parte de Ingreso</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo de Ingreso *</label>
+                            <select>
+                                <option value="caja">Ingreso en Caja (570)</option>
+                                <option value="cliente">Ingreso por Cliente (430)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cuenta de Ingreso *</label>
+                            <select>
+                                <option value="">-- Seleccionar cuenta --</option>
+                                <option value="705000000">705000000 - Prestaciones de servicios</option>
+                                <option value="700000000">700000000 - Ventas de mercaderías</option>
+                                <option value="759000000">759000000 - Ingresos por arrendamientos</option>
+                                <option value="762000000">762000000 - Ingresos por servicios profesionales</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Importe *</label>
+                            <input type="number" step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Concepto *</label>
+                            <input type="text" placeholder="Descripción del ingreso">
+                        </div>
+                        <div class="form-group">
+                            <label>Serie</label>
+                            <input type="text" value="ING">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº Documento *</label>
+                            <input type="text" placeholder="Número de documento">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section form3-section">
+                    <h3>📤 Parte de Factura</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Seleccionar Proveedor *</label>
+                            <select>
+                                <option value="">-- Seleccionar proveedor --</option>
+                                <option value="PROV001">PROV001 - Proveedor Ejemplo 1</option>
+                                <option value="PROV002">PROV002 - Proveedor Ejemplo 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Serie Factura</label>
+                            <input type="text" value="FAC">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº Factura *</label>
+                            <input type="text" placeholder="Número de factura">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Factura</label>
+                            <input type="date" value="2024-01-15">
+                        </div>
+                    </div>
+
+                    <div class="detalle-linea">
+                        <div class="linea-header">
+                            <span>Línea 1</span>
+                            <button class="remove-btn">Eliminar</button>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Base Imponible *</label>
+                                <input type="number" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo IVA</label>
+                                <select>
+                                    <option value="21">21%</option>
+                                    <option value="10">10%</option>
+                                    <option value="4">4%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuota IVA</label>
+                                <input type="number" step="0.01" value="0.00" class="readonly" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>% Retención</label>
+                                <select>
+                                    <option value="15">15%</option>
+                                    <option value="7">7%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuota Retención</label>
+                                <input type="number" step="0.01" value="0.00" class="readonly" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="add-btn">+ Añadir Línea</button>
+
+                    <div class="totales">
+                        <h4>Resumen:</h4>
+                        <div class="total-item">
+                            <span>Total Base:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span>Total IVA:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span>Total Factura:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span>Importe Ingreso:</span>
+                            <span>0.00 €</span>
+                        </div>
+                        <div class="no-coincide">
+                            ✗ Importes no coinciden
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="cancel-btn">Cancelar</button>
+                    <button class="clear-btn">Limpiar</button>
+                    <button class="submit-btn form3-submit-btn">Crear Asiento Doble</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funcionalidad de pestañas
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.tab');
+            const formContents = document.querySelectorAll('.form-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remover clase active de todas las pestañas y contenidos
+                    tabs.forEach(t => t.classList.remove('active'));
+                    formContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Añadir clase active a la pestaña clickeada
+                    tab.classList.add('active');
+                    
+                    // Mostrar el contenido correspondiente
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+            // Simulación de cálculo de IVA y retención
+            const baseInputs = document.querySelectorAll('input[type="number"]');
+            baseInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    const detalleLinea = this.closest('.detalle-linea');
+                    if (detalleLinea) {
+                        const base = parseFloat(this.value) || 0;
+                        const tipoIVA = parseFloat(detalleLinea.querySelector('select').value) || 0;
+                        const retencion = parseFloat(detalleLinea.querySelectorAll('select')[1].value) || 0;
+                        
+                        const cuotaIVA = (base * tipoIVA) / 100;
+                        const cuotaRetencion = (base * retencion) / 100;
+                        
+                        detalleLinea.querySelectorAll('input.readonly')[0].value = cuotaIVA.toFixed(2);
+                        detalleLinea.querySelectorAll('input.readonly')[1].value = cuotaRetencion.toFixed(2);
+                    }
+                });
+            });
+
+            // Simulación de cambio de tipo de ingreso en Form2
+            const tipoIngresoSelect = document.querySelector('#form2 select');
+            if (tipoIngresoSelect) {
+                tipoIngresoSelect.addEventListener('change', function() {
+                    const contrapartidaInput = document.querySelector('#form2 input.readonly');
+                    if (this.value === 'caja') {
+                        contrapartidaInput.value = '570000000';
+                    } else {
+                        contrapartidaInput.value = '430000000';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
