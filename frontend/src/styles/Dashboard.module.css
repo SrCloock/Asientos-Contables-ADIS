@@ -1,170 +1,192 @@
-/* ===== Dashboard.css ===== */
-
-.dashboardContainer {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* ===== Dashboard.module.css ===== */
+.dbContainer {
+  font-family: 'Segoe UI', system-ui, sans-serif;
   padding: 2rem;
-  background: #f5f7fa;
-  min-height: 100vh;
-  color: #2c3e50;
+  background: #f8fafc;
+  min-height: calc(100vh - 80px);
+  color: #1e293b;
 }
 
-/* ==== HEADER ==== */
-.dashboardHeader {
+.dbHeader {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
 }
 
-.dashboardHeader h1 {
-  font-size: 2.2rem;
+.dbHeader h1 {
+  font-size: 2rem;
   font-weight: 600;
   margin: 0;
-  color: #1a2a3a;
+  color: #1e293b;
 }
 
-.dashboardHeader p {
-  font-size: 1.1rem;
-  color: #6c7a89;
-  margin-top: 0.3rem;
+.dbHeader p {
+  font-size: 1rem;
+  color: #64748b;
+  margin-top: 0.5rem;
 }
 
-/* ==== GRID ==== */
-.dashboardGrid {
+.dbGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
   margin-bottom: 3rem;
 }
 
-.dashboardCard {
-  background: #fff;
-  border-radius: 10px;
-  padding: 1.8rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.dbCard {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.dashboardCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+.dbCard:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
 }
 
-.cardIcon {
-  width: 40px;
-  height: 40px;
+.dbCardIcon {
+  width: 48px;
+  height: 48px;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #0078d7, #00b4d8);
+  background: #2563eb;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 1.25rem;
 }
 
-/* ==== CARD TEXT ==== */
-.dashboardCard h3 {
+.dbCard h3 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #1a2a3a;
+  color: #1e293b;
 }
 
-.dashboardCard p {
-  margin: 0.6rem 0 1.2rem;
-  font-size: 0.95rem;
-  color: #6c7a89;
+.dbCard p {
+  margin: 0.75rem 0 1.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
 }
 
-/* ==== BUTTONS ==== */
-.cardButton {
-  display: inline-block;
-  padding: 0.6rem 1.2rem;
+.dbCardButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 6px;
-  background: #0078d7;
-  color: #fff;
-  font-size: 0.95rem;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
   transition: background 0.2s ease;
+  border: none;
   cursor: pointer;
 }
 
-.cardButton:hover {
-  background: #005fa3;
+.dbCardButton:hover {
+  background: #1d4ed8;
+  text-decoration: none;
+  color: #ffffff;
 }
 
-.disabledButton {
-  background: #b0b8c1 !important;
-  cursor: not-allowed;
-}
-
-/* ==== INFO SECTIONS ==== */
-.dashboardInfo {
+.dbInfo {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
 }
 
-.infoSection {
-  background: #fff;
-  border-radius: 10px;
-  padding: 1.8rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+.dbInfoSection {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
 }
 
-.infoSection h3 {
-  font-size: 1.2rem;
+.dbInfoSection h3 {
+  font-size: 1.125rem;
   margin-bottom: 1rem;
-  color: #1a2a3a;
+  color: #1e293b;
+  font-weight: 600;
 }
 
-.infoSection ul {
+.dbInfoSection ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.infoSection li {
-  margin-bottom: 0.6rem;
-  font-size: 0.95rem;
-  color: #4a5a68;
+.dbInfoSection li {
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
-/* ==== STATS ==== */
-.statsGrid {
+.dbInfoSection li:before {
+  content: "•";
+  color: #2563eb;
+  font-weight: bold;
+}
+
+.dbStatsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
 
-.statItem {
-  background: #f5f7fa;
-  border-radius: 8px;
-  padding: 1.2rem;
+.dbStatItem {
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 1.25rem;
   text-align: center;
+  border: 1px solid #e2e8f0;
 }
 
-.statNumber {
+.dbStatNumber {
   display: block;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #0078d7;
-  margin-bottom: 0.3rem;
+  color: #2563eb;
+  margin-bottom: 0.25rem;
 }
 
-.statLabel {
-  font-size: 0.85rem;
-  color: #6c7a89;
+.dbStatLabel {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
-/* ==== RESPONSIVE ==== */
-@media (max-width: 600px) {
-  .dashboardHeader h1 {
-    font-size: 1.7rem;
+@media (max-width: 768px) {
+  .dbContainer {
+    padding: 1.5rem;
   }
-  .dashboardCard {
-    padding: 1.2rem;
+  
+  .dbHeader h1 {
+    font-size: 1.75rem;
   }
-  .infoSection {
-    padding: 1.2rem;
+  
+  .dbGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dbCard {
+    padding: 1.5rem;
+  }
+  
+  .dbInfoSection {
+    padding: 1.5rem;
   }
 }

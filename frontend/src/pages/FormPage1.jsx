@@ -3,10 +3,7 @@ import axios from 'axios';
 import styles from '../styles/FormPage1.module.css';
 
 const FormPage1 = ({ user }) => {
-  // Estado para el número de asiento
   const [numAsiento, setNumAsiento] = useState('');
-  
-  // Estados principales del formulario
   const [tipo, setTipo] = useState('factura');
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '' });
@@ -14,14 +11,10 @@ const FormPage1 = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [proveedores, setProveedores] = useState([]);
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
-
-  // Estados para inputs de búsqueda/autocompletado
   const [inputCuenta, setInputCuenta] = useState('');
   const [inputCIF, setInputCIF] = useState('');
   const [inputNombre, setInputNombre] = useState('');
   const [inputCP, setInputCP] = useState('');
-
-  // Estados para datos del documento
   const [serie, setSerie] = useState(user?.serie || 'EM');
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
@@ -31,15 +24,12 @@ const FormPage1 = ({ user }) => {
   const [numFRA, setNumFRA] = useState('');
   const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
   const [archivo, setArchivo] = useState(null);
-
-  // Estado para las líneas de detalle
   const [detalles, setDetalles] = useState([
     { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }
   ]);
 
   const isNuevoProveedor = cuentaP === '4000';
 
-  // Obtener siguiente número de asiento al cargar el componente
   useEffect(() => {
     const fetchContador = async () => {
       try {
@@ -47,7 +37,6 @@ const FormPage1 = ({ user }) => {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
-        console.log('Contador de asiento obtenido:', response.data.contador);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
         alert('Error al obtener el número de asiento. Verifique la conexión.');
@@ -57,7 +46,6 @@ const FormPage1 = ({ user }) => {
     fetchContador();
   }, []);
 
-  // Cargar proveedores desde la base de datos
   useEffect(() => {
     const fetchProveedores = async () => {
       try {
@@ -72,7 +60,6 @@ const FormPage1 = ({ user }) => {
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
-        console.log('Proveedores cargados:', proveedoresRes.data.length);
       } catch (error) {
         console.error('Error cargando proveedores:', error);
         setProveedores([]);
@@ -83,7 +70,6 @@ const FormPage1 = ({ user }) => {
     fetchProveedores();
   }, []);
 
-  // Efecto para autocompletar datos del proveedor
   useEffect(() => {
     if (cuentaP && cuentaP !== '4000') {
       const proveedor = proveedores.find(p => p.codigo === cuentaP);
@@ -109,7 +95,6 @@ const FormPage1 = ({ user }) => {
       return;
     }
 
-    // Autocompletar basado en inputs
     const proveedorEncontrado = proveedores.find(p => 
       p.codigo === inputCuenta || 
       (p.cif && p.cif.toLowerCase().includes(inputCIF.toLowerCase())) || 
@@ -128,7 +113,6 @@ const FormPage1 = ({ user }) => {
     }
   }, [cuentaP, inputCuenta, inputCIF, inputNombre, inputCP, proveedores]);
 
-  // Validar datos antes de enviar
   const validarDatos = () => {
     const errores = [];
     
@@ -150,7 +134,6 @@ const FormPage1 = ({ user }) => {
       errores.push('Debe ingresar al menos una línea con base imponible mayor a 0');
     }
     
-    // Validar que todas las líneas tengan base si están activas
     detalles.forEach((linea, index) => {
       if (linea.base && parseFloat(linea.base) <= 0) {
         errores.push(`La línea ${index + 1} tiene base imponible inválida`);
@@ -165,7 +148,6 @@ const FormPage1 = ({ user }) => {
     return true;
   };
 
-  // Manejadores de cambios
   const handleCuentaPChange = (e) => {
     const val = e.target.value;
     setCuentaP(val);
@@ -199,7 +181,6 @@ const FormPage1 = ({ user }) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
 
-    // Recalcular automáticamente cuota IVA y retención
     const baseNum = parseFloat(newDetalles[index].base) || 0;
     const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
     const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
@@ -247,14 +228,12 @@ const FormPage1 = ({ user }) => {
     setArchivo(e.target.files[0]);
   };
 
-  // Calcular totales
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
       const iva = parseFloat(detalle.cuotaIVA) || 0;
       const retencion = parseFloat(detalle.cuotaRetencion) || 0;
       
-      // Solo considerar líneas con base positiva
       if (base > 0) {
         return {
           base: acc.base + base,
@@ -269,7 +248,6 @@ const FormPage1 = ({ user }) => {
 
   const totales = calcularTotales();
 
-  // Reiniciar formulario después de éxito
   const resetForm = () => {
     setCuentaP('');
     setInputCuenta('');
@@ -286,14 +264,12 @@ const FormPage1 = ({ user }) => {
     setArchivo(null);
     setPagoEfectivo(false);
     
-    // Obtener nuevo número de asiento
     const fetchNewContador = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/contador', {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
-        console.log('Contador actualizado:', response.data.contador);
       } catch (error) {
         console.error('Error actualizando contador:', error);
       }
@@ -302,7 +278,6 @@ const FormPage1 = ({ user }) => {
     fetchNewContador();
   };
 
-  // Enviar formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -313,7 +288,6 @@ const FormPage1 = ({ user }) => {
     setLoading(true);
 
     try {
-      // Filtrar solo líneas con base positiva
       const detallesFiltrados = detalles.filter(d => d.base && parseFloat(d.base) > 0);
       
       const asientoData = {
@@ -336,8 +310,6 @@ const FormPage1 = ({ user }) => {
         detalles: detallesFiltrados,
         usuario: user?.usuario || user?.UsuarioLogicNet || 'admin'
       };
-
-      console.log('Enviando datos del asiento:', asientoData);
 
       const response = await axios.post('http://localhost:5000/api/asiento/factura', asientoData, {
         withCredentials: true
@@ -391,7 +363,6 @@ const FormPage1 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp1Form}>
-        {/* SECCIÓN TIPO DE DOCUMENTO */}
         <div className={styles.fp1Section}>
           <h3>Tipo de Documento</h3>
           <div className={styles.fp1FormRow}>
@@ -406,7 +377,6 @@ const FormPage1 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DATOS DEL DOCUMENTO */}
         <div className={styles.fp1Section}>
           <h3>Datos del Documento</h3>
           <div className={styles.fp1FormRow}>
@@ -488,7 +458,6 @@ const FormPage1 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN PROVEEDOR */}
         <div className={styles.fp1Section}>
           <h3>Datos del Proveedor</h3>
           
@@ -525,7 +494,6 @@ const FormPage1 = ({ user }) => {
             </div>
           </div>
 
-          {/* DATOS DEL PROVEEDOR SELECCIONADO O NUEVO */}
           <div className={styles.fp1FormRow}>
             {isNuevoProveedor ? (
               <>
@@ -608,7 +576,6 @@ const FormPage1 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DETALLES ECONÓMICOS */}
         <div className={styles.fp1Section}>
           <h3>Detalles Económicos</h3>
           
@@ -626,7 +593,6 @@ const FormPage1 = ({ user }) => {
                 <small>Centro de coste asignado al usuario</small>
               </div>
 
-              {/* LÍNEAS DE DETALLE */}
               <div className={styles.fp1DetallesContainer}>
                 <h4>Líneas de Detalle:</h4>
                 
@@ -724,7 +690,6 @@ const FormPage1 = ({ user }) => {
                 </button>
               </div>
 
-              {/* RESUMEN DE TOTALES */}
               <div className={styles.fp1Totales}>
                 <h4>Resumen de Totales:</h4>
                 <div className={styles.fp1TotalItem}>
@@ -761,7 +726,6 @@ const FormPage1 = ({ user }) => {
             </div>
 
             <div className={styles.fp1RightColumn}>
-              {/* INFO PAGO EFECTIVO */}
               {isNuevoProveedor && pagoEfectivo && (
                 <div className={styles.fp1InfoBox}>
                   <h4>Pago en Efectivo</h4>
@@ -769,7 +733,6 @@ const FormPage1 = ({ user }) => {
                 </div>
               )}
 
-              {/* ADJUNTAR ARCHIVO */}
               <div className={styles.fp1FormGroup}>
                 <label>Adjuntar archivo (Opcional)</label>
                 <input 
@@ -786,7 +749,6 @@ const FormPage1 = ({ user }) => {
                 )}
               </div>
 
-              {/* INFO DEL ASIENTO */}
               <div className={styles.fp1InfoBox}>
                 <h4>Información del Asiento</h4>
                 <p><strong>Número:</strong> #{numAsiento}</p>
@@ -799,7 +761,6 @@ const FormPage1 = ({ user }) => {
           </div>
         </div>
 
-        {/* BOTONES FINALES */}
         <div className={styles.fp1ButtonGroup}>
           <button 
             type="button" 

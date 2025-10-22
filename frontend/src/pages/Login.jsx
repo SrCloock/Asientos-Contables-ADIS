@@ -1,7 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import '../styles/Login.css';
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import styles from '../styles/Login.module.css';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -15,7 +16,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar si ya hay una sesión activa
     const verifySession = async () => {
       const hasSession = await checkSession();
       if (hasSession) {
@@ -75,42 +75,37 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-background">
-        <div className="login-background-shapes">
-          <div className="login-shape login-shape-1"></div>
-          <div className="login-shape login-shape-2"></div>
-          <div className="login-shape login-shape-3"></div>
-        </div>
-      </div>
-
-      <div className="login-content">
-        <div className="login-branding">
-          <div className="login-logo-container">
-            <div className="login-logo">
-              <span className="login-logo-text">SC</span>
+    <div className={styles.lgContainer}>
+      <div className={styles.lgContent}>
+        <div className={styles.lgBranding}>
+          <div className={styles.lgLogoContainer}>
+            <div className={styles.lgLogo}>
+              SC
             </div>
           </div>
-          <h1 className="login-app-name">Sage200 Contabilidad</h1>
-          <p className="login-integration-text">Sistema integrado con Sage200</p>
+          <h1 className={styles.lgAppName}>Sage200 Contabilidad</h1>
+          <p className={styles.lgIntegrationText}>Sistema integrado con Sage200</p>
         </div>
         
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="login-form-header">
-            <h2 className="login-form-title">Iniciar Sesión</h2>
-            <p className="login-form-subtitle">Acceda a su cuenta para continuar</p>
+        <form className={styles.lgForm} onSubmit={handleSubmit}>
+          <div className={styles.lgFormHeader}>
+            <h2 className={styles.lgFormTitle}>Iniciar Sesión</h2>
+            <p className={styles.lgFormSubtitle}>Acceda a su cuenta para continuar</p>
           </div>
           
           {error && (
-            <div className="login-error">
-              <div className="login-error-icon">!</div>
+            <div className={styles.lgError}>
+              <div className={styles.lgErrorIcon}>!</div>
               <p>{error}</p>
             </div>
           )}
 
-          <div className="login-input-group">
-            <label htmlFor="username" className="login-label">Usuario</label>
-            <div className="login-input-container">
+          <div className={styles.lgInputGroup}>
+            <label htmlFor="username" className={styles.lgLabel}>
+              <FaUser style={{ marginRight: '0.5rem' }} />
+              Usuario
+            </label>
+            <div className={styles.lgInputContainer}>
               <input
                 id="username"
                 type="text"
@@ -118,15 +113,18 @@ const Login = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="login-input"
+                className={styles.lgInput}
                 disabled={isLoading}
               />
             </div>
           </div>
 
-          <div className="login-input-group">
-            <label htmlFor="password" className="login-label">Contraseña</label>
-            <div className="login-input-container">
+          <div className={styles.lgInputGroup}>
+            <label htmlFor="password" className={styles.lgLabel}>
+              <FaLock style={{ marginRight: '0.5rem' }} />
+              Contraseña
+            </label>
+            <div className={styles.lgInputContainer}>
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -134,42 +132,41 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="login-input"
+                className={styles.lgInput}
                 disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="login-password-toggle"
+                className={styles.lgPasswordToggle}
                 disabled={isLoading}
               >
-                {showPassword ? 'Ocultar' : 'Mostrar'}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
 
-          <div className="login-remember-forgot">
-            <label className="login-checkbox-label">
+          <div className={styles.lgRememberForgot}>
+            <label className={styles.lgCheckboxLabel}>
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="login-checkbox"
+                className={styles.lgCheckbox}
                 disabled={isLoading}
               />
-              <span className="login-checkbox-custom"></span>
               Recordar usuario
             </label>
           </div>
 
           <button 
             type="submit" 
-            className="login-button"
+            className={styles.lgButton}
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <div className="login-button-spinner"></div>
+                <FaSpinner className={styles.lgButtonSpinner} />
                 Iniciando sesión...
               </>
             ) : (
@@ -177,8 +174,8 @@ const Login = () => {
             )}
           </button>
 
-          <div className="login-footer">
-            <p className="login-footer-text">
+          <div className={styles.lgFooter}>
+            <p className={styles.lgFooterText}>
               Sistema integrado con Sage200 • Versión 1.0
             </p>
           </div>

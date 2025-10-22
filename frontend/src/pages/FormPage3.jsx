@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaExchangeAlt, FaPlus, FaTrash, FaCheck, FaTimes, FaFileInvoice, FaMoneyBill } from 'react-icons/fa';
 import styles from '../styles/FormPage3.module.css';
 
 const FormPage3 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
   const [proveedores, setProveedores] = useState([]);
-
-  // Estados para la sección de INGRESO
   const [tipoIngreso, setTipoIngreso] = useState('caja');
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState('');
   const [importeIngreso, setImporteIngreso] = useState('');
   const [conceptoIngreso, setConceptoIngreso] = useState('');
   const [serieIngreso, setSerieIngreso] = useState('ING');
   const [numDocumentoIngreso, setNumDocumentoIngreso] = useState('');
-
-  // Estados para la sección de FACTURA
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '' });
   const [inputCIF, setInputCIF] = useState('');
@@ -23,8 +20,6 @@ const FormPage3 = ({ user }) => {
   const [serieFactura, setSerieFactura] = useState('FAC');
   const [numDocumentoFactura, setNumDocumentoFactura] = useState('');
   const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
-  
-  // Estados para detalles de factura
   const [detalles, setDetalles] = useState([
     { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }
   ]);
@@ -229,7 +224,10 @@ const FormPage3 = ({ user }) => {
   return (
     <div className={styles.fp3Container}>
       <div className={styles.fp3Header}>
-        <h2>Asiento Doble: Ingreso para Pagar Factura</h2>
+        <h2>
+          <FaExchangeAlt />
+          Asiento Doble: Ingreso para Pagar Factura
+        </h2>
         <div className={styles.fp3AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
@@ -238,9 +236,11 @@ const FormPage3 = ({ user }) => {
 
       <form onSubmit={handleSubmit} className={styles.fp3Form}>
         
-        {/* SECCIÓN INGRESO */}
         <div className={styles.fp3Section}>
-          <h3>📥 Parte de Ingreso</h3>
+          <h3>
+            <FaMoneyBill />
+            Parte de Ingreso
+          </h3>
           
           <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
@@ -283,9 +283,7 @@ const FormPage3 = ({ user }) => {
                 required
               />
             </div>
-          </div>
 
-          <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
               <label>Concepto *</label>
               <input 
@@ -296,13 +294,16 @@ const FormPage3 = ({ user }) => {
                 required
               />
             </div>
+          </div>
 
+          <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
               <label>Serie</label>
               <input 
                 type="text" 
                 value={serieIngreso}
                 onChange={(e) => setSerieIngreso(e.target.value)}
+                placeholder="ING, FAC, etc."
               />
             </div>
 
@@ -312,20 +313,37 @@ const FormPage3 = ({ user }) => {
                 type="text" 
                 value={numDocumentoIngreso}
                 onChange={(e) => setNumDocumentoIngreso(e.target.value)}
+                placeholder="Número de documento"
                 required
+              />
+            </div>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Cuenta Contrapartida</label>
+              <input 
+                type="text" 
+                value={tipoIngreso === 'caja' ? '570000000' : '430000000'} 
+                readOnly 
+                className={styles.fp3Readonly}
               />
             </div>
           </div>
         </div>
 
-        {/* SECCIÓN FACTURA */}
         <div className={styles.fp3Section}>
-          <h3>📤 Parte de Factura</h3>
+          <h3>
+            <FaFileInvoice />
+            Parte de Factura
+          </h3>
           
           <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
-              <label>Seleccionar Proveedor *</label>
-              <select value={cuentaP} onChange={(e) => setCuentaP(e.target.value)} required>
+              <label>Proveedor *</label>
+              <select
+                value={cuentaP}
+                onChange={(e) => setCuentaP(e.target.value)}
+                required
+              >
                 <option value="">-- Seleccionar proveedor --</option>
                 {proveedores.map(proveedor => (
                   <option key={proveedor.codigo} value={proveedor.codigo}>
@@ -341,32 +359,34 @@ const FormPage3 = ({ user }) => {
                 type="text" 
                 value={serieFactura}
                 onChange={(e) => setSerieFactura(e.target.value)}
+                placeholder="FAC, EM, etc."
               />
             </div>
 
             <div className={styles.fp3FormGroup}>
-              <label>Nº Factura *</label>
+              <label>Nº Documento Factura *</label>
               <input 
                 type="text" 
                 value={numDocumentoFactura}
                 onChange={(e) => setNumDocumentoFactura(e.target.value)}
+                placeholder="Número de factura"
                 required
               />
             </div>
 
             <div className={styles.fp3FormGroup}>
-              <label>Fecha Factura</label>
+              <label>Fecha Factura *</label>
               <input
                 type="date"
                 value={fechaFactura}
                 onChange={(e) => setFechaFactura(e.target.value)}
+                required
               />
             </div>
           </div>
 
-          {/* DETALLES DE FACTURA */}
           <div className={styles.fp3Detalles}>
-            <h4>Líneas de Factura:</h4>
+            <h4>Detalles de la Factura:</h4>
             
             {detalles.map((line, i) => (
               <div className={styles.fp3DetalleLinea} key={i}>
@@ -378,6 +398,7 @@ const FormPage3 = ({ user }) => {
                       className={styles.fp3RemoveBtn}
                       onClick={() => removeDetalleLine(i)}
                     >
+                      <FaTrash />
                       Eliminar
                     </button>
                   )}
@@ -403,10 +424,10 @@ const FormPage3 = ({ user }) => {
                       value={line.tipoIVA}
                       onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
                     >
-                      <option value="21">21%</option>
-                      <option value="10">10%</option>
-                      <option value="4">4%</option>
-                      <option value="0">0%</option>
+                      <option value="21">21% General</option>
+                      <option value="10">10% Reducido</option>
+                      <option value="4">4% Superreducido</option>
+                      <option value="0">0% Exento</option>
                     </select>
                   </div>
                   
@@ -427,47 +448,59 @@ const FormPage3 = ({ user }) => {
                       value={line.retencion}
                       onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
                     >
-                      <option value="15">15%</option>
-                      <option value="7">7%</option>
-                      <option value="0">0%</option>
+                      <option value="15">15% Profesional</option>
+                      <option value="7">7% Reducido</option>
+                      <option value="1">1% Especial</option>
+                      <option value="0">0% Sin retención</option>
                     </select>
-                  </div>
-                  
-                  <div className={styles.fp3FormGroup}>
-                    <label>Cuota Retención</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      readOnly 
-                      value={line.cuotaRetencion.toFixed(2)} 
-                      className={styles.fp3Readonly}
-                    />
                   </div>
                 </div>
               </div>
             ))}
             
-            <button type="button" onClick={addDetalleLine} className={styles.fp3AddBtn}>
-              + Añadir Línea
+            <button type="button" className={styles.fp3AddBtn} onClick={addDetalleLine}>
+              <FaPlus />
+              Añadir línea de factura
             </button>
-          </div>
-
-          {/* RESUMEN */}
-          <div className={styles.fp3Resumen}>
-            <h4>Resumen:</h4>
-            <div className={styles.fp3Totales}>
-              <div>Total Base: <strong>{totalesFactura.base.toFixed(2)}€</strong></div>
-              <div>Total IVA: <strong>{totalesFactura.iva.toFixed(2)}€</strong></div>
-              <div>Total Factura: <strong>{totalesFactura.total.toFixed(2)}€</strong></div>
-              <div>Importe Ingreso: <strong>{parseFloat(importeIngreso || 0).toFixed(2)}€</strong></div>
-              <div className={totalesFactura.total.toFixed(2) === parseFloat(importeIngreso || 0).toFixed(2) ? styles.fp3Coincide : styles.fp3NoCoincide}>
-                {totalesFactura.total.toFixed(2) === parseFloat(importeIngreso || 0).toFixed(2) ? '✓ Importes coinciden' : '✗ Importes no coinciden'}
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* BOTONES */}
+        <div className={styles.fp3Resumen}>
+          <h4>Resumen y Validación</h4>
+          
+          <div className={styles.fp3Comparacion}>
+            <div className={`${styles.fp3ComparacionItem} ${styles.ingreso}`}>
+              <div>Ingreso</div>
+              <div className={styles.fp3ComparacionValor}>
+                {parseFloat(importeIngreso || 0).toFixed(2)} €
+              </div>
+              <small>Cuenta: {cuentaSeleccionada || 'No seleccionada'}</small>
+            </div>
+            
+            <div className={`${styles.fp3ComparacionItem} ${styles.factura}`}>
+              <div>Factura</div>
+              <div className={styles.fp3ComparacionValor}>
+                {totalesFactura.total.toFixed(2)} €
+              </div>
+              <small>Proveedor: {cuentaP || 'No seleccionado'}</small>
+            </div>
+          </div>
+          
+          {importeIngreso && totalesFactura.total > 0 && (
+            Math.abs(totalesFactura.total - parseFloat(importeIngreso)) <= 0.01 ? (
+              <div className={styles.fp3Coincide}>
+                <FaCheck /> Los importes coinciden correctamente
+              </div>
+            ) : (
+              <div className={styles.fp3NoCoincide}>
+                <FaTimes /> Los importes no coinciden: Diferencia de {
+                  Math.abs(totalesFactura.total - parseFloat(importeIngreso)).toFixed(2)
+                } €
+              </div>
+            )
+          )}
+        </div>
+
         <div className={styles.fp3ButtonGroup}>
           <button 
             type="button" 
@@ -488,7 +521,7 @@ const FormPage3 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp3SubmitBtn} 
-            disabled={loading}
+            disabled={loading || validarFormulario().length > 0}
           >
             {loading ? 'Procesando...' : 'Crear Asiento Doble'}
           </button>

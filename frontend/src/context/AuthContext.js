@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext } from 'react';
 import axios from 'axios';
 
-// 👉 lo exportamos para poder usarlo también directamente
 export const AuthContext = createContext();
 
 export const useAuth = () => {

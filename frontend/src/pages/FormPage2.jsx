@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaMoneyBillWave, FaUpload, FaFileInvoiceDollar } from 'react-icons/fa';
 import styles from '../styles/FormPage2.module.css';
 
 const FormPage2 = ({ user }) => {
@@ -137,7 +138,10 @@ const FormPage2 = ({ user }) => {
   return (
     <div className={styles.fp2Container}>
       <div className={styles.fp2Header}>
-        <h2>Formulario de Ingreso</h2>
+        <h2>
+          <FaMoneyBillWave />
+          Formulario de Ingreso
+        </h2>
         <div className={styles.fp2AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario || user?.UsuarioLogicNet}</strong></span>
@@ -254,7 +258,10 @@ const FormPage2 = ({ user }) => {
         </div>
 
         <div className={styles.fp2Section}>
-          <h3>Archivo</h3>
+          <h3>
+            <FaUpload />
+            Archivo
+          </h3>
           <div className={styles.fp2FormRow}>
             <div className={styles.fp2FormGroup}>
               <label>Adjuntar Archivo</label>

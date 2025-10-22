@@ -1,0 +1,221 @@
+/* ===== Login.module.css ===== */
+.lgContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.lgContent {
+  width: 100%;
+  max-width: 400px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.lgBranding {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.lgLogoContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.lgLogo {
+  width: 64px;
+  height: 64px;
+  background: #2563eb;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.lgAppName {
+  font-size: 1.5rem;
+  margin: 0.5rem 0;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.lgIntegrationText {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.lgForm {
+  width: 100%;
+}
+
+.lgFormHeader {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.lgFormTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.lgFormSubtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.lgError {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
+.lgErrorIcon {
+  font-size: 1rem;
+}
+
+.lgInputGroup {
+  margin-bottom: 1.25rem;
+}
+
+.lgLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.lgInputContainer {
+  position: relative;
+}
+
+.lgInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.lgInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.lgPasswordToggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.lgRememberForgot {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.lgCheckboxLabel {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #64748b;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+
+.lgCheckbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.lgButton {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lgButton:hover {
+  background: #1d4ed8;
+}
+
+.lgButton:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.lgButtonSpinner {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: lgSpin 0.7s linear infinite;
+}
+
+@keyframes lgSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.lgFooter {
+  margin-top: 1.5rem;
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.lgFooterText {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+@media (max-width: 480px) {
+  .lgContent {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+  }
+}
