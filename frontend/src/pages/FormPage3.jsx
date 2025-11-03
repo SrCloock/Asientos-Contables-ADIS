@@ -7,31 +7,41 @@ const FormPage3 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
   const [proveedores, setProveedores] = useState([]);
-  const [tipoIngreso, setTipoIngreso] = useState('caja');
-  const [cuentaSeleccionada, setCuentaSeleccionada] = useState('');
-  const [importeIngreso, setImporteIngreso] = useState('');
-  const [conceptoIngreso, setConceptoIngreso] = useState('');
-  const [serieIngreso, setSerieIngreso] = useState('ING');
-  const [numDocumentoIngreso, setNumDocumentoIngreso] = useState('');
-  const [cuentaP, setCuentaP] = useState('');
-  const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '' });
-  const [inputCIF, setInputCIF] = useState('');
-  const [inputNombre, setInputNombre] = useState('');
+  
+  // Datos de la factura
+  const [cuentaProveedor, setCuentaProveedor] = useState('');
+  const [datosProveedor, setDatosProveedor] = useState({ cif: '', nombre: '', cp: '' });
   const [serieFactura, setSerieFactura] = useState('FAC');
   const [numDocumentoFactura, setNumDocumentoFactura] = useState('');
   const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaVencimiento, setFechaVencimiento] = useState('');
+  
+  // Datos del pago
+  const [tipoPago, setTipoPago] = useState('banco'); // 'caja' o 'banco'
+  const [conceptoPago, setConceptoPago] = useState('');
+  
+  // Detalles de la factura
   const [detalles, setDetalles] = useState([
-    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }
+    { base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '0', cuotaRetencion: 0 }
   ]);
 
-  const CUENTAS_INGRESO = [
-    { id: '705000000', nombre: 'Prestaciones de servicios' },
-    { id: '700000000', nombre: 'Ventas de mercaderías' },
-    { id: '701000000', nombre: 'Ventas de productos terminados' },
-    { id: '759000000', nombre: 'Ingresos por arrendamientos' },
-    { id: '762000000', nombre: 'Ingresos por servicios profesionales' },
-    { id: '769000000', nombre: 'Otros ingresos de gestión' }
+  // Cuentas disponibles
+  const CUENTAS_GASTO = [
+    { id: '600000000', nombre: 'Compras de mercaderías' },
+    { id: '601000000', nombre: 'Compras de materias primas' },
+    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
+    { id: '621000000', nombre: 'Arrendamientos y cánones' },
+    { id: '622000000', nombre: 'Reparaciones y conservación' },
+    { id: '623000000', nombre: 'Servicios de profesionales independientes' },
+    { id: '624000000', nombre: 'Transportes' },
+    { id: '625000000', nombre: 'Primas de seguros' },
+    { id: '626000000', nombre: 'Servicios bancarios y similares' },
+    { id: '627000000', nombre: 'Publicidad, propaganda y relaciones públicas' },
+    { id: '628000000', nombre: 'Suministros' },
+    { id: '629000000', nombre: 'Otros servicios' }
   ];
+
+  const [cuentaGastoSeleccionada, setCuentaGastoSeleccionada] = useState('600000000');
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -87,7 +97,7 @@ const FormPage3 = ({ user }) => {
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0, 
-      retencion: '15', 
+      retencion: '0', 
       cuotaRetencion: 0 
     }]);
   };
@@ -123,20 +133,14 @@ const FormPage3 = ({ user }) => {
   const validarFormulario = () => {
     const errores = [];
 
-    if (!cuentaSeleccionada) errores.push('Debe seleccionar una cuenta de ingreso');
-    if (!importeIngreso || parseFloat(importeIngreso) <= 0) errores.push('Importe de ingreso inválido');
-    if (!conceptoIngreso) errores.push('Concepto de ingreso requerido');
-    if (!numDocumentoIngreso) errores.push('Número de documento de ingreso requerido');
-    
-    if (!cuentaP) errores.push('Debe seleccionar un proveedor');
+    if (!cuentaProveedor) errores.push('Debe seleccionar un proveedor');
     if (!numDocumentoFactura) errores.push('Número de documento de factura requerido');
+    if (!conceptoPago) errores.push('Concepto del pago requerido');
     
     const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
     if (lineasValidas.length === 0) errores.push('Debe ingresar al menos una línea de factura con base mayor a 0');
 
-    if (Math.abs(totalesFactura.total - parseFloat(importeIngreso || 0)) > 0.01) {
-      errores.push(`Los importes no coinciden: Factura ${totalesFactura.total.toFixed(2)} vs Ingreso ${parseFloat(importeIngreso || 0).toFixed(2)}`);
-    }
+    if (!fechaVencimiento) errores.push('Fecha de vencimiento requerida para el pago');
 
     return errores;
   };
@@ -156,40 +160,39 @@ const FormPage3 = ({ user }) => {
       const detallesFiltrados = detalles.filter(d => d.base && parseFloat(d.base) > 0);
       
       const asientoData = {
-        tipoIngreso,
-        ingreso: {
-          cuentaSeleccionada,
-          importe: parseFloat(importeIngreso),
-          concepto: conceptoIngreso,
-          serie: serieIngreso,
-          numDocumento: numDocumentoIngreso
-        },
+        tipoOperacion: 'compra-pago', // Nuevo tipo para identificar esta operación
         factura: {
           proveedor: {
-            cuentaProveedor: cuentaP,
-            cif: inputCIF,
-            nombre: inputNombre
+            cuentaProveedor: cuentaProveedor,
+            cif: datosProveedor.cif,
+            nombre: datosProveedor.nombre
           },
           serie: serieFactura,
           numDocumento: numDocumentoFactura,
           fechaFactura: fechaFactura,
-          detalles: detallesFiltrados
+          detalles: detallesFiltrados,
+          cuentaGasto: cuentaGastoSeleccionada
+        },
+        pago: {
+          tipoPago: tipoPago, // 'caja' o 'banco'
+          concepto: conceptoPago,
+          fechaVencimiento: fechaVencimiento
         },
         usuario: user?.usuario || 'admin'
       };
 
-      const response = await axios.post('http://localhost:5000/api/asiento/doble', asientoData, {
+      const response = await axios.post('http://localhost:5000/api/asiento/compra-pago', asientoData, {
         withCredentials: true
       });
       
       if (response.data.success) {
-        alert(`Asiento Doble #${response.data.asiento} creado correctamente`);
+        alert(`Asiento Compra+Pago #${response.data.asiento} creado correctamente`);
         resetForm();
       } else {
         alert('Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
-      console.error('Error creando asiento doble:', error);
+      console.error('Error creando asiento compra+pago:', error);
       alert('Error al crear el asiento: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
@@ -197,15 +200,13 @@ const FormPage3 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaSeleccionada('');
-    setImporteIngreso('');
-    setConceptoIngreso('');
-    setNumDocumentoIngreso('');
-    setCuentaP('');
-    setInputCIF('');
-    setInputNombre('');
+    setCuentaProveedor('');
+    setDatosProveedor({ cif: '', nombre: '', cp: '' });
     setNumDocumentoFactura('');
-    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '15', cuotaRetencion: 0 }]);
+    setConceptoPago('');
+    setFechaVencimiento('');
+    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, retencion: '0', cuotaRetencion: 0 }]);
+    setCuentaGastoSeleccionada('600000000');
     
     const fetchNewContador = async () => {
       try {
@@ -221,12 +222,26 @@ const FormPage3 = ({ user }) => {
     fetchNewContador();
   };
 
+  // Actualizar datos del proveedor cuando se selecciona uno
+  useEffect(() => {
+    if (cuentaProveedor) {
+      const proveedor = proveedores.find(p => p.codigo === cuentaProveedor);
+      if (proveedor) {
+        setDatosProveedor({
+          cif: proveedor.cif || '',
+          nombre: proveedor.nombre || '',
+          cp: proveedor.cp || ''
+        });
+      }
+    }
+  }, [cuentaProveedor, proveedores]);
+
   return (
     <div className={styles.fp3Container}>
       <div className={styles.fp3Header}>
         <h2>
           <FaExchangeAlt />
-          Asiento Doble: Ingreso para Pagar Factura
+          Asiento de Compra y Pago a Proveedor
         </h2>
         <div className={styles.fp3AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -238,110 +253,16 @@ const FormPage3 = ({ user }) => {
         
         <div className={styles.fp3Section}>
           <h3>
-            <FaMoneyBill />
-            Parte de Ingreso
-          </h3>
-          
-          <div className={styles.fp3FormRow}>
-            <div className={styles.fp3FormGroup}>
-              <label>Tipo de Ingreso *</label>
-              <select
-                value={tipoIngreso}
-                onChange={(e) => setTipoIngreso(e.target.value)}
-                required
-              >
-                <option value="caja">Ingreso en Caja (570)</option>
-                <option value="cliente">Ingreso por Cliente (430)</option>
-              </select>
-            </div>
-
-            <div className={styles.fp3FormGroup}>
-              <label>Cuenta de Ingreso *</label>
-              <select
-                value={cuentaSeleccionada}
-                onChange={(e) => setCuentaSeleccionada(e.target.value)}
-                required
-              >
-                <option value="">-- Seleccionar cuenta --</option>
-                {CUENTAS_INGRESO.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.id} - {cuenta.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.fp3FormGroup}>
-              <label>Importe *</label>
-              <input 
-                type="number" 
-                step="0.01"
-                min="0.01"
-                value={importeIngreso}
-                onChange={(e) => setImporteIngreso(e.target.value)}
-                placeholder="0.00"
-                required
-              />
-            </div>
-
-            <div className={styles.fp3FormGroup}>
-              <label>Concepto *</label>
-              <input 
-                type="text" 
-                value={conceptoIngreso}
-                onChange={(e) => setConceptoIngreso(e.target.value)}
-                placeholder="Descripción del ingreso"
-                required
-              />
-            </div>
-          </div>
-
-          <div className={styles.fp3FormRow}>
-            <div className={styles.fp3FormGroup}>
-              <label>Serie</label>
-              <input 
-                type="text" 
-                value={serieIngreso}
-                onChange={(e) => setSerieIngreso(e.target.value)}
-                placeholder="ING, FAC, etc."
-              />
-            </div>
-
-            <div className={styles.fp3FormGroup}>
-              <label>Nº Documento *</label>
-              <input 
-                type="text" 
-                value={numDocumentoIngreso}
-                onChange={(e) => setNumDocumentoIngreso(e.target.value)}
-                placeholder="Número de documento"
-                required
-              />
-            </div>
-
-            <div className={styles.fp3FormGroup}>
-              <label>Cuenta Contrapartida</label>
-              <input 
-                type="text" 
-                value={tipoIngreso === 'caja' ? '570000000' : '430000000'} 
-                readOnly 
-                className={styles.fp3Readonly}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.fp3Section}>
-          <h3>
             <FaFileInvoice />
-            Parte de Factura
+            Datos del Proveedor y Factura
           </h3>
           
           <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
               <label>Proveedor *</label>
               <select
-                value={cuentaP}
-                onChange={(e) => setCuentaP(e.target.value)}
+                value={cuentaProveedor}
+                onChange={(e) => setCuentaProveedor(e.target.value)}
                 required
               >
                 <option value="">-- Seleccionar proveedor --</option>
@@ -353,6 +274,28 @@ const FormPage3 = ({ user }) => {
               </select>
             </div>
 
+            <div className={styles.fp3FormGroup}>
+              <label>CIF Proveedor</label>
+              <input 
+                type="text" 
+                value={datosProveedor.cif}
+                readOnly
+                className={styles.fp3Readonly}
+              />
+            </div>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Nombre Proveedor</label>
+              <input 
+                type="text" 
+                value={datosProveedor.nombre}
+                readOnly
+                className={styles.fp3Readonly}
+              />
+            </div>
+          </div>
+
+          <div className={styles.fp3FormRow}>
             <div className={styles.fp3FormGroup}>
               <label>Serie Factura</label>
               <input 
@@ -384,9 +327,30 @@ const FormPage3 = ({ user }) => {
               />
             </div>
           </div>
+        </div>
+
+        <div className={styles.fp3Section}>
+          <h3>Detalles de la Factura</h3>
+          
+          <div className={styles.fp3FormRow}>
+            <div className={styles.fp3FormGroup}>
+              <label>Cuenta de Gasto *</label>
+              <select
+                value={cuentaGastoSeleccionada}
+                onChange={(e) => setCuentaGastoSeleccionada(e.target.value)}
+                required
+              >
+                {CUENTAS_GASTO.map((cuenta) => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.id} - {cuenta.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className={styles.fp3Detalles}>
-            <h4>Detalles de la Factura:</h4>
+            <h4>Líneas de la Factura:</h4>
             
             {detalles.map((line, i) => (
               <div className={styles.fp3DetalleLinea} key={i}>
@@ -448,10 +412,10 @@ const FormPage3 = ({ user }) => {
                       value={line.retencion}
                       onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
                     >
+                      <option value="0">0% Sin retención</option>
                       <option value="15">15% Profesional</option>
                       <option value="7">7% Reducido</option>
                       <option value="1">1% Especial</option>
-                      <option value="0">0% Sin retención</option>
                     </select>
                   </div>
                 </div>
@@ -465,40 +429,101 @@ const FormPage3 = ({ user }) => {
           </div>
         </div>
 
-        <div className={styles.fp3Resumen}>
-          <h4>Resumen y Validación</h4>
+        <div className={styles.fp3Section}>
+          <h3>
+            <FaMoneyBill />
+            Datos del Pago
+          </h3>
           
-          <div className={styles.fp3Comparacion}>
-            <div className={`${styles.fp3ComparacionItem} ${styles.ingreso}`}>
-              <div>Ingreso</div>
-              <div className={styles.fp3ComparacionValor}>
-                {parseFloat(importeIngreso || 0).toFixed(2)} €
-              </div>
-              <small>Cuenta: {cuentaSeleccionada || 'No seleccionada'}</small>
+          <div className={styles.fp3FormRow}>
+            <div className={styles.fp3FormGroup}>
+              <label>Tipo de Pago *</label>
+              <select
+                value={tipoPago}
+                onChange={(e) => setTipoPago(e.target.value)}
+                required
+              >
+                <option value="banco">Pago por Banco (572)</option>
+                <option value="caja">Pago por Caja (570)</option>
+              </select>
             </div>
-            
-            <div className={`${styles.fp3ComparacionItem} ${styles.factura}`}>
-              <div>Factura</div>
-              <div className={styles.fp3ComparacionValor}>
-                {totalesFactura.total.toFixed(2)} €
-              </div>
-              <small>Proveedor: {cuentaP || 'No seleccionado'}</small>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Concepto del Pago *</label>
+              <input 
+                type="text" 
+                value={conceptoPago}
+                onChange={(e) => setConceptoPago(e.target.value)}
+                placeholder="Ej: Pago factura compra"
+                required
+              />
+            </div>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Fecha Vencimiento *</label>
+              <input
+                type="date"
+                value={fechaVencimiento}
+                onChange={(e) => setFechaVencimiento(e.target.value)}
+                required
+              />
             </div>
           </div>
+
+          <div className={styles.fp3FormRow}>
+            <div className={styles.fp3FormGroup}>
+              <label>Cuenta Proveedor</label>
+              <input 
+                type="text" 
+                value="400000000"
+                readOnly 
+                className={styles.fp3Readonly}
+              />
+            </div>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Cuenta IVA</label>
+              <input 
+                type="text" 
+                value="472000000"
+                readOnly 
+                className={styles.fp3Readonly}
+              />
+            </div>
+
+            <div className={styles.fp3FormGroup}>
+              <label>Cuenta de Pago</label>
+              <input 
+                type="text" 
+                value={tipoPago === 'caja' ? '570000000' : '572000000'}
+                readOnly 
+                className={styles.fp3Readonly}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.fp3Resumen}>
+          <h4>Resumen de la Factura</h4>
           
-          {importeIngreso && totalesFactura.total > 0 && (
-            Math.abs(totalesFactura.total - parseFloat(importeIngreso)) <= 0.01 ? (
-              <div className={styles.fp3Coincide}>
-                <FaCheck /> Los importes coinciden correctamente
-              </div>
-            ) : (
-              <div className={styles.fp3NoCoincide}>
-                <FaTimes /> Los importes no coinciden: Diferencia de {
-                  Math.abs(totalesFactura.total - parseFloat(importeIngreso)).toFixed(2)
-                } €
-              </div>
-            )
-          )}
+          <div className={styles.fp3Totales}>
+            <div className={styles.fp3TotalItem}>
+              <span>Base Imponible:</span>
+              <span>{totalesFactura.base.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp3TotalItem}>
+              <span>IVA:</span>
+              <span>{totalesFactura.iva.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp3TotalItem}>
+              <span>Retención:</span>
+              <span>{totalesFactura.retencion.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp3TotalItem + ' ' + styles.fp3TotalFinal}>
+              <span>Total Factura:</span>
+              <span>{totalesFactura.total.toFixed(2)} €</span>
+            </div>
+          </div>
         </div>
 
         <div className={styles.fp3ButtonGroup}>
@@ -523,7 +548,7 @@ const FormPage3 = ({ user }) => {
             className={styles.fp3SubmitBtn} 
             disabled={loading || validarFormulario().length > 0}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento Doble'}
+            {loading ? 'Procesando...' : 'Crear Asiento Compra+Pago'}
           </button>
         </div>
       </form>
