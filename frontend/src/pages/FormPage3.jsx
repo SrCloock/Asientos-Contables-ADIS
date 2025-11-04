@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaExchangeAlt, FaPlus, FaTrash, FaCheck, FaTimes, FaFileInvoice, FaMoneyBill } from 'react-icons/fa';
 import styles from '../styles/FormPage3.module.css';
+import config from '../config/config';
 
 const FormPage3 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
@@ -17,7 +18,7 @@ const FormPage3 = ({ user }) => {
   const [fechaVencimiento, setFechaVencimiento] = useState('');
   
   // Datos del pago
-  const [tipoPago, setTipoPago] = useState('banco'); // 'caja' o 'banco'
+  const [tipoPago, setTipoPago] = useState('banco');
   const [conceptoPago, setConceptoPago] = useState('');
   
   // Detalles de la factura
@@ -46,7 +47,7 @@ const FormPage3 = ({ user }) => {
   useEffect(() => {
     const fetchContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador', {
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
@@ -61,7 +62,7 @@ const FormPage3 = ({ user }) => {
   useEffect(() => {
     const fetchProveedores = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/proveedores', {
+        const response = await axios.get(`${config.apiBaseUrl}/api/proveedores`, {
           withCredentials: true
         });
         setProveedores(response.data || []);
@@ -160,7 +161,7 @@ const FormPage3 = ({ user }) => {
       const detallesFiltrados = detalles.filter(d => d.base && parseFloat(d.base) > 0);
       
       const asientoData = {
-        tipoOperacion: 'compra-pago', // Nuevo tipo para identificar esta operación
+        tipoOperacion: 'compra-pago',
         factura: {
           proveedor: {
             cuentaProveedor: cuentaProveedor,
@@ -174,14 +175,14 @@ const FormPage3 = ({ user }) => {
           cuentaGasto: cuentaGastoSeleccionada
         },
         pago: {
-          tipoPago: tipoPago, // 'caja' o 'banco'
+          tipoPago: tipoPago,
           concepto: conceptoPago,
           fechaVencimiento: fechaVencimiento
         },
         usuario: user?.usuario || 'admin'
       };
 
-      const response = await axios.post('http://localhost:5000/api/asiento/compra-pago', asientoData, {
+      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/compra-pago`, asientoData, {
         withCredentials: true
       });
       
@@ -210,7 +211,7 @@ const FormPage3 = ({ user }) => {
     
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador', {
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);

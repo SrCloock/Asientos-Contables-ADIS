@@ -3,9 +3,37 @@ const session = require('express-session');
 const cors = require('cors');
 const sql = require('mssql');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+// ============================================
+// 🔍 DETECCIÓN AUTOMÁTICA DE FRONTEND
+// ============================================
+
+const detectFrontend = () => {
+  const possiblePaths = [
+    path.join(__dirname, 'build'),
+    path.join(__dirname, 'dist'),
+    path.join(__dirname, '../client/build'),
+    path.join(__dirname, '../client/dist')
+  ];
+
+  for (const frontendPath of possiblePaths) {
+    if (fs.existsSync(frontendPath)) {
+      console.log(`✅ Frontend detectado en: ${frontendPath}`);
+      return frontendPath;
+    }
+  }
+  
+  console.log('🔍 No se detectó frontend construido - Modo desarrollo');
+  return null;
+};
+
+const frontendPath = detectFrontend();
+const hasFrontend = frontendPath !== null;
 
 // ============================================
 // ⚙️ CONFIGURACIÓN DE BASE DE DATOS
@@ -49,20 +77,36 @@ connectDB();
 // ⚙️ MIDDLEWARE
 // ============================================
 
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+// Configurar CORS según si hay frontend o no
+if (hasFrontend) {
+  // Si hay frontend construido, servir archivos estáticos
+  app.use(express.static(frontendPath));
+  
+  app.use(cors({
+    origin: ['http://localhost:3000', 'http://localhost:5000'],
+    credentials: true
+  }));
+  
+  console.log('🚀 Modo: Backend + Frontend Integrado');
+} else {
+  // Si no hay frontend, solo API (desarrollo)
+  app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+  }));
+  
+  console.log('🔧 Modo: Solo API (Desarrollo)');
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: 'sage200-secret-key-2024',
+  secret: process.env.SESSION_SECRET || 'sage200-secret-key-2024',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false,
+    secure: hasFrontend, // HTTPS en producción si hay frontend
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
@@ -141,7 +185,7 @@ const gestionarEfecto = async (transaction, movimientoData) => {
       .input('FechaEmision', sql.DateTime, fechaAsiento)
       .input('FechaFactura', sql.DateTime, fechaAsiento)
       .input('FechaVencimiento', sql.DateTime, fechaVencimiento)
-      .input('Factura', sql.Int, facturaNumero) // SOLO AGREGAMOS ESTE CAMPO NUEVO
+      .input('Factura', sql.Int, facturaNumero)
       .input('SuFacturaNo', sql.VarChar(40), suFacturaNo || '')
       .input('Comentario', sql.VarChar(40), comentario)
       .input('EmpresaOrigen', sql.SmallInt, codigoEmpresa)
@@ -382,7 +426,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
     if (!numDocumento) {
       throw new Error('Número de documento requerido');
     }
-
+    
     if (!proveedor) {
       throw new Error('Datos del proveedor requeridos');
     }
@@ -866,7 +910,7 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
          StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
-         StatusConciliacion, @StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
@@ -1400,8 +1444,21 @@ app.get('/api/efectos/:codigoProveedor?', requireAuth, async (req, res) => {
 // 🚀 INICIALIZACIÓN DEL SERVIDOR
 // ============================================
 
+// Si hay frontend construido, servir archivos estáticos para rutas no manejadas por la API
+if (hasFrontend) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
+  console.log(`📊 Modo: ${hasFrontend ? 'Backend + Frontend Integrado' : 'Solo API (Desarrollo)'}`);
+  if (hasFrontend) {
+    console.log(`📁 Frontend servido desde: ${frontendPath}`);
+  } else {
+    console.log('💡 Para modo producción, construye el frontend en carpeta "build" o "dist"');
+  }
 });
 
 module.exports = app;

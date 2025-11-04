@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave, FaUpload, FaFileInvoiceDollar } from 'react-icons/fa';
 import styles from '../styles/FormPage2.module.css';
+import config from '../config/config';
 
 const FormPage2 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
@@ -35,7 +36,7 @@ const FormPage2 = ({ user }) => {
   useEffect(() => {
     const fetchContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador', {
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
@@ -61,7 +62,7 @@ const FormPage2 = ({ user }) => {
     
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/contador', {
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
         setNumAsiento(response.data.contador);
@@ -99,7 +100,7 @@ const FormPage2 = ({ user }) => {
         usuario: user?.usuario || user?.UsuarioLogicNet || 'admin'
       };
 
-      const response = await axios.post('http://localhost:5000/api/asiento/ingreso', asientoData, {
+      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/ingreso`, asientoData, {
         withCredentials: true
       });
       
