@@ -7,7 +7,10 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 5000;
 
-// Configuración de la base de datos
+// ============================================
+// ⚙️ CONFIGURACIÓN DE BASE DE DATOS
+// ============================================
+
 const dbConfig = {
   server: 'SVRALANDALUS',
   database: 'demos',
@@ -42,7 +45,10 @@ const connectDB = async () => {
 
 connectDB();
 
-// Middleware
+// ============================================
+// ⚙️ MIDDLEWARE
+// ============================================
+
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true
@@ -51,7 +57,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de sesión
 app.use(session({
   secret: 'sage200-secret-key-2024',
   resave: false,
@@ -62,7 +67,10 @@ app.use(session({
   }
 }));
 
-// Middleware de autenticación
+// ============================================
+// 🔐 MIDDLEWARE DE AUTENTICACIÓN
+// ============================================
+
 const requireAuth = (req, res, next) => {
   if (req.session.user) {
     next();
@@ -72,7 +80,88 @@ const requireAuth = (req, res, next) => {
 };
 
 // ============================================
-// ✅ ENDPOINTS DE AUTENTICACIÓN
+// 🔄 FUNCIONES AUXILIARES PARA EFECTOS
+// ============================================
+
+const gestionarEfecto = async (transaction, movimientoData) => {
+  const {
+    movPosicion,
+    ejercicio,
+    codigoEmpresa,
+    tipoMov,
+    asiento,
+    codigoCuenta,
+    contrapartida,
+    fechaAsiento,
+    fechaVencimiento,
+    importe,
+    comentario,
+    codigoClienteProveedor,
+    suFacturaNo,
+    esPago = false
+  } = movimientoData;
+
+  if (!fechaVencimiento) {
+    return null;
+  }
+
+  if (esPago) {
+    // MARCAR EFECTO COMO PAGADO/BORRADO (FormPage3 - Pago)
+    console.log(`🗑️ Marcando efecto como pagado para MovPosicion: ${movPosicion}`);
+    
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicion)
+      .input('Ejercicio', sql.SmallInt, ejercicio)
+      .input('StatusBorrado', sql.SmallInt, -1)
+      .input('StatusContabilizado', sql.SmallInt, -1)
+      .query(`
+        UPDATE CarteraEfectos 
+        SET StatusBorrado = @StatusBorrado,
+            StatusContabilizado = @StatusContabilizado,
+            FechaCobroEfecto_ = GETDATE()
+        WHERE MovPosicion = @MovPosicion 
+          AND Ejercicio = @Ejercicio
+      `);
+    
+    return true;
+  } else {
+    // CREAR NUEVO EFECTO - SOLO CAMPOS QUE SABEMOS QUE FUNCIONAN + FACTURA
+    console.log(`📄 Creando nuevo efecto para cuenta: ${codigoCuenta}`);
+    
+    // Convertir número de documento a entero para el campo Factura
+    const facturaNumero = parseInt(suFacturaNo) || 0;
+    
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicion)
+      .input('CodigoEmpresa', sql.SmallInt, codigoEmpresa)
+      .input('Ejercicio', sql.SmallInt, ejercicio)
+      .input('Prevision', sql.VarChar(1), 'P')
+      .input('CodigoClienteProveedor', sql.VarChar(6), codigoClienteProveedor || '000002')
+      .input('CodigoCuenta', sql.VarChar(15), codigoCuenta)
+      .input('FechaEmision', sql.DateTime, fechaAsiento)
+      .input('FechaFactura', sql.DateTime, fechaAsiento)
+      .input('FechaVencimiento', sql.DateTime, fechaVencimiento)
+      .input('Factura', sql.Int, facturaNumero) // SOLO AGREGAMOS ESTE CAMPO NUEVO
+      .input('SuFacturaNo', sql.VarChar(40), suFacturaNo || '')
+      .input('Comentario', sql.VarChar(40), comentario)
+      .input('EmpresaOrigen', sql.SmallInt, codigoEmpresa)
+      .query(`
+        INSERT INTO CarteraEfectos 
+        (MovPosicion, CodigoEmpresa, Ejercicio, Prevision, 
+         CodigoClienteProveedor, CodigoCuenta, 
+         FechaEmision, FechaFactura, FechaVencimiento, Factura, SuFacturaNo, Comentario, EmpresaOrigen)
+        VALUES 
+        (@MovPosicion, @CodigoEmpresa, @Ejercicio, @Prevision,
+         @CodigoClienteProveedor, @CodigoCuenta,
+         @FechaEmision, @FechaFactura, @FechaVencimiento, @Factura, @SuFacturaNo, @Comentario, @EmpresaOrigen)
+      `);
+    
+    return true;
+  }
+};
+
+// ============================================
+// 🔐 ENDPOINTS DE AUTENTICACIÓN
 // ============================================
 
 app.post('/login', async (req, res) => {
@@ -164,7 +253,7 @@ app.get('/api/session', (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE PROVEEDORES
+// 👥 ENDPOINTS DE PROVEEDORES
 // ============================================
 
 app.get('/api/proveedores', requireAuth, async (req, res) => {
@@ -214,7 +303,7 @@ app.get('/api/proveedores/cuentas', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE CONTADORES
+// 🔢 ENDPOINTS DE CONTADORES
 // ============================================
 
 app.get('/api/contador', requireAuth, async (req, res) => {
@@ -243,7 +332,7 @@ app.get('/api/contador', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE ASIENTOS CONTABLES - FACTURAS/GASTOS
+// 🧾 ENDPOINTS DE ASIENTOS CONTABLES - FACTURAS/GASTOS
 // ============================================
 
 app.post('/api/asiento/factura', requireAuth, async (req, res) => {
@@ -382,7 +471,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
       .input('CodigoDiario', sql.TinyInt, 0)
       .input('CodigoCanal', sql.VarChar(10), '')
       .input('CodigoActividad', sql.VarChar(1), '')
-      .input('Previsiones', sql.VarChar(1), 'P')
+      .input('Previsiones', sql.VarChar(1), vencimiento ? 'P' : '')
       .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
       .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
       .input('StatusConciliacion', sql.TinyInt, 0)
@@ -402,6 +491,26 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
          @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
+    
+    // CREAR EFECTO SI HAY FECHA DE VENCIMIENTO
+    if (vencimiento) {
+      await gestionarEfecto(transaction, {
+        movPosicion: movPosicionProveedor,
+        ejercicio: 2025,
+        codigoEmpresa: 9999,
+        tipoMov: 0,
+        asiento: siguienteAsiento,
+        codigoCuenta: cuentaContrapartida,
+        contrapartida: '',
+        fechaAsiento: fechaAsiento,
+        fechaVencimiento: fechaVencimientoFormateada,
+        importe: totalFactura,
+        comentario: comentarioCorto,
+        codigoClienteProveedor: proveedor.cuentaProveedor,
+        suFacturaNo: numDocumento,
+        esPago: false
+      });
+    }
     
     // Línea 2: IVA (DEBE)
     let movPosicionIVA = null;
@@ -624,7 +733,7 @@ app.post('/api/asiento/factura', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS (FormPage2)
+// 💰 ENDPOINTS DE ASIENTOS CONTABLES - INGRESOS
 // ============================================
 
 app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
@@ -757,7 +866,7 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
          StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
-         StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
+         StatusConciliacion, @StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
@@ -858,11 +967,8 @@ app.post('/api/asiento/ingreso', requireAuth, async (req, res) => {
   }
 });
 
-
-
-
 // ============================================
-// ✅ ENDPOINT PARA ASIENTO COMPRA + PAGO (FormPage3)
+// 🔄 ENDPOINT PARA ASIENTO COMPRA + PAGO
 // ============================================
 
 app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
@@ -949,7 +1055,18 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
     const comentarioFactura = `Factura ${factura.numDocumento}`.substring(0, 40);
     const comentarioPago = `Pago ${factura.numDocumento} - ${pago.concepto}`.substring(0, 40);
     
-    console.log(`💰 Compra+Pago: Factura=${totalFactura}, Base=${totalBase}, IVA=${totalIVA}`);
+    // Formatear fecha de vencimiento
+    let fechaVencimientoFormateada = null;
+    if (pago.fechaVencimiento) {
+      try {
+        const fechaVenc = new Date(pago.fechaVencimiento);
+        fechaVencimientoFormateada = new Date(fechaVenc.getFullYear(), fechaVenc.getMonth(), fechaVenc.getDate(), 0, 0, 0, 0);
+      } catch (error) {
+        console.error('❌ Error formateando fecha vencimiento:', error);
+      }
+    }
+    
+    console.log(`💰 Compra+Pago: Factura=${totalFactura}, Base=${totalBase}, IVA=${totalIVA}, Vencimiento=${fechaVencimientoFormateada}`);
     
     // LÍNEA 1: Proveedor (HABER) - Registro de la deuda
     const movPosicionProveedorHaber = uuidv4();
@@ -971,8 +1088,8 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
       .input('CodigoDiario', sql.TinyInt, 0)
       .input('CodigoCanal', sql.VarChar(10), '')
       .input('CodigoActividad', sql.VarChar(1), '')
-      .input('Previsiones', sql.VarChar(1), 'P')
-      .input('FechaVencimiento', sql.DateTime, pago.fechaVencimiento)
+      .input('Previsiones', sql.VarChar(1), fechaVencimientoFormateada ? 'P' : '')
+      .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
       .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
       .input('StatusConciliacion', sql.TinyInt, 0)
       .input('StatusSaldo', sql.TinyInt, 0)
@@ -991,6 +1108,26 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
          @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
+    
+    // CREAR EFECTO PARA LA DEUDA SI HAY FECHA DE VENCIMIENTO
+    if (fechaVencimientoFormateada) {
+      await gestionarEfecto(transaction, {
+        movPosicion: movPosicionProveedorHaber,
+        ejercicio: 2025,
+        codigoEmpresa: 9999,
+        tipoMov: 0,
+        asiento: siguienteAsiento,
+        codigoCuenta: cuentaProveedor,
+        contrapartida: '',
+        fechaAsiento: fechaAsiento,
+        fechaVencimiento: fechaVencimientoFormateada,
+        importe: totalFactura,
+        comentario: comentarioFactura,
+        codigoClienteProveedor: factura.proveedor.cuentaProveedor,
+        suFacturaNo: factura.numDocumento,
+        esPago: false
+      });
+    }
     
     // LÍNEA 2: IVA (DEBE)
     let movPosicionIVA = null;
@@ -1098,7 +1235,7 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
       .input('CodigoCanal', sql.VarChar(10), '')
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
-      .input('FechaVencimiento', sql.DateTime, pago.fechaVencimiento)
+      .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
       .input('NumeroPeriodo', sql.TinyInt, new Date().getMonth() + 1)
       .input('StatusConciliacion', sql.TinyInt, 0)
       .input('StatusSaldo', sql.TinyInt, 0)
@@ -1117,6 +1254,24 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
          @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
+    
+    // MARCAR EFECTO COMO PAGADO SI HABÍA FECHA DE VENCIMIENTO
+    if (fechaVencimientoFormateada) {
+      await gestionarEfecto(transaction, {
+        movPosicion: movPosicionProveedorHaber,
+        ejercicio: 2025,
+        codigoEmpresa: 9999,
+        tipoMov: 0,
+        asiento: siguienteAsiento,
+        codigoCuenta: cuentaProveedor,
+        fechaAsiento: fechaAsiento,
+        fechaVencimiento: fechaVencimientoFormateada,
+        importe: totalFactura,
+        comentario: comentarioPago,
+        codigoClienteProveedor: factura.proveedor.cuentaProveedor,
+        esPago: true
+      });
+    }
     
     // LÍNEA 5: Pago (HABER) - Salida de dinero
     const movPosicionPago = uuidv4();
@@ -1195,7 +1350,54 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// ✅ INICIALIZACIÓN DEL SERVIDOR
+// 🔍 ENDPOINT PARA CONSULTAR EFECTOS
+// ============================================
+
+app.get('/api/efectos/:codigoProveedor?', requireAuth, async (req, res) => {
+  try {
+    const { codigoProveedor } = req.params;
+    
+    let query = `
+      SELECT 
+        ce.MovCartera,
+        ce.MovPosicion,
+        ce.NumeroEfecto,
+        ce.CodigoClienteProveedor,
+        ce.CodigoCuenta,
+        ce.FechaEmision,
+        ce.FechaVencimiento,
+        ce.ImporteEfecto,
+        ce.SuFacturaNo,
+        ce.Comentario,
+        ce.StatusBorrado,
+        ce.StatusContabilizado,
+        p.RazonSocial as NombreProveedor
+      FROM CarteraEfectos ce
+      LEFT JOIN Proveedores p ON ce.CodigoClienteProveedor = p.CodigoProveedor
+      WHERE ce.CodigoEmpresa = 9999
+        AND ce.Ejercicio = 2025
+        AND ce.StatusBorrado = 0
+    `;
+    
+    if (codigoProveedor) {
+      query += ` AND ce.CodigoClienteProveedor = '${codigoProveedor}'`;
+    }
+    
+    query += ` ORDER BY ce.FechaVencimiento ASC`;
+    
+    const result = await pool.request().query(query);
+    
+    console.log(`📋 Efectos obtenidos: ${result.recordset.length} registros`);
+    res.json(result.recordset);
+    
+  } catch (err) {
+    console.error('❌ Error obteniendo efectos:', err);
+    res.status(500).json({ error: 'Error obteniendo efectos' });
+  }
+});
+
+// ============================================
+// 🚀 INICIALIZACIÓN DEL SERVIDOR
 // ============================================
 
 app.listen(PORT, () => {
