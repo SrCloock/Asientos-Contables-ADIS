@@ -6,6 +6,11 @@ import Dashboard from './pages/Dashboard';
 import FormPage1 from './pages/FormPage1';
 import FormPage2 from './pages/FormPage2';
 import FormPage3 from './pages/FormPage3';
+// Importar los nuevos formularios
+import FormPage4 from './pages/FormPage4';
+import FormPage5 from './pages/FormPage5';
+import FormPage6 from './pages/FormPage6';
+import FormPage7 from './pages/FormPage7';
 import Login from './pages/Login';
 
 const ProtectedRoute = ({ children }) => {
@@ -53,6 +58,11 @@ function App() {
             <Route path="form1" element={<FormPage1 />} />
             <Route path="form2" element={<FormPage2 />} />
             <Route path="form3" element={<FormPage3 />} />
+            {/* NUEVAS RUTAS PARA LOS FORMULARIOS NUEVOS */}
+            <Route path="form4" element={<FormPage4 />} />
+            <Route path="form5" element={<FormPage5 />} />
+            <Route path="form6" element={<FormPage6 />} />
+            <Route path="form7" element={<FormPage7 />} />
           </Route>
         </Routes>
       </Router>

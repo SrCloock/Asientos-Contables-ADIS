@@ -1,6 +1,19 @@
+// components/Layout.jsx
 import React from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { FaChartLine, FaFileInvoice, FaMoneyBill, FaExchangeAlt, FaSignOutAlt, FaUser, FaBuilding } from 'react-icons/fa';
+import { 
+  FaChartLine, 
+  FaFileInvoice, 
+  FaMoneyBill, 
+  FaExchangeAlt, 
+  FaSignOutAlt, 
+  FaUser, 
+  FaBuilding,
+  FaFileInvoiceDollar,
+  FaHandHoldingUsd,
+  FaMoneyBillWave,
+  FaReceipt
+} from 'react-icons/fa';
 import styles from '../styles/Layout.module.css';
 import { useAuth } from '../context/AuthContext';
 
@@ -74,6 +87,43 @@ const Layout = () => {
               >
                 <FaExchangeAlt />
                 Asiento Doble
+              </Link>
+            </li>
+            {/* NUEVOS FORMULARIOS */}
+            <li>
+              <Link 
+                to="/form4" 
+                className={location.pathname === '/form4' ? styles.active : ''}
+              >
+                <FaFileInvoiceDollar />
+                Factura Proveedor
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/form5" 
+                className={location.pathname === '/form5' ? styles.active : ''}
+              >
+                <FaHandHoldingUsd />
+                Pago Caja Proveedor
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/form6" 
+                className={location.pathname === '/form6' ? styles.active : ''}
+              >
+                <FaMoneyBillWave />
+                Ingreso Caja
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/form7" 
+                className={location.pathname === '/form7' ? styles.active : ''}
+              >
+                <FaReceipt />
+                Gasto Directo Caja
               </Link>
             </li>
             <li>
