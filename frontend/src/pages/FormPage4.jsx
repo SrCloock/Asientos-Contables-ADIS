@@ -12,8 +12,13 @@ const FormPage4 = ({ user }) => {
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Campos de documento (igual que FormPage1)
-  const [serie, setSerie] = useState(user?.serie || 'EM');
+  // Nuevos estados para datos maestros
+  const [cuentasGasto, setCuentasGasto] = useState([]);
+  const [cuentasProveedores, setCuentasProveedores] = useState([]);
+  const [canalCliente, setCanalCliente] = useState({ serie: 'EM', analitico: 'EM' });
+  
+  // Campos de documento
+  const [serie, setSerie] = useState('EM');
   const [numDocumento, setNumDocumento] = useState('');
   const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
@@ -21,7 +26,7 @@ const FormPage4 = ({ user }) => {
   const [fechaOper, setFechaOper] = useState('');
   const [vencimiento, setVencimiento] = useState('');
   
-  // Campos de proveedor (igual que FormPage1)
+  // Campos de proveedor
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '', cuenta: '' });
   const [inputCuenta, setInputCuenta] = useState('');
@@ -31,8 +36,8 @@ const FormPage4 = ({ user }) => {
   const isNuevoProveedor = cuentaP === '4000';
   
   // Campos específicos
-  const [cuentaGasto, setCuentaGasto] = useState('600000000');
-  const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
+  const [cuentaGasto, setCuentaGasto] = useState('');
+  const [analitico, setAnalitico] = useState('EM');
   const [archivo, setArchivo] = useState(null);
   
   // Detalles adaptados para IVA no deducible
@@ -45,23 +50,7 @@ const FormPage4 = ({ user }) => {
     }
   ]);
 
-  // Cuentas disponibles
-  const CUENTAS_GASTO = [
-    { id: '600000000', nombre: 'Compras de mercaderías' },
-    { id: '601000000', nombre: 'Compras de materias primas' },
-    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
-    { id: '621000000', nombre: 'Arrendamientos y cánones' },
-    { id: '622000000', nombre: 'Reparaciones y conservación' },
-    { id: '623000000', nombre: 'Servicios de profesionales independientes' },
-    { id: '624000000', nombre: 'Transportes' },
-    { id: '625000000', nombre: 'Primas de seguros' },
-    { id: '626000000', nombre: 'Servicios bancarios y similares' },
-    { id: '627000000', nombre: 'Publicidad, propaganda y relaciones públicas' },
-    { id: '628000000', nombre: 'Suministros' },
-    { id: '629000000', nombre: 'Otros servicios' }
-  ];
-
-  // Efectos (igual que FormPage1)
+  // Efectos para cargar datos maestros
   useEffect(() => {
     const fetchContador = async () => {
       try {
@@ -77,22 +66,52 @@ const FormPage4 = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    const fetchProveedores = async () => {
+    const fetchDatosMaestros = async () => {
       try {
-        const [proveedoresRes, cuentasRes] = await Promise.all([
+        const [
+          proveedoresRes, 
+          cuentasRes, 
+          gastosRes, 
+          proveedoresCuentasRes,
+          canalRes
+        ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cuentas/proveedores`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true })
         ]);
+        
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
+        setCuentasGasto(gastosRes.data || []);
+        setCuentasProveedores(proveedoresCuentasRes.data || []);
+        setCanalCliente(canalRes.data || { serie: 'EM', analitico: 'EM' });
+        
+        // Establecer valores por defecto del canal
+        setSerie(canalRes.data?.serie || 'EM');
+        setAnalitico(canalRes.data?.analitico || 'EM');
+        
+        // Establecer primera cuenta de gasto por defecto si existe
+        if (gastosRes.data && gastosRes.data.length > 0) {
+          setCuentaGasto(gastosRes.data[0].id);
+        } else {
+          // Si no hay cuentas de gasto, usar una por defecto
+          setCuentaGasto('600000000');
+        }
+        
       } catch (error) {
-        console.error('Error cargando proveedores:', error);
+        console.error('Error cargando datos maestros:', error);
+        // En caso de error, establecer valores por defecto
+        setSerie('EM');
+        setAnalitico('EM');
+        setCuentaGasto('600000000');
       }
     };
-    fetchProveedores();
+    fetchDatosMaestros();
   }, []);
 
-  // Actualizar datos proveedor (igual que FormPage1)
+  // Actualizar datos proveedor
   useEffect(() => {
     if (cuentaP && cuentaP !== '4000') {
       const proveedor = proveedores.find(p => p.codigo === cuentaP);
@@ -190,6 +209,9 @@ const FormPage4 = ({ user }) => {
       if (!inputCIF.trim()) errores.push('El CIF del nuevo proveedor es obligatorio');
       if (!inputNombre.trim()) errores.push('El nombre del nuevo proveedor es obligatorio');
     }
+    if (!cuentaGasto) {
+      errores.push('Debe seleccionar una cuenta de gasto');
+    }
     
     const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
     if (lineasValidas.length === 0) {
@@ -286,6 +308,11 @@ const FormPage4 = ({ user }) => {
     setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
     setArchivo(null);
     
+    // Restablecer cuenta de gasto a la primera opción
+    if (cuentasGasto.length > 0) {
+      setCuentaGasto(cuentasGasto[0].id);
+    }
+    
     const fetchNewContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { withCredentials: true });
@@ -295,6 +322,18 @@ const FormPage4 = ({ user }) => {
       }
     };
     fetchNewContador();
+  };
+
+  // Obtener nombre de la cuenta seleccionada
+  const getNombreCuentaGasto = () => {
+    const cuenta = cuentasGasto.find(c => c.id === cuentaGasto);
+    return cuenta ? cuenta.nombre : '';
+  };
+
+  // Obtener nombre de la cuenta de proveedor seleccionada
+  const getNombreCuentaProveedor = () => {
+    const cuenta = cuentasProveedores.find(c => c.id === datosCuentaP.cuenta);
+    return cuenta ? cuenta.nombre : 'Proveedores';
   };
 
   return (
@@ -316,12 +355,12 @@ const FormPage4 = ({ user }) => {
           <h3>Datos del Documento</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Serie</label>
+              <label>Serie (No editable)</label>
               <input 
                 type="text" 
                 value={serie}
-                onChange={(e) => setSerie(e.target.value)}
-                placeholder="EM, FAC, etc."
+                readOnly
+                className={styles.fp4Readonly}
               />
             </div>
             <div className={styles.fp4FormGroup}>
@@ -479,12 +518,17 @@ const FormPage4 = ({ user }) => {
               </div>
               <div className={styles.fp4FormGroup}>
                 <label>Cuenta Contable</label>
-                <input 
-                  type="text" 
+                <select
                   value={inputCuenta}
                   onChange={(e) => setInputCuenta(e.target.value)}
-                  placeholder="400000000"
-                />
+                >
+                  <option value="">Seleccionar cuenta</option>
+                  {cuentasProveedores.map(cuenta => (
+                    <option key={cuenta.id} value={cuenta.id}>
+                      {cuenta.id} - {cuenta.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
@@ -495,12 +539,12 @@ const FormPage4 = ({ user }) => {
           <h3>Detalles Económicos</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Código Analítico</label>
+              <label>Código Analítico (No editable)</label>
               <input 
                 type="text" 
                 value={analitico}
-                onChange={(e) => setAnalitico(e.target.value)}
-                placeholder="EM, etc."
+                readOnly
+                className={styles.fp4Readonly}
               />
             </div>
             <div className={styles.fp4FormGroup}>
@@ -510,7 +554,8 @@ const FormPage4 = ({ user }) => {
                 onChange={(e) => setCuentaGasto(e.target.value)}
                 required
               >
-                {CUENTAS_GASTO.map((cuenta) => (
+                <option value="">-- Seleccionar cuenta de gasto --</option>
+                {cuentasGasto.map((cuenta) => (
                   <option key={cuenta.id} value={cuenta.id}>
                     {cuenta.id} - {cuenta.nombre}
                   </option>
@@ -621,12 +666,12 @@ const FormPage4 = ({ user }) => {
           <div className={styles.fp4Resumen}>
             <div className={styles.fp4ResumenItem}>
               <span>DEBE:</span>
-              <span>{cuentaGasto} - {CUENTAS_GASTO.find(c => c.id === cuentaGasto)?.nombre}</span>
+              <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
             <div className={styles.fp4ResumenItem}>
               <span>HABER:</span>
-              <span>{datosCuentaP.cuenta} - Proveedores</span>
+              <span>{datosCuentaP.cuenta} - {getNombreCuentaProveedor()}</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
           </div>
@@ -653,7 +698,7 @@ const FormPage4 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp4SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento}
+            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento || !cuentaGasto}
           >
             {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>

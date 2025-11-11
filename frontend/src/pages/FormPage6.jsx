@@ -1,4 +1,4 @@
-// pages/FormPage6.jsx
+// pages/FormPage6.jsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
@@ -6,38 +6,18 @@ import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
 const FormPage6 = ({ user }) => {
-  // Estados similares al FormPage2
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Campos de documento (similar a FormPage2)
+  // Campos de documento
   const [serie, setSerie] = useState('ING');
   const [numDocumento, setNumDocumento] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Campos específicos para el ingreso
-  const [cuentaIngreso, setCuentaIngreso] = useState('');
+  // Campo único para importe (ya no necesitamos cuentaIngreso)
   const [importe, setImporte] = useState('');
-
-  // Cuentas de ingreso (similares a las del FormPage2)
-  const CUENTAS_INGRESO = [
-    { id: '700000000', nombre: 'Ventas de mercaderías' },
-    { id: '701000000', nombre: 'Ventas de productos terminados' },
-    { id: '702000000', nombre: 'Ventas de productos semi-terminados' },
-    { id: '703000000', nombre: 'Ventas de subproductos y residuos' },
-    { id: '704000000', nombre: 'Ventas de envases y embalajes' },
-    { id: '705000000', nombre: 'Prestaciones de servicios' },
-    { id: '706000000', nombre: 'Descuentos sobre ventas por pronto pago' },
-    { id: '708000000', nombre: 'Devoluciones de ventas y operaciones similares' },
-    { id: '709000000', nombre: 'Rappels sobre ventas' },
-    { id: '759000000', nombre: 'Ingresos por arrendamientos' },
-    { id: '760000000', nombre: 'Ingresos por propiedad intelectual' },
-    { id: '761000000', nombre: 'Ingresos por servicios al personal' },
-    { id: '762000000', nombre: 'Ingresos por servicios profesionales' },
-    { id: '769000000', nombre: 'Otros ingresos de gestión' }
-  ];
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -64,7 +44,8 @@ const FormPage6 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cuentaIngreso || !importe || !concepto || !numDocumento) {
+    // Validaciones simplificadas
+    if (!importe || !concepto || !numDocumento) {
       alert('Por favor complete todos los campos obligatorios');
       return;
     }
@@ -82,9 +63,9 @@ const FormPage6 = ({ user }) => {
         numDocumento,
         fecha,
         concepto,
-        cuentaIngreso,
         importe: parseFloat(importe),
         archivo
+        // ❌ Eliminado: cuentaIngreso
       };
 
       const response = await axios.post(`${config.apiBaseUrl}/api/asiento/ingreso-caja`, datosEnvio, {
@@ -92,7 +73,10 @@ const FormPage6 = ({ user }) => {
       });
 
       if (response.data.success) {
-        alert(`Asiento #${response.data.asiento} - Ingreso en Caja creado correctamente`);
+        alert(`✅ Asiento #${response.data.asiento} - Ingreso en Caja creado correctamente\n\n` +
+              `DEBE: 570000000 - Caja\n` +
+              `HABER: 519000000 - Responsable de caja\n` +
+              `Importe: ${parseFloat(importe).toFixed(2)} €`);
         resetForm();
       } else {
         alert('Error al crear el asiento: ' + response.data.message);
@@ -106,7 +90,6 @@ const FormPage6 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaIngreso('');
     setImporte('');
     setConcepto('');
     setNumDocumento('');
@@ -128,7 +111,7 @@ const FormPage6 = ({ user }) => {
       <div className={styles.fp6Header}>
         <h2>
           <FaMoneyBillWave />
-          Ingreso en Caja
+          Ingreso en Caja - Entrada de Efectivo
         </h2>
         <div className={styles.fp6AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -172,9 +155,9 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Importe y Cuenta */}
+        {/* Sección de Importe - SIMPLIFICADA */}
         <div className={styles.fp6Section}>
-          <h3>Importe y Cuenta</h3>
+          <h3>Datos del Ingreso</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
               <label>Concepto *</label>
@@ -182,7 +165,7 @@ const FormPage6 = ({ user }) => {
                 type="text" 
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del ingreso"
+                placeholder="Descripción del ingreso (ventas, servicios, etc.)"
                 required
               />
             </div>
@@ -197,21 +180,6 @@ const FormPage6 = ({ user }) => {
                 placeholder="0.00"
                 required
               />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso *</label>
-              <select
-                value={cuentaIngreso}
-                onChange={(e) => setCuentaIngreso(e.target.value)}
-                required
-              >
-                <option value="">-- Seleccionar cuenta --</option>
-                {CUENTAS_INGRESO.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.id} - {cuenta.nombre}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>
@@ -234,7 +202,7 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento */}
+        {/* Resumen del Asiento - CORREGIDO */}
         <div className={styles.fp6Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp6Resumen}>
@@ -245,11 +213,12 @@ const FormPage6 = ({ user }) => {
             </div>
             <div className={styles.fp6ResumenItem}>
               <span>HABER:</span>
-              <span>{cuentaIngreso} - {CUENTAS_INGRESO.find(c => c.id === cuentaIngreso)?.nombre || 'Ingreso'}</span>
+              <span>519000000 - Responsable de caja</span>
               <span>{importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}</span>
             </div>
             <div className={styles.fp6InfoBox}>
-              <p><strong>Nota:</strong> La contrapartida se registrará en la cuenta 519000000 (Responsable de caja)</p>
+              <p><strong>💡 Nota:</strong> Este asiento registra la entrada de dinero en efectivo a caja. 
+              La contrapartida se registra automáticamente en la cuenta del responsable de caja (519000000).</p>
             </div>
           </div>
         </div>
@@ -275,7 +244,7 @@ const FormPage6 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp6SubmitBtn} 
-            disabled={loading || !importe || !cuentaIngreso || !concepto || !numDocumento}
+            disabled={loading || !importe || !concepto || !numDocumento}
           >
             {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>

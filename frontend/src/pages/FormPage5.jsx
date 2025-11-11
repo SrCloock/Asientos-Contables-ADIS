@@ -28,11 +28,11 @@ const FormPage5 = ({ user }) => {
   const [inputCP, setInputCP] = useState('');
   const isNuevoProveedor = cuentaP === '4000';
   
-  // Campos específicos para el pago - AÑADIDOS
+  // Campos específicos para el pago
   const [cuentaGasto, setCuentaGasto] = useState('600000000');
   const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
   
-  // Detalles de la factura - AÑADIDOS
+  // Detalles de la factura
   const [detalles, setDetalles] = useState([
     { 
       base: '', 
@@ -42,7 +42,7 @@ const FormPage5 = ({ user }) => {
     }
   ]);
 
-  // Cuentas disponibles - AÑADIDAS
+  // Cuentas disponibles
   const CUENTAS_GASTO = [
     { id: '600000000', nombre: 'Compras de mercaderías' },
     { id: '601000000', nombre: 'Compras de materias primas' },
@@ -58,7 +58,7 @@ const FormPage5 = ({ user }) => {
     { id: '629000000', nombre: 'Otros servicios' }
   ];
 
-  // Efectos (igual que FormPage1)
+  // Efectos
   useEffect(() => {
     const fetchContador = async () => {
       try {
@@ -89,7 +89,7 @@ const FormPage5 = ({ user }) => {
     fetchProveedores();
   }, []);
 
-  // Actualizar datos proveedor (igual que FormPage1)
+  // Actualizar datos proveedor
   useEffect(() => {
     if (cuentaP && cuentaP !== '4000') {
       const proveedor = proveedores.find(p => p.codigo === cuentaP);
@@ -113,7 +113,7 @@ const FormPage5 = ({ user }) => {
     }
   }, [cuentaP, proveedores, proveedoresCuentas, inputCIF, inputNombre, inputCP, inputCuenta]);
 
-  // Manejo de detalles - IVA NO DEDUCIBLE - AÑADIDO
+  // Manejo de detalles - IVA INCLUIDO (todo va al gasto)
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -124,7 +124,7 @@ const FormPage5 = ({ user }) => {
     if (!isNaN(baseNum) && baseNum >= 0) {
       const cuotaIVA = (baseNum * tipoIVANum) / 100;
       newDetalles[index].cuotaIVA = cuotaIVA;
-      // En IVA no deducible, el total de la línea es base + IVA (todo va al gasto)
+      // En IVA incluido, el total de la línea es base + IVA (todo va al gasto)
       newDetalles[index].importeTotalLinea = baseNum + cuotaIVA;
     } else {
       newDetalles[index].cuotaIVA = 0;
@@ -151,7 +151,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // Cálculo de totales para IVA no deducible - AÑADIDO
+  // Cálculo de totales para IVA incluido
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -170,7 +170,7 @@ const FormPage5 = ({ user }) => {
 
   const totales = calcularTotales();
 
-  // Validación del formulario - AÑADIDA
+  // Validación del formulario
   const validarFormulario = () => {
     const errores = [];
     
@@ -229,12 +229,12 @@ const FormPage5 = ({ user }) => {
           cp: isNuevoProveedor ? inputCP : datosCuentaP.cp
         },
         
-        // Datos específicos del pago - AÑADIDOS
+        // Datos específicos del pago
         cuentaGasto,
         analitico,
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // Totales - AÑADIDOS
+        // Totales
         totalBase: totales.base,
         totalIVA: totales.iva,
         totalFactura: totales.total,
@@ -248,14 +248,14 @@ const FormPage5 = ({ user }) => {
       });
 
       if (response.data.success) {
-        alert(`Asiento #${response.data.asiento} - Pago en Caja a Proveedor creado correctamente`);
+        alert(`✅ Asiento #${response.data.asiento} - Pago en Caja a Proveedor creado correctamente`);
         resetForm();
       } else {
-        alert('Error al crear el asiento: ' + response.data.message);
+        alert('❌ Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
       console.error('Error creando asiento:', error);
-      alert('Error al crear el asiento: ' + (error.response?.data?.error || error.message));
+      alert('❌ Error al crear el asiento: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -440,7 +440,7 @@ const FormPage5 = ({ user }) => {
           )}
         </div>
 
-        {/* Sección de Detalles Económicos - AÑADIDA */}
+        {/* Sección de Detalles Económicos */}
         <div className={styles.fp5Section}>
           <h3>Detalles Económicos</h3>
           <div className={styles.fp5FormRow}>
@@ -470,7 +470,7 @@ const FormPage5 = ({ user }) => {
           </div>
 
           <div className={styles.fp5Detalles}>
-            <h4>Líneas de la Factura:</h4>
+            <h4>Líneas de la Factura (IVA INCLUIDO):</h4>
             
             {detalles.map((line, i) => (
               <div className={styles.fp5DetalleLinea} key={i}>
@@ -606,7 +606,9 @@ const FormPage5 = ({ user }) => {
               <span>{totales.total.toFixed(2)} €</span>
             </div>
             <div className={styles.fp5InfoBox}>
-              <p><strong>Nota:</strong> Este asiento registra la compra y el pago inmediato en caja. No se genera vencimiento.</p>
+              <p><strong>💰 PAGADO POR CAJA - SIN VENCIMIENTO</strong></p>
+              <p>Este asiento registra la compra y el pago inmediato en caja. No se genera vencimiento.</p>
+              <p><strong>IVA INCLUIDO:</strong> Todo el importe (base + IVA) va a la cuenta de gasto.</p>
             </div>
           </div>
         </div>
@@ -634,7 +636,7 @@ const FormPage5 = ({ user }) => {
             className={styles.fp5SubmitBtn} 
             disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0)}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento'}
+            {loading ? 'Procesando...' : 'Crear Asiento Pago en Caja'}
           </button>
         </div>
       </form>
