@@ -248,6 +248,9 @@ const FormPage6 = ({ user }) => {
               <span>{cuentaIngreso} - {CUENTAS_INGRESO.find(c => c.id === cuentaIngreso)?.nombre || 'Ingreso'}</span>
               <span>{importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}</span>
             </div>
+            <div className={styles.fp6InfoBox}>
+              <p><strong>Nota:</strong> La contrapartida se registrará en la cuenta 519000000 (Responsable de caja)</p>
+            </div>
           </div>
         </div>
 

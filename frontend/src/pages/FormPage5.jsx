@@ -1,7 +1,7 @@
 // pages/FormPage5.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaHandHoldingUsd } from 'react-icons/fa';
+import { FaHandHoldingUsd, FaPlus, FaTrash } from 'react-icons/fa';
 import styles from '../styles/FormPage5.module.css';
 import config from '../config/config';
 
@@ -28,8 +28,35 @@ const FormPage5 = ({ user }) => {
   const [inputCP, setInputCP] = useState('');
   const isNuevoProveedor = cuentaP === '4000';
   
-  // Campos específicos para el pago
-  const [importePago, setImportePago] = useState('');
+  // Campos específicos para el pago - AÑADIDOS
+  const [cuentaGasto, setCuentaGasto] = useState('600000000');
+  const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
+  
+  // Detalles de la factura - AÑADIDOS
+  const [detalles, setDetalles] = useState([
+    { 
+      base: '', 
+      tipoIVA: '21', 
+      cuotaIVA: 0,
+      importeTotalLinea: 0
+    }
+  ]);
+
+  // Cuentas disponibles - AÑADIDAS
+  const CUENTAS_GASTO = [
+    { id: '600000000', nombre: 'Compras de mercaderías' },
+    { id: '601000000', nombre: 'Compras de materias primas' },
+    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
+    { id: '621000000', nombre: 'Arrendamientos y cánones' },
+    { id: '622000000', nombre: 'Reparaciones y conservación' },
+    { id: '623000000', nombre: 'Servicios de profesionales independientes' },
+    { id: '624000000', nombre: 'Transportes' },
+    { id: '625000000', nombre: 'Primas de seguros' },
+    { id: '626000000', nombre: 'Servicios bancarios y similares' },
+    { id: '627000000', nombre: 'Publicidad, propaganda y relaciones públicas' },
+    { id: '628000000', nombre: 'Suministros' },
+    { id: '629000000', nombre: 'Otros servicios' }
+  ];
 
   // Efectos (igual que FormPage1)
   useEffect(() => {
@@ -86,6 +113,86 @@ const FormPage5 = ({ user }) => {
     }
   }, [cuentaP, proveedores, proveedoresCuentas, inputCIF, inputNombre, inputCP, inputCuenta]);
 
+  // Manejo de detalles - IVA NO DEDUCIBLE - AÑADIDO
+  const handleDetalleChange = (index, field, value) => {
+    const newDetalles = [...detalles];
+    newDetalles[index][field] = value;
+
+    const baseNum = parseFloat(newDetalles[index].base) || 0;
+    const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
+    
+    if (!isNaN(baseNum) && baseNum >= 0) {
+      const cuotaIVA = (baseNum * tipoIVANum) / 100;
+      newDetalles[index].cuotaIVA = cuotaIVA;
+      // En IVA no deducible, el total de la línea es base + IVA (todo va al gasto)
+      newDetalles[index].importeTotalLinea = baseNum + cuotaIVA;
+    } else {
+      newDetalles[index].cuotaIVA = 0;
+      newDetalles[index].importeTotalLinea = 0;
+    }
+    
+    setDetalles(newDetalles);
+  };
+
+  const addDetalleLine = () => {
+    setDetalles([...detalles, { 
+      base: '', 
+      tipoIVA: '21', 
+      cuotaIVA: 0,
+      importeTotalLinea: 0
+    }]);
+  };
+
+  const removeDetalleLine = (index) => {
+    if (detalles.length > 1) {
+      const newDetalles = [...detalles];
+      newDetalles.splice(index, 1);
+      setDetalles(newDetalles);
+    }
+  };
+
+  // Cálculo de totales para IVA no deducible - AÑADIDO
+  const calcularTotales = () => {
+    return detalles.reduce((acc, detalle) => {
+      const base = parseFloat(detalle.base) || 0;
+      const iva = parseFloat(detalle.cuotaIVA) || 0;
+      
+      if (base > 0) {
+        return {
+          base: acc.base + base,
+          iva: acc.iva + iva,
+          total: acc.total + base + iva  // Base + IVA todo va al gasto
+        };
+      }
+      return acc;
+    }, { base: 0, iva: 0, total: 0 });
+  };
+
+  const totales = calcularTotales();
+
+  // Validación del formulario - AÑADIDA
+  const validarFormulario = () => {
+    const errores = [];
+    
+    if (!numDocumento.trim()) {
+      errores.push('El número de documento es obligatorio');
+    }
+    if (!cuentaP && !isNuevoProveedor) {
+      errores.push('Debe seleccionar un proveedor');
+    }
+    if (isNuevoProveedor) {
+      if (!inputCIF.trim()) errores.push('El CIF del nuevo proveedor es obligatorio');
+      if (!inputNombre.trim()) errores.push('El nombre del nuevo proveedor es obligatorio');
+    }
+    
+    const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
+    if (lineasValidas.length === 0) {
+      errores.push('Debe ingresar al menos una línea con base imponible mayor a 0');
+    }
+    
+    return errores;
+  };
+
   // Manejo de archivos
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -98,8 +205,9 @@ const FormPage5 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cuentaP || !numDocumento || !importePago) {
-      alert('Por favor complete los campos obligatorios');
+    const errores = validarFormulario();
+    if (errores.length > 0) {
+      alert('Errores en el formulario:\n• ' + errores.join('\n• '));
       return;
     }
 
@@ -111,6 +219,7 @@ const FormPage5 = ({ user }) => {
         serie,
         numDocumento,
         fechaReg,
+        concepto,
         
         // Datos de proveedor
         proveedor: {
@@ -120,9 +229,15 @@ const FormPage5 = ({ user }) => {
           cp: isNuevoProveedor ? inputCP : datosCuentaP.cp
         },
         
-        // Datos específicos del pago
-        importePago: parseFloat(importePago),
-        concepto,
+        // Datos específicos del pago - AÑADIDOS
+        cuentaGasto,
+        analitico,
+        detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
+        
+        // Totales - AÑADIDOS
+        totalBase: totales.base,
+        totalIVA: totales.iva,
+        totalFactura: totales.total,
         
         // Archivo
         archivo: archivo
@@ -154,8 +269,8 @@ const FormPage5 = ({ user }) => {
     setInputNombre('');
     setInputCP('');
     setNumDocumento('');
-    setImportePago('');
     setConcepto('');
+    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
     setArchivo(null);
     
     const fetchNewContador = async () => {
@@ -325,9 +440,116 @@ const FormPage5 = ({ user }) => {
           )}
         </div>
 
-        {/* Sección de Importe del Pago */}
+        {/* Sección de Detalles Económicos - AÑADIDA */}
         <div className={styles.fp5Section}>
-          <h3>Importe del Pago</h3>
+          <h3>Detalles Económicos</h3>
+          <div className={styles.fp5FormRow}>
+            <div className={styles.fp5FormGroup}>
+              <label>Código Analítico</label>
+              <input 
+                type="text" 
+                value={analitico}
+                onChange={(e) => setAnalitico(e.target.value)}
+                placeholder="EM, etc."
+              />
+            </div>
+            <div className={styles.fp5FormGroup}>
+              <label>Cuenta de Gasto *</label>
+              <select
+                value={cuentaGasto}
+                onChange={(e) => setCuentaGasto(e.target.value)}
+                required
+              >
+                {CUENTAS_GASTO.map((cuenta) => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.id} - {cuenta.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.fp5Detalles}>
+            <h4>Líneas de la Factura:</h4>
+            
+            {detalles.map((line, i) => (
+              <div className={styles.fp5DetalleLinea} key={i}>
+                <div className={styles.fp5LineaHeader}>
+                  <span>Línea {i + 1}</span>
+                  {detalles.length > 1 && (
+                    <button 
+                      type="button" 
+                      className={styles.fp5RemoveBtn}
+                      onClick={() => removeDetalleLine(i)}
+                    >
+                      <FaTrash />
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+                
+                <div className={styles.fp5FormRow}>
+                  <div className={styles.fp5FormGroup}>
+                    <label>Base Imponible *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={line.base}
+                      onChange={(e) => handleDetalleChange(i, 'base', e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.fp5FormGroup}>
+                    <label>Tipo IVA</label>
+                    <select
+                      value={line.tipoIVA}
+                      onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
+                    >
+                      <option value="21">21% General</option>
+                      <option value="10">10% Reducido</option>
+                      <option value="4">4% Superreducido</option>
+                      <option value="0">0% Exento</option>
+                    </select>
+                  </div>
+                  
+                  <div className={styles.fp5FormGroup}>
+                    <label>Cuota IVA</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      readOnly 
+                      value={line.cuotaIVA.toFixed(2)} 
+                      className={styles.fp5Readonly}
+                    />
+                  </div>
+                  
+                  <div className={styles.fp5FormGroup}>
+                    <label>Total Línea</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      readOnly 
+                      value={line.importeTotalLinea.toFixed(2)} 
+                      className={styles.fp5Readonly}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button type="button" className={styles.fp5AddBtn} onClick={addDetalleLine}>
+              <FaPlus />
+              Añadir línea de factura
+            </button>
+          </div>
+        </div>
+
+        {/* Sección de Concepto */}
+        <div className={styles.fp5Section}>
+          <h3>Concepto del Pago</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>Concepto</label>
@@ -336,18 +558,6 @@ const FormPage5 = ({ user }) => {
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
                 placeholder="Ej: Pago factura pendiente"
-              />
-            </div>
-            <div className={styles.fp5FormGroup}>
-              <label>Importe a Pagar *</label>
-              <input 
-                type="number" 
-                step="0.01"
-                min="0.01"
-                value={importePago}
-                onChange={(e) => setImportePago(e.target.value)}
-                placeholder="0.00"
-                required
               />
             </div>
           </div>
@@ -377,13 +587,26 @@ const FormPage5 = ({ user }) => {
           <div className={styles.fp5Resumen}>
             <div className={styles.fp5ResumenItem}>
               <span>DEBE:</span>
+              <span>{cuentaGasto} - {CUENTAS_GASTO.find(c => c.id === cuentaGasto)?.nombre}</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp5ResumenItem}>
+              <span>HABER:</span>
               <span>{datosCuentaP.cuenta} - Proveedores</span>
-              <span>{importePago ? parseFloat(importePago).toFixed(2) + ' €' : '0.00 €'}</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp5ResumenItem}>
+              <span>DEBE:</span>
+              <span>{datosCuentaP.cuenta} - Proveedores</span>
+              <span>{totales.total.toFixed(2)} €</span>
             </div>
             <div className={styles.fp5ResumenItem}>
               <span>HABER:</span>
               <span>570000000 - Caja</span>
-              <span>{importePago ? parseFloat(importePago).toFixed(2) + ' €' : '0.00 €'}</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp5InfoBox}>
+              <p><strong>Nota:</strong> Este asiento registra la compra y el pago inmediato en caja. No se genera vencimiento.</p>
             </div>
           </div>
         </div>
@@ -409,7 +632,7 @@ const FormPage5 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp5SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !importePago}
+            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0)}
           >
             {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>

@@ -49,7 +49,7 @@ const FormPage4 = ({ user }) => {
   const CUENTAS_GASTO = [
     { id: '600000000', nombre: 'Compras de mercaderías' },
     { id: '601000000', nombre: 'Compras de materias primas' },
-    { id: '602000000', nome: 'Compras de otros aprovisionamientos' },
+    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
     { id: '621000000', nombre: 'Arrendamientos y cánones' },
     { id: '622000000', nombre: 'Reparaciones y conservación' },
     { id: '623000000', nombre: 'Servicios de profesionales independientes' },
@@ -173,21 +173,47 @@ const FormPage4 = ({ user }) => {
 
   const totales = calcularTotales();
 
+  // Validación del formulario
+  const validarFormulario = () => {
+    const errores = [];
+    
+    if (!vencimiento) {
+      errores.push('La fecha de vencimiento es obligatoria para este tipo de asiento');
+    }
+    if (!numDocumento.trim()) {
+      errores.push('El número de documento es obligatorio');
+    }
+    if (!cuentaP && !isNuevoProveedor) {
+      errores.push('Debe seleccionar un proveedor');
+    }
+    if (isNuevoProveedor) {
+      if (!inputCIF.trim()) errores.push('El CIF del nuevo proveedor es obligatorio');
+      if (!inputNombre.trim()) errores.push('El nombre del nuevo proveedor es obligatorio');
+    }
+    
+    const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
+    if (lineasValidas.length === 0) {
+      errores.push('Debe ingresar al menos una línea con base imponible mayor a 0');
+    }
+    
+    return errores;
+  };
+
   // Manejo de archivos
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Guardamos la ruta completa como se solicita
       setArchivo(`C:\\Users\\${user?.usuario || 'Usuario'}\\Desktop\\${file.name}`);
     }
   };
 
-  // Envío del formulario - Usaremos el endpoint existente con adaptaciones
+  // Envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0)) {
-      alert('Por favor complete los campos obligatorios');
+    const errores = validarFormulario();
+    if (errores.length > 0) {
+      alert('Errores en el formulario:\n• ' + errores.join('\n• '));
       return;
     }
 
@@ -222,16 +248,12 @@ const FormPage4 = ({ user }) => {
         // Archivo - solo la ruta
         archivo: archivo,
         
-        // Flag para indicar que es IVA no deducible
-        ivaNoDeducible: true,
-        
         // Totales
         totalBase: totales.base,
         totalIVA: totales.iva,
         totalFactura: totales.total
       };
 
-      // Usamos el endpoint existente con adaptación para IVA no deducible
       const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-incluido`, datosEnvio, {
         withCredentials: true
       });
@@ -350,11 +372,12 @@ const FormPage4 = ({ user }) => {
               />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Vencimiento</label>
+              <label>Vencimiento *</label>
               <input
                 type="date"
                 value={vencimiento}
                 onChange={(e) => setVencimiento(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -630,7 +653,7 @@ const FormPage4 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp4SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0)}
+            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento}
           >
             {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
