@@ -59,8 +59,8 @@ const FormPage7 = ({ user }) => {
         setCuentasGasto(gastosRes.data || []);
         
         // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
-        const serieCliente = canalRes.data?.serie || 'EM';
-        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        const serieCliente = canalRes.data?.serie || 'ERROR';
+        const analiticoCliente = canalRes.data?.analitico || 'ERROR';
         const serieConC = `C${serieCliente}`;
         
         setSerieBase(serieCliente);
@@ -181,24 +181,13 @@ const FormPage7 = ({ user }) => {
           <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
-
-      <div className={styles.fp7Description}>
-        <p>
-          <strong>Objetivo:</strong> Registrar un gasto pagado directamente en efectivo 
-          (Sin factura, pero con liquidación de gasto, ticket u otro justificante).
-        </p>
-        <div className={styles.fp7AsientoType}>
-          <span><strong>Asiento:</strong> DEBE → 6xx (Gasto con IVA incluido) | HABER → 570 (Caja)</span>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className={styles.fp7Form}>
         {/* Sección de Datos del Documento */}
         <div className={styles.fp7Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
-              <label>Serie (C + Serie usuario)</label>
+              <label>Serie</label>
               <input 
                 type="text" 
                 value={serie}
@@ -207,7 +196,7 @@ const FormPage7 = ({ user }) => {
               />
             </div>
             <div className={styles.fp7FormGroup}>
-              <label>Nº Documento * (Va a NumeroDoc)</label>
+              <label>Nº Documento *</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -244,7 +233,7 @@ const FormPage7 = ({ user }) => {
             </div>
             <div className={styles.fp7FormGroup}>
               <label>
-                <FaEuroSign /> Importe (IVA Incluido) *
+                <FaEuroSign /> Importe*
               </label>
               <input 
                 type="number" 
@@ -279,7 +268,7 @@ const FormPage7 = ({ user }) => {
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
-              <label>Justificante (Ticket, Liquidación, etc.)</label>
+              <label>Justificante</label>
               <input 
                 type="file" 
                 onChange={handleFileChange}
@@ -315,17 +304,6 @@ const FormPage7 = ({ user }) => {
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
               </span>
             </div>
-          </div>
-          
-          <div className={styles.fp7InfoBox}>
-            <p><strong>✅ Correcciones aplicadas:</strong></p>
-            <ul>
-              <li>Serie con 'C': <strong>{serie}</strong> (base: {serieBase})</li>
-              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
-              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
-              <li>Cuentas 6xx desde BD</li>
-              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
-            </ul>
           </div>
         </div>
 

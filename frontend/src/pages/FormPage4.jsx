@@ -112,8 +112,8 @@ const FormPage4 = ({ user }) => {
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
         // Valores por defecto en caso de error
-        setSerie('EM');
-        setAnalitico('EM');
+        setSerie('ERROR');
+        setAnalitico('ERROR');
         setCuentaGasto('600000000');
       }
     };
@@ -341,7 +341,7 @@ const FormPage4 = ({ user }) => {
       <div className={styles.fp4Header}>
         <h2>
           <FaFileInvoiceDollar />
-          Factura de Proveedor (IVA Incluido) - CORREGIDO
+          Factura de Proveedor
         </h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -357,7 +357,7 @@ const FormPage4 = ({ user }) => {
           <h3>Datos del Documento</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Serie (Fija del usuario)</label>
+              <label>Serie</label>
               <input 
                 type="text" 
                 value={serie}
@@ -366,7 +366,7 @@ const FormPage4 = ({ user }) => {
               />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Nº Documento * (Va a NumeroDoc)</label>
+              <label>Nº Documento *</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -389,7 +389,7 @@ const FormPage4 = ({ user }) => {
           {/* NUEVO CAMPO: Concepto */}
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Concepto * (Para Comentario)</label>
+              <label>Concepto *</label>
               <input 
                 type="text" 
                 value={concepto}
@@ -507,7 +507,7 @@ const FormPage4 = ({ user }) => {
           <h3>Detalles Económicos</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Código Analítico (Fijo del usuario)</label>
+              <label>Código Analítico </label>
               <input 
                 type="text" 
                 value={analitico}
@@ -632,8 +632,6 @@ const FormPage4 = ({ user }) => {
         <div className={styles.fp4Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp4InfoBox}>
-            <p><strong>📝 Comentario que se guardará:</strong></p>
-            <p>"{numFRA} {concepto}".substring(0, 40)</p>
           </div>
           <div className={styles.fp4Resumen}>
             <div className={styles.fp4ResumenItem}>
@@ -646,16 +644,6 @@ const FormPage4 = ({ user }) => {
               <span>{datosCuentaP.cuentaContable} - Proveedores</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
-          </div>
-          <div className={styles.fp4InfoBox}>
-            <p><strong>✅ Correcciones aplicadas:</strong></p>
-            <ul>
-              <li>Serie fija: <strong>{serie}</strong> (desde tabla Clientes)</li>
-              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
-              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
-              <li>Cuenta contable real del proveedor: <strong>{datosCuentaP.cuentaContable}</strong></li>
-              <li>Serie <strong>{serie}</strong> se guarda en tabla Movimientos</li>
-            </ul>
           </div>
         </div>
 

@@ -62,33 +62,6 @@ const Layout = () => {
                 Dashboard
               </Link>
             </li>
-            <li>
-              <Link 
-                to="/form1" 
-                className={location.pathname === '/form1' ? styles.active : ''}
-              >
-                <FaFileInvoice />
-                Facturas y Gastos
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/form2" 
-                className={location.pathname === '/form2' ? styles.active : ''}
-              >
-                <FaMoneyBill />
-                Ingresos
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/form3" 
-                className={location.pathname === '/form3' ? styles.active : ''}
-              >
-                <FaExchangeAlt />
-                Asiento Doble
-              </Link>
-            </li>
             {/* NUEVOS FORMULARIOS */}
             <li>
               <Link 

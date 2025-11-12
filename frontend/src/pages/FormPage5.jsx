@@ -103,8 +103,8 @@ const FormPage5 = ({ user }) => {
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
         // Valores por defecto en caso de error
-        setSerie('EM');
-        setAnalitico('EM');
+        setSerie('ERROR');
+        setAnalitico('ERROR');
         setCuentaCaja('570000000');
       }
     };
@@ -308,7 +308,7 @@ const FormPage5 = ({ user }) => {
       <div className={styles.fp5Header}>
         <h2>
           <FaHandHoldingUsd />
-          Pago en Caja a Proveedor - CORREGIDO
+          Pago en Caja a Proveedor
         </h2>
         <div className={styles.fp5AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -319,14 +319,6 @@ const FormPage5 = ({ user }) => {
         </div>
       </div>
 
-      <div className={styles.fp5Description}>
-        <p>
-          <strong>Objetivo:</strong> Registrar compra a proveedor con pago inmediato en caja (IVA INCLUIDO).
-        </p>
-        <div className={styles.fp5AsientoType}>
-          <span><strong>Asiento:</strong> 4 líneas (Gasto → Proveedor Haber → Proveedor Debe → Caja)</span>
-        </div>
-      </div>
 
       <form onSubmit={handleSubmit} className={styles.fp5Form}>
         {/* Sección de Datos del Documento */}
@@ -334,7 +326,7 @@ const FormPage5 = ({ user }) => {
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Serie (Fija del usuario)</label>
+              <label>Serie</label>
               <input 
                 type="text" 
                 value={serie}
@@ -343,7 +335,7 @@ const FormPage5 = ({ user }) => {
               />
             </div>
             <div className={styles.fp5FormGroup}>
-              <label>Nº Documento * (Va a NumeroDoc)</label>
+              <label>Nº Documento *</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -364,7 +356,7 @@ const FormPage5 = ({ user }) => {
           </div>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Concepto (Opcional, para Comentario)</label>
+              <label>Concepto</label>
               <input 
                 type="text" 
                 value={concepto}
@@ -469,7 +461,7 @@ const FormPage5 = ({ user }) => {
           </div>
 
           <div className={styles.fp5Detalles}>
-            <h4>Líneas de la Factura (IVA INCLUIDO):</h4>
+            <h4>Líneas de la Factura:</h4>
             
             {detalles.map((line, i) => (
               <div className={styles.fp5DetalleLinea} key={i}>
@@ -605,17 +597,6 @@ const FormPage5 = ({ user }) => {
                 {totales.total.toFixed(2)} €
               </span>
             </div>
-          </div>
-          
-          <div className={styles.fp5InfoBox}>
-            <p><strong>✅ Correcciones aplicadas:</strong></p>
-            <ul>
-              <li>Serie fija: <strong>{serie}</strong> (desde tabla Clientes)</li>
-              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
-              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
-              <li>Cuenta contable real del proveedor: <strong>{datosCuentaP.cuentaContable}</strong></li>
-              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
-            </ul>
           </div>
         </div>
 

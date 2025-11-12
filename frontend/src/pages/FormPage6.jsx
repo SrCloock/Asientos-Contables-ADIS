@@ -59,8 +59,8 @@ const FormPage6 = ({ user }) => {
         setCuentasIngreso(ingresosRes.data || []);
         
         // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
-        const serieCliente = canalRes.data?.serie || 'EM';
-        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        const serieCliente = canalRes.data?.serie || 'ERROR';
+        const analiticoCliente = canalRes.data?.analitico || 'ERROR';
         const serieConC = `C${serieCliente}`;
         
         setSerieBase(serieCliente);
@@ -171,7 +171,7 @@ const FormPage6 = ({ user }) => {
       <div className={styles.fp6Header}>
         <h2>
           <FaMoneyBillWave />
-          Ingreso en Caja - CORREGIDO
+          Ingreso en Caja
         </h2>
         <div className={styles.fp6AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -182,22 +182,13 @@ const FormPage6 = ({ user }) => {
         </div>
       </div>
 
-      <div className={styles.fp6Description}>
-        <p>
-          <strong>Objetivo:</strong> Registrar un ingreso en efectivo (Venta, cobro, anticipo, etc.).
-        </p>
-        <div className={styles.fp6AsientoType}>
-          <span><strong>Asiento:</strong> DEBE → 570 (Caja) | HABER → 519 (Ingreso)</span>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className={styles.fp6Form}>
         {/* Sección de Datos del Documento */}
         <div className={styles.fp6Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Serie (C + Serie usuario)</label>
+              <label>Serie </label>
               <input 
                 type="text" 
                 value={serie}
@@ -206,7 +197,7 @@ const FormPage6 = ({ user }) => {
               />
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Nº Documento * (Va a NumeroDoc)</label>
+              <label>Nº Documento *</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -256,7 +247,7 @@ const FormPage6 = ({ user }) => {
               />
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso * (519)</label>
+              <label>Cuenta de Ingreso *</label>
               <select
                 value={cuentaIngreso}
                 onChange={(e) => setCuentaIngreso(e.target.value)}
@@ -278,7 +269,7 @@ const FormPage6 = ({ user }) => {
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Justificante (Recibo, Factura, etc.)</label>
+              <label>Justificante</label>
               <input 
                 type="file" 
                 onChange={handleFileChange}
@@ -314,17 +305,6 @@ const FormPage6 = ({ user }) => {
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
               </span>
             </div>
-          </div>
-          
-          <div className={styles.fp6InfoBox}>
-            <p><strong>✅ Correcciones aplicadas:</strong></p>
-            <ul>
-              <li>Serie con 'C': <strong>{serie}</strong> (base: {serieBase})</li>
-              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
-              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
-              <li>Cuentas 519 desde BD</li>
-              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
-            </ul>
           </div>
         </div>
 
