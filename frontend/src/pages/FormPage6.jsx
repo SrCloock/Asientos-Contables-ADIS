@@ -1,7 +1,7 @@
-// pages/FormPage6.jsx - VERSIÓN CORREGIDA
+// pages/FormPage6.jsx - VERSIÓN COMPLETA Y CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaMoneyBillWave } from 'react-icons/fa';
+import { FaMoneyBillWave, FaEuroSign, FaWallet } from 'react-icons/fa';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
@@ -9,15 +9,24 @@ const FormPage6 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
+  const [serieBase, setSerieBase] = useState('');
+  const [serie, setSerie] = useState('');
+  const [analitico, setAnalitico] = useState('');
+  
+  // CUENTA CAJA desde tabla Clientes
+  const [cuentaCaja, setCuentaCaja] = useState('');
+  
   // Campos de documento
-  const [serie, setSerie] = useState('ING');
   const [numDocumento, setNumDocumento] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
-  const [archivo, setArchivo] = useState(null);
   
-  // Campo único para importe (ya no necesitamos cuentaIngreso)
+  // Cuentas de ingreso (519) desde BD
+  const [cuentasIngreso, setCuentasIngreso] = useState([]);
+  const [cuentaIngreso, setCuentaIngreso] = useState('');
   const [importe, setImporte] = useState('');
+  const [archivo, setArchivo] = useState(null);
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -34,6 +43,51 @@ const FormPage6 = ({ user }) => {
     fetchContador();
   }, []);
 
+  useEffect(() => {
+    const fetchDatosMaestros = async () => {
+      try {
+        const [
+          ingresosRes,
+          canalRes,
+          cuentaCajaRes
+        ] = await Promise.all([
+          axios.get(`${config.apiBaseUrl}/api/cuentas/ingresos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
+        ]);
+        
+        setCuentasIngreso(ingresosRes.data || []);
+        
+        // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+        const serieCliente = canalRes.data?.serie || 'EM';
+        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        const serieConC = `C${serieCliente}`;
+        
+        setSerieBase(serieCliente);
+        setSerie(serieConC);
+        setAnalitico(analiticoCliente);
+        
+        // CUENTA CAJA
+        setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
+        
+        // Establecer primera cuenta de ingreso por defecto si existe
+        if (ingresosRes.data && ingresosRes.data.length > 0) {
+          setCuentaIngreso(ingresosRes.data[0].id);
+        }
+        
+        console.log(`✅ FormPage6 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
+        
+      } catch (error) {
+        console.error('Error cargando datos maestros:', error);
+        // Valores por defecto en caso de error
+        setSerie('CEM');
+        setAnalitico('EM');
+        setCuentaCaja('570000000');
+      }
+    };
+    fetchDatosMaestros();
+  }, []);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -44,8 +98,7 @@ const FormPage6 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validaciones simplificadas
-    if (!importe || !concepto || !numDocumento) {
+    if (!cuentaIngreso || !importe || !concepto || !numDocumento) {
       alert('Por favor complete todos los campos obligatorios');
       return;
     }
@@ -63,33 +116,38 @@ const FormPage6 = ({ user }) => {
         numDocumento,
         fecha,
         concepto,
+        comentario: concepto,
+        analitico,
+        cuentaIngreso,
+        cuentaCaja,
         importe: parseFloat(importe),
         archivo
-        // ❌ Eliminado: cuentaIngreso
       };
 
-      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/ingreso-caja`, datosEnvio, {
-        withCredentials: true
-      });
+      console.log('📤 Enviando datos FormPage6:', datosEnvio);
+
+      const response = await axios.post(
+        `${config.apiBaseUrl}/api/asiento/ingreso-caja`, 
+        datosEnvio, 
+        { withCredentials: true }
+      );
 
       if (response.data.success) {
-        alert(`✅ Asiento #${response.data.asiento} - Ingreso en Caja creado correctamente\n\n` +
-              `DEBE: 570000000 - Caja\n` +
-              `HABER: 519000000 - Responsable de caja\n` +
-              `Importe: ${parseFloat(importe).toFixed(2)} €`);
+        alert(`✅ Asiento #${response.data.asiento} - Ingreso en Caja creado correctamente`);
         resetForm();
       } else {
-        alert('Error al crear el asiento: ' + response.data.message);
+        alert('❌ Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
       console.error('Error creando asiento:', error);
-      alert('Error al crear el asiento: ' + (error.response?.data?.error || error.message));
+      alert('❌ Error al crear el asiento: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
   };
 
   const resetForm = () => {
+    setCuentaIngreso(cuentasIngreso.length > 0 ? cuentasIngreso[0].id : '');
     setImporte('');
     setConcepto('');
     setNumDocumento('');
@@ -97,7 +155,9 @@ const FormPage6 = ({ user }) => {
     
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { withCredentials: true });
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
+          withCredentials: true 
+        });
         setNumAsiento(response.data.contador);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -111,30 +171,42 @@ const FormPage6 = ({ user }) => {
       <div className={styles.fp6Header}>
         <h2>
           <FaMoneyBillWave />
-          Ingreso en Caja - Entrada de Efectivo
+          Ingreso en Caja - CORREGIDO
         </h2>
         <div className={styles.fp6AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
+          <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
+          <span>Analítico: <strong>{analitico}</strong></span>
+          <span>Caja: <strong>{cuentaCaja}</strong></span>
+        </div>
+      </div>
+
+      <div className={styles.fp6Description}>
+        <p>
+          <strong>Objetivo:</strong> Registrar un ingreso en efectivo (Venta, cobro, anticipo, etc.).
+        </p>
+        <div className={styles.fp6AsientoType}>
+          <span><strong>Asiento:</strong> DEBE → 570 (Caja) | HABER → 519 (Ingreso)</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp6Form}>
         {/* Sección de Datos del Documento */}
         <div className={styles.fp6Section}>
-          <h3>Datos del Documento</h3>
+          <h3>📄 Datos del Documento</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Serie</label>
+              <label>Serie (C + Serie usuario)</label>
               <input 
                 type="text" 
                 value={serie}
-                onChange={(e) => setSerie(e.target.value)}
-                placeholder="ING, etc."
+                readOnly
+                className={styles.fp6Readonly}
               />
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Nº Documento *</label>
+              <label>Nº Documento * (Va a NumeroDoc)</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -155,9 +227,9 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Importe - SIMPLIFICADA */}
+        {/* Sección de Importe y Cuenta */}
         <div className={styles.fp6Section}>
-          <h3>Datos del Ingreso</h3>
+          <h3>💰 Importe y Cuenta</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
               <label>Concepto *</label>
@@ -165,12 +237,14 @@ const FormPage6 = ({ user }) => {
                 type="text" 
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del ingreso (ventas, servicios, etc.)"
+                placeholder="Descripción del ingreso"
                 required
               />
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Importe *</label>
+              <label>
+                <FaEuroSign /> Importe *
+              </label>
               <input 
                 type="number" 
                 step="0.01"
@@ -181,45 +255,76 @@ const FormPage6 = ({ user }) => {
                 required
               />
             </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Cuenta de Ingreso * (519)</label>
+              <select
+                value={cuentaIngreso}
+                onChange={(e) => setCuentaIngreso(e.target.value)}
+                required
+              >
+                <option value="">-- Seleccionar cuenta de ingreso --</option>
+                {cuentasIngreso.map((cuenta) => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.id} - {cuenta.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Sección de Archivo */}
         <div className={styles.fp6Section}>
-          <h3>Archivo</h3>
+          <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Adjuntar Archivo</label>
+              <label>Justificante (Recibo, Factura, etc.)</label>
               <input 
                 type="file" 
                 onChange={handleFileChange}
                 className={styles.fp6FileInput}
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
               {archivo && (
-                <span className={styles.fp6FileName}>{archivo}</span>
+                <span className={styles.fp6FileName}>📄 {archivo.split('\\').pop()}</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Resumen del Asiento - CORREGIDO */}
+        {/* Resumen del Asiento */}
         <div className={styles.fp6Section}>
-          <h3>Resumen del Asiento</h3>
+          <h3>📊 Resumen del Asiento</h3>
           <div className={styles.fp6Resumen}>
             <div className={styles.fp6ResumenItem}>
-              <span>DEBE:</span>
-              <span>570000000 - Caja</span>
-              <span>{importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}</span>
+              <span className={styles.fp6DebeHaber}>DEBE</span>
+              <span className={styles.fp6CuentaInfo}>
+                <FaWallet /> {cuentaCaja} - Caja
+              </span>
+              <span className={styles.fp6Importe}>
+                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
+              </span>
             </div>
             <div className={styles.fp6ResumenItem}>
-              <span>HABER:</span>
-              <span>519000000 - Responsable de caja</span>
-              <span>{importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}</span>
+              <span className={styles.fp6DebeHaber}>HABER</span>
+              <span className={styles.fp6CuentaInfo}>
+                {cuentaIngreso} - {cuentasIngreso.find(c => c.id === cuentaIngreso)?.nombre}
+              </span>
+              <span className={styles.fp6Importe}>
+                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
+              </span>
             </div>
-            <div className={styles.fp6InfoBox}>
-              <p><strong>💡 Nota:</strong> Este asiento registra la entrada de dinero en efectivo a caja. 
-              La contrapartida se registra automáticamente en la cuenta del responsable de caja (519000000).</p>
-            </div>
+          </div>
+          
+          <div className={styles.fp6InfoBox}>
+            <p><strong>✅ Correcciones aplicadas:</strong></p>
+            <ul>
+              <li>Serie con 'C': <strong>{serie}</strong> (base: {serieBase})</li>
+              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
+              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
+              <li>Cuentas 519 desde BD</li>
+              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
+            </ul>
           </div>
         </div>
 
@@ -231,7 +336,7 @@ const FormPage6 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            Cancelar
+            ← Volver
           </button>
           <button 
             type="button" 
@@ -239,14 +344,14 @@ const FormPage6 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            Limpiar
+            🗑️ Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp6SubmitBtn} 
-            disabled={loading || !importe || !concepto || !numDocumento}
+            disabled={loading || !importe || !cuentaIngreso || !concepto || !numDocumento}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento'}
+            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Ingreso'}
           </button>
         </div>
       </form>

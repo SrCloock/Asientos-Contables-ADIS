@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx
+// pages/FormPage7.jsx - VERSIÓN COMPLETA Y CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt, FaEuroSign, FaWallet } from 'react-icons/fa';
@@ -9,51 +9,24 @@ const FormPage7 = ({ user }) => {
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
+  const [serieBase, setSerieBase] = useState('');
+  const [serie, setSerie] = useState('');
+  const [analitico, setAnalitico] = useState('');
+  
+  // CUENTA CAJA desde tabla Clientes
+  const [cuentaCaja, setCuentaCaja] = useState('');
+  
   // Campos del formulario
-  const [serie, setSerie] = useState('GAS');
   const [numDocumento, setNumDocumento] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
-  const [cuentaGasto, setCuentaGasto] = useState('600000000');
+  const [cuentaGasto, setCuentaGasto] = useState('');
   const [importe, setImporte] = useState('');
   const [archivo, setArchivo] = useState(null);
 
-  // Cuentas de gasto (6xx) - Más completas
-  const CUENTAS_GASTO = [
-    { id: '600000000', nombre: 'Compras de mercaderías' },
-    { id: '601000000', nombre: 'Compras de materias primas' },
-    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
-    { id: '606000000', nombre: 'Descuentos sobre compras' },
-    { id: '610000000', nombre: 'Variación de existencias' },
-    { id: '621000000', nombre: 'Arrendamientos y cánones' },
-    { id: '622000000', nombre: 'Reparaciones y conservación' },
-    { id: '623000000', nombre: 'Servicios de profesionales independientes' },
-    { id: '624000000', nombre: 'Transportes' },
-    { id: '625000000', nombre: 'Primas de seguros' },
-    { id: '626000000', nombre: 'Servicios bancarios y similares' },
-    { id: '627000000', nombre: 'Publicidad, propaganda y relaciones públicas' },
-    { id: '628000000', nombre: 'Suministros (Agua, luz, gas, teléfono)' },
-    { id: '629000000', nombre: 'Otros servicios' },
-    { id: '630000000', nombre: 'Impuestos (IAE, IVA no deducible, etc.)' },
-    { id: '631000000', nombre: 'Tributos' },
-    { id: '640000000', nombre: 'Sueldos y salarios' },
-    { id: '641000000', nombre: 'Indemnizaciones' },
-    { id: '642000000', nombre: 'Seguridad Social a cargo de la empresa' },
-    { id: '649000000', nombre: 'Otros gastos sociales' },
-    { id: '650000000', nombre: 'Pérdidas de créditos comerciales' },
-    { id: '651000000', nombre: 'Otros servicios' },
-    { id: '652000000', nombre: 'Suscripciones, cuotas y donativos' },
-    { id: '653000000', nombre: 'Primas de seguro' },
-    { id: '654000000', nombre: 'Pérdidas procedentes del inmovilizado' },
-    { id: '659000000', nombre: 'Otros gastos de gestión' },
-    { id: '660000000', nombre: 'Gastos financieros' },
-    { id: '665000000', nombre: 'Intereses por descuento de efectos' },
-    { id: '669000000', nombre: 'Otros gastos financieros' },
-    { id: '670000000', nombre: 'Pérdidas procedentes de activos no corrientes' },
-    { id: '671000000', nombre: 'Pérdidas por operaciones con acciones' },
-    { id: '672000000', nombre: 'Gastos excepcionales' },
-    { id: '679000000', nombre: 'Otros gastos excepcionales' }
-  ];
+  // Cuentas de gasto (6xx) desde BD
+  const [cuentasGasto, setCuentasGasto] = useState([]);
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -68,6 +41,51 @@ const FormPage7 = ({ user }) => {
     };
     
     fetchContador();
+  }, []);
+
+  useEffect(() => {
+    const fetchDatosMaestros = async () => {
+      try {
+        const [
+          gastosRes,
+          canalRes,
+          cuentaCajaRes
+        ] = await Promise.all([
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
+        ]);
+        
+        setCuentasGasto(gastosRes.data || []);
+        
+        // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+        const serieCliente = canalRes.data?.serie || 'EM';
+        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        const serieConC = `C${serieCliente}`;
+        
+        setSerieBase(serieCliente);
+        setSerie(serieConC);
+        setAnalitico(analiticoCliente);
+        
+        // CUENTA CAJA
+        setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
+        
+        // Establecer primera cuenta de gasto por defecto si existe
+        if (gastosRes.data && gastosRes.data.length > 0) {
+          setCuentaGasto(gastosRes.data[0].id);
+        }
+        
+        console.log(`✅ FormPage7 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
+        
+      } catch (error) {
+        console.error('Error cargando datos maestros:', error);
+        // Valores por defecto en caso de error
+        setSerie('CEM');
+        setAnalitico('EM');
+        setCuentaCaja('570000000');
+      }
+    };
+    fetchDatosMaestros();
   }, []);
 
   const handleFileChange = (e) => {
@@ -98,10 +116,15 @@ const FormPage7 = ({ user }) => {
         numDocumento,
         fecha,
         concepto,
+        comentario: concepto,
+        analitico,
         cuentaGasto,
+        cuentaCaja,
         importe: parseFloat(importe),
         archivo
       };
+
+      console.log('📤 Enviando datos FormPage7:', datosEnvio);
 
       const response = await axios.post(
         `${config.apiBaseUrl}/api/asiento/gasto-directo-caja`, 
@@ -124,13 +147,12 @@ const FormPage7 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaGasto('600000000');
+    setCuentaGasto(cuentasGasto.length > 0 ? cuentasGasto[0].id : '');
     setImporte('');
     setConcepto('');
     setNumDocumento('');
     setArchivo(null);
     
-    // Actualizar contador
     const fetchNewContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
@@ -149,11 +171,14 @@ const FormPage7 = ({ user }) => {
       <div className={styles.fp7Header}>
         <div className={styles.fp7Title}>
           <FaReceipt className={styles.fp7Icon} />
-          <h2>Gasto Directo en Caja</h2>
+          <h2>Gasto Directo en Caja - CORREGIDO</h2>
         </div>
         <div className={styles.fp7AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
+          <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
+          <span>Analítico: <strong>{analitico}</strong></span>
+          <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
 
@@ -173,16 +198,16 @@ const FormPage7 = ({ user }) => {
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
-              <label>Serie</label>
+              <label>Serie (C + Serie usuario)</label>
               <input 
                 type="text" 
                 value={serie}
-                onChange={(e) => setSerie(e.target.value)}
-                placeholder="GAS, TKT, LIQ..."
+                readOnly
+                className={styles.fp7Readonly}
               />
             </div>
             <div className={styles.fp7FormGroup}>
-              <label>Nº Documento *</label>
+              <label>Nº Documento * (Va a NumeroDoc)</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -238,7 +263,8 @@ const FormPage7 = ({ user }) => {
                 onChange={(e) => setCuentaGasto(e.target.value)}
                 required
               >
-                {CUENTAS_GASTO.map((cuenta) => (
+                <option value="">-- Seleccionar cuenta de gasto --</option>
+                {cuentasGasto.map((cuenta) => (
                   <option key={cuenta.id} value={cuenta.id}>
                     {cuenta.id} - {cuenta.nombre}
                   </option>
@@ -274,7 +300,7 @@ const FormPage7 = ({ user }) => {
             <div className={styles.fp7ResumenItem}>
               <span className={styles.fp7DebeHaber}>DEBE</span>
               <span className={styles.fp7CuentaInfo}>
-                {cuentaGasto} - {CUENTAS_GASTO.find(c => c.id === cuentaGasto)?.nombre}
+                {cuentaGasto} - {cuentasGasto.find(c => c.id === cuentaGasto)?.nombre}
               </span>
               <span className={styles.fp7Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
@@ -283,12 +309,23 @@ const FormPage7 = ({ user }) => {
             <div className={styles.fp7ResumenItem}>
               <span className={styles.fp7DebeHaber}>HABER</span>
               <span className={styles.fp7CuentaInfo}>
-                <FaWallet /> 570000000 - Caja (Fijo)
+                <FaWallet /> {cuentaCaja} - Caja
               </span>
               <span className={styles.fp7Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
               </span>
             </div>
+          </div>
+          
+          <div className={styles.fp7InfoBox}>
+            <p><strong>✅ Correcciones aplicadas:</strong></p>
+            <ul>
+              <li>Serie con 'C': <strong>{serie}</strong> (base: {serieBase})</li>
+              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
+              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
+              <li>Cuentas 6xx desde BD</li>
+              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
+            </ul>
           </div>
         </div>
 

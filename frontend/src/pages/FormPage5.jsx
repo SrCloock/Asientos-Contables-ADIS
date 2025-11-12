@@ -1,4 +1,4 @@
-// pages/FormPage5.jsx
+// pages/FormPage5.jsx - VERSIÓN COMPLETA Y CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaHandHoldingUsd, FaPlus, FaTrash } from 'react-icons/fa';
@@ -6,31 +6,37 @@ import styles from '../styles/FormPage5.module.css';
 import config from '../config/config';
 
 const FormPage5 = ({ user }) => {
-  // Estados del FormPage1 (documento y proveedor)
+  // Estados
   const [numAsiento, setNumAsiento] = useState('');
   const [proveedores, setProveedores] = useState([]);
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Campos de documento (igual que FormPage1)
-  const [serie, setSerie] = useState(user?.serie || 'PAG');
+  // SERIE Y ANALITICO FIJOS desde tabla Clientes
+  const [serie, setSerie] = useState('');
+  const [analitico, setAnalitico] = useState('');
+  
+  // CUENTA CAJA desde tabla Clientes
+  const [cuentaCaja, setCuentaCaja] = useState('');
+  
+  // Campos de documento
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Campos de proveedor (igual que FormPage1)
+  // Campos de proveedor
   const [cuentaP, setCuentaP] = useState('');
-  const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '', cuenta: '' });
-  const [inputCuenta, setInputCuenta] = useState('');
-  const [inputCIF, setInputCIF] = useState('');
-  const [inputNombre, setInputNombre] = useState('');
-  const [inputCP, setInputCP] = useState('');
-  const isNuevoProveedor = cuentaP === '4000';
+  const [datosCuentaP, setDatosCuentaP] = useState({ 
+    cif: '', 
+    nombre: '', 
+    cp: '', 
+    cuentaContable: ''
+  });
   
   // Campos específicos para el pago
-  const [cuentaGasto, setCuentaGasto] = useState('600000000');
-  const [analitico, setAnalitico] = useState(user?.analitico || 'EM');
+  const [cuentaGasto, setCuentaGasto] = useState('');
+  const [cuentasGasto, setCuentasGasto] = useState([]);
   
   // Detalles de la factura
   const [detalles, setDetalles] = useState([
@@ -42,23 +48,7 @@ const FormPage5 = ({ user }) => {
     }
   ]);
 
-  // Cuentas disponibles
-  const CUENTAS_GASTO = [
-    { id: '600000000', nombre: 'Compras de mercaderías' },
-    { id: '601000000', nombre: 'Compras de materias primas' },
-    { id: '602000000', nombre: 'Compras de otros aprovisionamientos' },
-    { id: '621000000', nombre: 'Arrendamientos y cánones' },
-    { id: '622000000', nombre: 'Reparaciones y conservación' },
-    { id: '623000000', nombre: 'Servicios de profesionales independientes' },
-    { id: '624000000', nombre: 'Transportes' },
-    { id: '625000000', nombre: 'Primas de seguros' },
-    { id: '626000000', nombre: 'Servicios bancarios y similares' },
-    { id: '627000000', nombre: 'Publicidad, propaganda y relaciones públicas' },
-    { id: '628000000', nombre: 'Suministros' },
-    { id: '629000000', nombre: 'Otros servicios' }
-  ];
-
-  // Efectos
+  // Efectos para cargar datos maestros
   useEffect(() => {
     const fetchContador = async () => {
       try {
@@ -74,24 +64,56 @@ const FormPage5 = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    const fetchProveedores = async () => {
+    const fetchDatosMaestros = async () => {
       try {
-        const [proveedoresRes, cuentasRes] = await Promise.all([
+        const [
+          proveedoresRes, 
+          cuentasRes, 
+          gastosRes,
+          canalRes,
+          cuentaCajaRes
+        ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
         ]);
+        
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
+        setCuentasGasto(gastosRes.data || []);
+        
+        // SERIE Y ANALITICO FIJOS
+        const serieCliente = canalRes.data?.serie || 'EM';
+        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        setSerie(serieCliente);
+        setAnalitico(analiticoCliente);
+        
+        // CUENTA CAJA
+        setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
+        
+        // Establecer primera cuenta de gasto por defecto si existe
+        if (gastosRes.data && gastosRes.data.length > 0) {
+          setCuentaGasto(gastosRes.data[0].id);
+        }
+        
+        console.log(`✅ FormPage5 - Serie: ${serieCliente}, Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
+        
       } catch (error) {
-        console.error('Error cargando proveedores:', error);
+        console.error('Error cargando datos maestros:', error);
+        // Valores por defecto en caso de error
+        setSerie('EM');
+        setAnalitico('EM');
+        setCuentaCaja('570000000');
       }
     };
-    fetchProveedores();
+    fetchDatosMaestros();
   }, []);
 
-  // Actualizar datos proveedor
+  // Actualizar datos proveedor - USAR CUENTA CONTABLE REAL
   useEffect(() => {
-    if (cuentaP && cuentaP !== '4000') {
+    if (cuentaP) {
       const proveedor = proveedores.find(p => p.codigo === cuentaP);
       const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
       
@@ -100,20 +122,14 @@ const FormPage5 = ({ user }) => {
           cif: proveedor.cif || '',
           nombre: proveedor.nombre || '',
           cp: proveedor.cp || '',
-          cuenta: cuentaProv?.cuenta || '400000000'
+          cuentaContable: cuentaProv?.cuenta || '400000000'
         });
+        console.log(`✅ Proveedor seleccionado: ${proveedor.nombre}, Cuenta: ${cuentaProv?.cuenta}`);
       }
-    } else if (cuentaP === '4000') {
-      setDatosCuentaP({
-        cif: inputCIF,
-        nombre: inputNombre,
-        cp: inputCP,
-        cuenta: inputCuenta || '400000000'
-      });
     }
-  }, [cuentaP, proveedores, proveedoresCuentas, inputCIF, inputNombre, inputCP, inputCuenta]);
+  }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // Manejo de detalles - IVA INCLUIDO (todo va al gasto)
+  // Manejo de detalles
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -124,7 +140,6 @@ const FormPage5 = ({ user }) => {
     if (!isNaN(baseNum) && baseNum >= 0) {
       const cuotaIVA = (baseNum * tipoIVANum) / 100;
       newDetalles[index].cuotaIVA = cuotaIVA;
-      // En IVA incluido, el total de la línea es base + IVA (todo va al gasto)
       newDetalles[index].importeTotalLinea = baseNum + cuotaIVA;
     } else {
       newDetalles[index].cuotaIVA = 0;
@@ -151,7 +166,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // Cálculo de totales para IVA incluido
+  // Cálculo de totales
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -161,7 +176,7 @@ const FormPage5 = ({ user }) => {
         return {
           base: acc.base + base,
           iva: acc.iva + iva,
-          total: acc.total + base + iva  // Base + IVA todo va al gasto
+          total: acc.total + base + iva
         };
       }
       return acc;
@@ -177,12 +192,8 @@ const FormPage5 = ({ user }) => {
     if (!numDocumento.trim()) {
       errores.push('El número de documento es obligatorio');
     }
-    if (!cuentaP && !isNuevoProveedor) {
+    if (!cuentaP) {
       errores.push('Debe seleccionar un proveedor');
-    }
-    if (isNuevoProveedor) {
-      if (!inputCIF.trim()) errores.push('El CIF del nuevo proveedor es obligatorio');
-      if (!inputNombre.trim()) errores.push('El nombre del nuevo proveedor es obligatorio');
     }
     
     const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
@@ -220,18 +231,23 @@ const FormPage5 = ({ user }) => {
         numDocumento,
         fechaReg,
         concepto,
+        comentario: concepto,
+        analitico,
         
         // Datos de proveedor
         proveedor: {
-          cuentaProveedor: isNuevoProveedor ? '400000000' : cuentaP,
-          cif: isNuevoProveedor ? inputCIF : datosCuentaP.cif,
-          nombre: isNuevoProveedor ? inputNombre : datosCuentaP.nombre,
-          cp: isNuevoProveedor ? inputCP : datosCuentaP.cp
+          cuentaProveedor: datosCuentaP.cuentaContable,
+          codigoProveedor: cuentaP,
+          cif: datosCuentaP.cif,
+          nombre: datosCuentaP.nombre,
+          cp: datosCuentaP.cp
         },
         
         // Datos específicos del pago
         cuentaGasto,
-        analitico,
+        cuentaCaja,
+        
+        // Detalles
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
         // Totales
@@ -242,6 +258,8 @@ const FormPage5 = ({ user }) => {
         // Archivo
         archivo: archivo
       };
+
+      console.log('📤 Enviando datos FormPage5:', datosEnvio);
 
       const response = await axios.post(`${config.apiBaseUrl}/api/asiento/pago-caja-proveedor`, datosEnvio, {
         withCredentials: true
@@ -263,15 +281,16 @@ const FormPage5 = ({ user }) => {
 
   const resetForm = () => {
     setCuentaP('');
-    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuenta: '' });
-    setInputCuenta('');
-    setInputCIF('');
-    setInputNombre('');
-    setInputCP('');
+    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
     setConcepto('');
     setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
     setArchivo(null);
+    
+    // Restablecer cuenta de gasto a la primera opción
+    if (cuentasGasto.length > 0) {
+      setCuentaGasto(cuentasGasto[0].id);
+    }
     
     const fetchNewContador = async () => {
       try {
@@ -289,30 +308,42 @@ const FormPage5 = ({ user }) => {
       <div className={styles.fp5Header}>
         <h2>
           <FaHandHoldingUsd />
-          Pago en Caja a Proveedor
+          Pago en Caja a Proveedor - CORREGIDO
         </h2>
         <div className={styles.fp5AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
+          <span>Serie: <strong>{serie}</strong></span>
+          <span>Analítico: <strong>{analitico}</strong></span>
+          <span>Caja: <strong>{cuentaCaja}</strong></span>
+        </div>
+      </div>
+
+      <div className={styles.fp5Description}>
+        <p>
+          <strong>Objetivo:</strong> Registrar compra a proveedor con pago inmediato en caja (IVA INCLUIDO).
+        </p>
+        <div className={styles.fp5AsientoType}>
+          <span><strong>Asiento:</strong> 4 líneas (Gasto → Proveedor Haber → Proveedor Debe → Caja)</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp5Form}>
         {/* Sección de Datos del Documento */}
         <div className={styles.fp5Section}>
-          <h3>Datos del Documento</h3>
+          <h3>📄 Datos del Documento</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Serie</label>
+              <label>Serie (Fija del usuario)</label>
               <input 
                 type="text" 
                 value={serie}
-                onChange={(e) => setSerie(e.target.value)}
-                placeholder="PAG, etc."
+                readOnly
+                className={styles.fp5Readonly}
               />
             </div>
             <div className={styles.fp5FormGroup}>
-              <label>Nº Documento *</label>
+              <label>Nº Documento * (Va a NumeroDoc)</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -331,11 +362,23 @@ const FormPage5 = ({ user }) => {
               />
             </div>
           </div>
+          <div className={styles.fp5FormRow}>
+            <div className={styles.fp5FormGroup}>
+              <label>Concepto (Opcional, para Comentario)</label>
+              <input 
+                type="text" 
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                placeholder="Descripción del pago"
+                className={styles.fp5FullWidth}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Sección de Datos del Proveedor */}
         <div className={styles.fp5Section}>
-          <h3>Datos del Proveedor</h3>
+          <h3>🏢 Datos del Proveedor</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>Seleccionar Proveedor *</label>
@@ -350,107 +393,62 @@ const FormPage5 = ({ user }) => {
                     {prov.codigo} - {prov.nombre}
                   </option>
                 ))}
-                <option value="4000">-- NUEVO PROVEEDOR --</option>
               </select>
             </div>
           </div>
 
-          {!isNuevoProveedor ? (
-            // Mostrar datos del proveedor seleccionado
-            <div className={styles.fp5FormRow}>
-              <div className={styles.fp5FormGroup}>
-                <label>CIF/NIF</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cif}
-                  readOnly
-                  className={styles.fp5Readonly}
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Razón Social</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.nombre}
-                  readOnly
-                  className={styles.fp5Readonly}
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Código Postal</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cp}
-                  readOnly
-                  className={styles.fp5Readonly}
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Cuenta Contable</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cuenta}
-                  readOnly
-                  className={styles.fp5Readonly}
-                />
-              </div>
+          {/* Mostrar datos del proveedor seleccionado */}
+          <div className={styles.fp5FormRow}>
+            <div className={styles.fp5FormGroup}>
+              <label>CIF/NIF</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cif}
+                readOnly
+                className={styles.fp5Readonly}
+              />
             </div>
-          ) : (
-            // Campos para nuevo proveedor
-            <div className={styles.fp5FormRow}>
-              <div className={styles.fp5FormGroup}>
-                <label>CIF/NIF *</label>
-                <input 
-                  type="text" 
-                  value={inputCIF}
-                  onChange={(e) => setInputCIF(e.target.value)}
-                  placeholder="CIF/NIF del proveedor"
-                  required
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Razón Social *</label>
-                <input 
-                  type="text" 
-                  value={inputNombre}
-                  onChange={(e) => setInputNombre(e.target.value)}
-                  placeholder="Nombre del proveedor"
-                  required
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Código Postal</label>
-                <input 
-                  type="text" 
-                  value={inputCP}
-                  onChange={(e) => setInputCP(e.target.value)}
-                  placeholder="Código postal"
-                />
-              </div>
-              <div className={styles.fp5FormGroup}>
-                <label>Cuenta Contable</label>
-                <input 
-                  type="text" 
-                  value={inputCuenta}
-                  onChange={(e) => setInputCuenta(e.target.value)}
-                  placeholder="400000000"
-                />
-              </div>
+            <div className={styles.fp5FormGroup}>
+              <label>Razón Social</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.nombre}
+                readOnly
+                className={styles.fp5Readonly}
+              />
             </div>
-          )}
+            <div className={styles.fp5FormGroup}>
+              <label>Código Postal</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cp}
+                readOnly
+                className={styles.fp5Readonly}
+              />
+            </div>
+            <div className={styles.fp5FormGroup}>
+              <label>Cuenta Contable Real</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cuentaContable}
+                readOnly
+                className={styles.fp5Readonly}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Sección de Detalles Económicos */}
         <div className={styles.fp5Section}>
-          <h3>Detalles Económicos</h3>
+          <h3>💰 Detalles Económicos</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Código Analítico</label>
+              <label>Código Analítico (Fijo del usuario)</label>
               <input 
                 type="text" 
                 value={analitico}
-                onChange={(e) => setAnalitico(e.target.value)}
-                placeholder="EM, etc."
+                readOnly
+                className={styles.fp5Readonly}
               />
             </div>
             <div className={styles.fp5FormGroup}>
@@ -460,7 +458,8 @@ const FormPage5 = ({ user }) => {
                 onChange={(e) => setCuentaGasto(e.target.value)}
                 required
               >
-                {CUENTAS_GASTO.map((cuenta) => (
+                <option value="">-- Seleccionar cuenta de gasto --</option>
+                {cuentasGasto.map((cuenta) => (
                   <option key={cuenta.id} value={cuenta.id}>
                     {cuenta.id} - {cuenta.nombre}
                   </option>
@@ -547,35 +546,20 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Concepto */}
-        <div className={styles.fp5Section}>
-          <h3>Concepto del Pago</h3>
-          <div className={styles.fp5FormRow}>
-            <div className={styles.fp5FormGroup}>
-              <label>Concepto</label>
-              <input 
-                type="text" 
-                value={concepto}
-                onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Ej: Pago factura pendiente"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Sección de Archivo */}
         <div className={styles.fp5Section}>
-          <h3>Archivo</h3>
+          <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Adjuntar Archivo</label>
+              <label>Justificante (Factura, Ticket, etc.)</label>
               <input 
                 type="file" 
                 onChange={handleFileChange}
                 className={styles.fp5FileInput}
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
               {archivo && (
-                <span className={styles.fp5FileName}>{archivo}</span>
+                <span className={styles.fp5FileName}>📄 {archivo.split('\\').pop()}</span>
               )}
             </div>
           </div>
@@ -583,33 +567,55 @@ const FormPage5 = ({ user }) => {
 
         {/* Resumen del Asiento */}
         <div className={styles.fp5Section}>
-          <h3>Resumen del Asiento</h3>
+          <h3>📊 Resumen del Asiento</h3>
           <div className={styles.fp5Resumen}>
             <div className={styles.fp5ResumenItem}>
-              <span>DEBE:</span>
-              <span>{cuentaGasto} - {CUENTAS_GASTO.find(c => c.id === cuentaGasto)?.nombre}</span>
-              <span>{totales.total.toFixed(2)} €</span>
+              <span className={styles.fp5DebeHaber}>DEBE</span>
+              <span className={styles.fp5CuentaInfo}>
+                {cuentaGasto} - {cuentasGasto.find(c => c.id === cuentaGasto)?.nombre}
+              </span>
+              <span className={styles.fp5Importe}>
+                {totales.total.toFixed(2)} €
+              </span>
             </div>
             <div className={styles.fp5ResumenItem}>
-              <span>HABER:</span>
-              <span>{datosCuentaP.cuenta} - Proveedores</span>
-              <span>{totales.total.toFixed(2)} €</span>
+              <span className={styles.fp5DebeHaber}>HABER</span>
+              <span className={styles.fp5CuentaInfo}>
+                {datosCuentaP.cuentaContable} - Proveedores
+              </span>
+              <span className={styles.fp5Importe}>
+                {totales.total.toFixed(2)} €
+              </span>
             </div>
             <div className={styles.fp5ResumenItem}>
-              <span>DEBE:</span>
-              <span>{datosCuentaP.cuenta} - Proveedores</span>
-              <span>{totales.total.toFixed(2)} €</span>
+              <span className={styles.fp5DebeHaber}>DEBE</span>
+              <span className={styles.fp5CuentaInfo}>
+                {datosCuentaP.cuentaContable} - Proveedores
+              </span>
+              <span className={styles.fp5Importe}>
+                {totales.total.toFixed(2)} €
+              </span>
             </div>
             <div className={styles.fp5ResumenItem}>
-              <span>HABER:</span>
-              <span>570000000 - Caja</span>
-              <span>{totales.total.toFixed(2)} €</span>
+              <span className={styles.fp5DebeHaber}>HABER</span>
+              <span className={styles.fp5CuentaInfo}>
+                {cuentaCaja} - Caja
+              </span>
+              <span className={styles.fp5Importe}>
+                {totales.total.toFixed(2)} €
+              </span>
             </div>
-            <div className={styles.fp5InfoBox}>
-              <p><strong>💰 PAGADO POR CAJA - SIN VENCIMIENTO</strong></p>
-              <p>Este asiento registra la compra y el pago inmediato en caja. No se genera vencimiento.</p>
-              <p><strong>IVA INCLUIDO:</strong> Todo el importe (base + IVA) va a la cuenta de gasto.</p>
-            </div>
+          </div>
+          
+          <div className={styles.fp5InfoBox}>
+            <p><strong>✅ Correcciones aplicadas:</strong></p>
+            <ul>
+              <li>Serie fija: <strong>{serie}</strong> (desde tabla Clientes)</li>
+              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
+              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
+              <li>Cuenta contable real del proveedor: <strong>{datosCuentaP.cuentaContable}</strong></li>
+              <li>Cuenta caja del cliente: <strong>{cuentaCaja}</strong></li>
+            </ul>
           </div>
         </div>
 
@@ -621,7 +627,7 @@ const FormPage5 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            Cancelar
+            ← Volver
           </button>
           <button 
             type="button" 
@@ -629,14 +635,14 @@ const FormPage5 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            Limpiar
+            🗑️ Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp5SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0)}
+            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento Pago en Caja'}
+            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Pago'}
           </button>
         </div>
       </form>

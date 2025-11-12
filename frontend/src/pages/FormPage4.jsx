@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx
+// pages/FormPage4.jsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -15,10 +15,12 @@ const FormPage4 = ({ user }) => {
   // Nuevos estados para datos maestros
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentasProveedores, setCuentasProveedores] = useState([]);
-  const [canalCliente, setCanalCliente] = useState({ serie: 'EM', analitico: 'EM' });
+  
+  // SERIE Y ANALITICO FIJOS desde tabla Clientes
+  const [serie, setSerie] = useState('');
+  const [analitico, setAnalitico] = useState('');
   
   // Campos de documento
-  const [serie, setSerie] = useState('EM');
   const [numDocumento, setNumDocumento] = useState('');
   const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
@@ -26,18 +28,22 @@ const FormPage4 = ({ user }) => {
   const [fechaOper, setFechaOper] = useState('');
   const [vencimiento, setVencimiento] = useState('');
   
+  // NUEVO CAMPO: Concepto obligatorio
+  const [concepto, setConcepto] = useState('');
+  
   // Campos de proveedor
   const [cuentaP, setCuentaP] = useState('');
-  const [datosCuentaP, setDatosCuentaP] = useState({ cif: '', nombre: '', cp: '', cuenta: '' });
-  const [inputCuenta, setInputCuenta] = useState('');
-  const [inputCIF, setInputCIF] = useState('');
-  const [inputNombre, setInputNombre] = useState('');
-  const [inputCP, setInputCP] = useState('');
+  const [datosCuentaP, setDatosCuentaP] = useState({ 
+    cif: '', 
+    nombre: '', 
+    cp: '', 
+    cuentaContable: '' // CAMBIADO: ahora guardamos la cuenta contable real
+  });
+  
   const isNuevoProveedor = cuentaP === '4000';
   
   // Campos específicos
   const [cuentaGasto, setCuentaGasto] = useState('');
-  const [analitico, setAnalitico] = useState('EM');
   const [archivo, setArchivo] = useState(null);
   
   // Detalles adaptados para IVA no deducible
@@ -79,6 +85,7 @@ const FormPage4 = ({ user }) => {
           axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cuentas/proveedores`, { withCredentials: true }),
+          // OBTENER SERIE Y ANALITICO DESDE CLIENTES
           axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true })
         ]);
         
@@ -86,23 +93,25 @@ const FormPage4 = ({ user }) => {
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
         setCuentasProveedores(proveedoresCuentasRes.data || []);
-        setCanalCliente(canalRes.data || { serie: 'EM', analitico: 'EM' });
         
-        // Establecer valores por defecto del canal
-        setSerie(canalRes.data?.serie || 'EM');
-        setAnalitico(canalRes.data?.analitico || 'EM');
+        // SERIE Y ANALITICO FIJOS desde tabla Clientes
+        const serieCliente = canalRes.data?.serie || 'EM';
+        const analiticoCliente = canalRes.data?.analitico || 'EM';
+        setSerie(serieCliente);
+        setAnalitico(analiticoCliente);
+        
+        console.log(`✅ Serie fija: ${serieCliente}, Analítico fijo: ${analiticoCliente}`);
         
         // Establecer primera cuenta de gasto por defecto si existe
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
         } else {
-          // Si no hay cuentas de gasto, usar una por defecto
           setCuentaGasto('600000000');
         }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        // En caso de error, establecer valores por defecto
+        // Valores por defecto en caso de error
         setSerie('EM');
         setAnalitico('EM');
         setCuentaGasto('600000000');
@@ -111,7 +120,7 @@ const FormPage4 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // Actualizar datos proveedor
+  // CORREGIDO: Actualizar datos proveedor - USAR CUENTA CONTABLE REAL
   useEffect(() => {
     if (cuentaP && cuentaP !== '4000') {
       const proveedor = proveedores.find(p => p.codigo === cuentaP);
@@ -122,20 +131,14 @@ const FormPage4 = ({ user }) => {
           cif: proveedor.cif || '',
           nombre: proveedor.nombre || '',
           cp: proveedor.cp || '',
-          cuenta: cuentaProv?.cuenta || '400000000'
+          cuentaContable: cuentaProv?.cuenta || '400000000' // CUENTA CONTABLE REAL
         });
+        console.log(`✅ Proveedor: ${proveedor.nombre}, Cuenta contable: ${cuentaProv?.cuenta}`);
       }
-    } else if (cuentaP === '4000') {
-      setDatosCuentaP({
-        cif: inputCIF,
-        nombre: inputNombre,
-        cp: inputCP,
-        cuenta: inputCuenta || '400000000'
-      });
     }
-  }, [cuentaP, proveedores, proveedoresCuentas, inputCIF, inputNombre, inputCP, inputCuenta]);
+  }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // Manejo de detalles - IVA NO DEDUCIBLE
+  // Manejo de detalles - IVA NO DEDUCIBLE (sin cambios)
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -146,7 +149,6 @@ const FormPage4 = ({ user }) => {
     if (!isNaN(baseNum) && baseNum >= 0) {
       const cuotaIVA = (baseNum * tipoIVANum) / 100;
       newDetalles[index].cuotaIVA = cuotaIVA;
-      // En IVA no deducible, el total de la línea es base + IVA (todo va al gasto)
       newDetalles[index].importeTotalLinea = baseNum + cuotaIVA;
     } else {
       newDetalles[index].cuotaIVA = 0;
@@ -183,7 +185,7 @@ const FormPage4 = ({ user }) => {
         return {
           base: acc.base + base,
           iva: acc.iva + iva,
-          total: acc.total + base + iva  // Base + IVA todo va al gasto
+          total: acc.total + base + iva
         };
       }
       return acc;
@@ -192,7 +194,7 @@ const FormPage4 = ({ user }) => {
 
   const totales = calcularTotales();
 
-  // Validación del formulario
+  // Validación del formulario - AGREGADO CONCEPTO
   const validarFormulario = () => {
     const errores = [];
     
@@ -202,12 +204,11 @@ const FormPage4 = ({ user }) => {
     if (!numDocumento.trim()) {
       errores.push('El número de documento es obligatorio');
     }
+    if (!concepto.trim()) {
+      errores.push('El concepto es obligatorio');
+    }
     if (!cuentaP && !isNuevoProveedor) {
       errores.push('Debe seleccionar un proveedor');
-    }
-    if (isNuevoProveedor) {
-      if (!inputCIF.trim()) errores.push('El CIF del nuevo proveedor es obligatorio');
-      if (!inputNombre.trim()) errores.push('El nombre del nuevo proveedor es obligatorio');
     }
     if (!cuentaGasto) {
       errores.push('Debe seleccionar una cuenta de gasto');
@@ -229,7 +230,7 @@ const FormPage4 = ({ user }) => {
     }
   };
 
-  // Envío del formulario
+  // Envío del formulario - ACTUALIZADO CON NUEVOS CAMPOS
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -242,32 +243,38 @@ const FormPage4 = ({ user }) => {
     setLoading(true);
 
     try {
+      // COMENTARIO COMBINADO: Nº FRA + Concepto
+      const comentarioCombinado = `${numFRA || ''} ${concepto}`.trim().substring(0, 40);
+
       const datosEnvio = {
         // Datos de documento
-        serie,
-        numDocumento,
+        serie, // SERIE FIJA del usuario
+        numDocumento, // Para colocar en NumeroDoc
         numFRA,
         fechaReg,
         fechaFactura,
         fechaOper,
         vencimiento,
+        concepto, // NUEVO CAMPO OBLIGATORIO
+        comentario: comentarioCombinado, // COMENTARIO COMBINADO
         
-        // Datos de proveedor
+        // Datos de proveedor - USAR CUENTA CONTABLE REAL
         proveedor: {
-          cuentaProveedor: isNuevoProveedor ? '400000000' : cuentaP,
-          cif: isNuevoProveedor ? inputCIF : datosCuentaP.cif,
-          nombre: isNuevoProveedor ? inputNombre : datosCuentaP.nombre,
-          cp: isNuevoProveedor ? inputCP : datosCuentaP.cp
+          cuentaProveedor: datosCuentaP.cuentaContable || '400000000', // CUENTA CONTABLE REAL
+          codigoProveedor: cuentaP, // Código del proveedor para identificarlo
+          cif: datosCuentaP.cif,
+          nombre: datosCuentaP.nombre,
+          cp: datosCuentaP.cp
         },
         
         // Datos específicos
         cuentaGasto,
-        analitico,
+        analitico, // ANALITICO FIJO del usuario
         
-        // Detalles adaptados para IVA no deducible
+        // Detalles
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // Archivo - solo la ruta
+        // Archivo
         archivo: archivo,
         
         // Totales
@@ -276,19 +283,21 @@ const FormPage4 = ({ user }) => {
         totalFactura: totales.total
       };
 
+      console.log('📤 Enviando datos:', datosEnvio);
+
       const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-incluido`, datosEnvio, {
         withCredentials: true
       });
 
       if (response.data.success) {
-        alert(`Asiento #${response.data.asiento} - Factura Proveedor (IVA Incluido) creado correctamente`);
+        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA Incluido) creado correctamente`);
         resetForm();
       } else {
-        alert('Error al crear el asiento: ' + response.data.message);
+        alert('❌ Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
       console.error('Error creando asiento:', error);
-      alert('Error al crear el asiento: ' + (error.response?.data?.error || error.message));
+      alert('❌ Error al crear el asiento: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -296,19 +305,16 @@ const FormPage4 = ({ user }) => {
 
   const resetForm = () => {
     setCuentaP('');
-    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuenta: '' });
-    setInputCuenta('');
-    setInputCIF('');
-    setInputNombre('');
-    setInputCP('');
+    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
     setNumFRA('');
+    setConcepto(''); // LIMPIAR CONCEPTO
     setFechaOper('');
     setVencimiento('');
     setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
     setArchivo(null);
     
-    // Restablecer cuenta de gasto a la primera opción
+    // Restablecer cuenta de gasto
     if (cuentasGasto.length > 0) {
       setCuentaGasto(cuentasGasto[0].id);
     }
@@ -330,32 +336,28 @@ const FormPage4 = ({ user }) => {
     return cuenta ? cuenta.nombre : '';
   };
 
-  // Obtener nombre de la cuenta de proveedor seleccionada
-  const getNombreCuentaProveedor = () => {
-    const cuenta = cuentasProveedores.find(c => c.id === datosCuentaP.cuenta);
-    return cuenta ? cuenta.nombre : 'Proveedores';
-  };
-
   return (
     <div className={styles.fp4Container}>
       <div className={styles.fp4Header}>
         <h2>
           <FaFileInvoiceDollar />
-          Factura de Proveedor (IVA Incluido)
+          Factura de Proveedor (IVA Incluido) - CORREGIDO
         </h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
+          <span>Serie: <strong>{serie}</strong></span>
+          <span>Analítico: <strong>{analitico}</strong></span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp4Form}>
-        {/* Sección de Datos del Documento */}
+        {/* Sección de Datos del Documento - ACTUALIZADO */}
         <div className={styles.fp4Section}>
           <h3>Datos del Documento</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Serie (No editable)</label>
+              <label>Serie (Fija del usuario)</label>
               <input 
                 type="text" 
                 value={serie}
@@ -364,7 +366,7 @@ const FormPage4 = ({ user }) => {
               />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Nº Documento *</label>
+              <label>Nº Documento * (Va a NumeroDoc)</label>
               <input 
                 type="text" 
                 value={numDocumento}
@@ -383,6 +385,21 @@ const FormPage4 = ({ user }) => {
               />
             </div>
           </div>
+          
+          {/* NUEVO CAMPO: Concepto */}
+          <div className={styles.fp4FormRow}>
+            <div className={styles.fp4FormGroup}>
+              <label>Concepto * (Para Comentario)</label>
+              <input 
+                type="text" 
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                placeholder="Descripción del gasto/proveedor"
+                required
+              />
+            </div>
+          </div>
+
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
               <label>Fecha de Registro *</label>
@@ -422,7 +439,7 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Datos del Proveedor */}
+        {/* Sección de Datos del Proveedor - ELIMINADO NUEVO PROVEEDOR */}
         <div className={styles.fp4Section}>
           <h3>Datos del Proveedor</h3>
           <div className={styles.fp4FormRow}>
@@ -436,110 +453,61 @@ const FormPage4 = ({ user }) => {
                 <option value="">-- Seleccionar proveedor --</option>
                 {proveedores.map(prov => (
                   <option key={prov.codigo} value={prov.codigo}>
-                    {prov.codigo} - {prov.nombre}
+                    {prov.codigo} - {prov.nombre} - Cuenta: {proveedoresCuentas.find(p => p.codigo === prov.codigo)?.cuenta || '400000000'}
                   </option>
                 ))}
-                <option value="4000">-- NUEVO PROVEEDOR --</option>
               </select>
             </div>
           </div>
 
-          {!isNuevoProveedor ? (
-            // Mostrar datos del proveedor seleccionado
-            <div className={styles.fp4FormRow}>
-              <div className={styles.fp4FormGroup}>
-                <label>CIF/NIF</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cif}
-                  readOnly
-                  className={styles.fp4Readonly}
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Razón Social</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.nombre}
-                  readOnly
-                  className={styles.fp4Readonly}
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Código Postal</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cp}
-                  readOnly
-                  className={styles.fp4Readonly}
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Cuenta Contable</label>
-                <input 
-                  type="text" 
-                  value={datosCuentaP.cuenta}
-                  readOnly
-                  className={styles.fp4Readonly}
-                />
-              </div>
+          {/* SOLO MOSTRAR DATOS DEL PROVEEDOR SELECCIONADO */}
+          <div className={styles.fp4FormRow}>
+            <div className={styles.fp4FormGroup}>
+              <label>CIF/NIF</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cif}
+                readOnly
+                className={styles.fp4Readonly}
+              />
             </div>
-          ) : (
-            // Campos para nuevo proveedor
-            <div className={styles.fp4FormRow}>
-              <div className={styles.fp4FormGroup}>
-                <label>CIF/NIF *</label>
-                <input 
-                  type="text" 
-                  value={inputCIF}
-                  onChange={(e) => setInputCIF(e.target.value)}
-                  placeholder="CIF/NIF del proveedor"
-                  required
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Razón Social *</label>
-                <input 
-                  type="text" 
-                  value={inputNombre}
-                  onChange={(e) => setInputNombre(e.target.value)}
-                  placeholder="Nombre del proveedor"
-                  required
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Código Postal</label>
-                <input 
-                  type="text" 
-                  value={inputCP}
-                  onChange={(e) => setInputCP(e.target.value)}
-                  placeholder="Código postal"
-                />
-              </div>
-              <div className={styles.fp4FormGroup}>
-                <label>Cuenta Contable</label>
-                <select
-                  value={inputCuenta}
-                  onChange={(e) => setInputCuenta(e.target.value)}
-                >
-                  <option value="">Seleccionar cuenta</option>
-                  {cuentasProveedores.map(cuenta => (
-                    <option key={cuenta.id} value={cuenta.id}>
-                      {cuenta.id} - {cuenta.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className={styles.fp4FormGroup}>
+              <label>Razón Social</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.nombre}
+                readOnly
+                className={styles.fp4Readonly}
+              />
             </div>
-          )}
+            <div className={styles.fp4FormGroup}>
+              <label>Código Postal</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cp}
+                readOnly
+                className={styles.fp4Readonly}
+              />
+            </div>
+            <div className={styles.fp4FormGroup}>
+              <label>Cuenta Contable Real</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cuentaContable}
+                readOnly
+                className={styles.fp4Readonly}
+              />
+            </div>
+          </div>
         </div>
 
+        {/* Resto del código se mantiene igual... */}
         {/* Sección de Detalles Económicos */}
         <div className={styles.fp4Section}>
           <h3>Detalles Económicos</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Código Analítico (No editable)</label>
+              <label>Código Analítico (Fijo del usuario)</label>
               <input 
                 type="text" 
                 value={analitico}
@@ -660,9 +628,13 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento */}
+        {/* Resumen del Asiento - ACTUALIZADO */}
         <div className={styles.fp4Section}>
           <h3>Resumen del Asiento</h3>
+          <div className={styles.fp4InfoBox}>
+            <p><strong>📝 Comentario que se guardará:</strong></p>
+            <p>"{numFRA} {concepto}".substring(0, 40)</p>
+          </div>
           <div className={styles.fp4Resumen}>
             <div className={styles.fp4ResumenItem}>
               <span>DEBE:</span>
@@ -671,9 +643,19 @@ const FormPage4 = ({ user }) => {
             </div>
             <div className={styles.fp4ResumenItem}>
               <span>HABER:</span>
-              <span>{datosCuentaP.cuenta} - {getNombreCuentaProveedor()}</span>
+              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
+          </div>
+          <div className={styles.fp4InfoBox}>
+            <p><strong>✅ Correcciones aplicadas:</strong></p>
+            <ul>
+              <li>Serie fija: <strong>{serie}</strong> (desde tabla Clientes)</li>
+              <li>Analítico fijo: <strong>{analitico}</strong> (desde tabla Clientes)</li>
+              <li>Nº Documento va a columna <strong>NumeroDoc</strong></li>
+              <li>Cuenta contable real del proveedor: <strong>{datosCuentaP.cuentaContable}</strong></li>
+              <li>Serie <strong>{serie}</strong> se guarda en tabla Movimientos</li>
+            </ul>
           </div>
         </div>
 
@@ -698,9 +680,9 @@ const FormPage4 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp4SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento || !cuentaGasto}
+            disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento || !cuentaGasto}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento'}
+            {loading ? 'Procesando...' : 'Crear Asiento Corregido'}
           </button>
         </div>
       </form>
