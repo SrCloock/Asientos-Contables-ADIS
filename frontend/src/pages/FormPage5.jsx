@@ -1,4 +1,4 @@
-// pages/FormPage5.jsx - VERSIÓN COMPLETA Y CORREGIDA
+// pages/FormPage5.jsx - VERSIÓN COMPLETA SIN RETENCIÓN
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaHandHoldingUsd, FaPlus, FaTrash } from 'react-icons/fa';
@@ -12,16 +12,20 @@ const FormPage5 = ({ user }) => {
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // SERIE Y ANALITICO FIJOS desde tabla Clientes
+  // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
+  const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
   
   // CUENTA CAJA desde tabla Clientes
   const [cuentaCaja, setCuentaCaja] = useState('');
   
-  // Campos de documento
+  // Campos de documento (IGUALES A FORMPAGE4 excepto vencimiento)
   const [numDocumento, setNumDocumento] = useState('');
+  const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaOper, setFechaOper] = useState('');
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
@@ -38,7 +42,7 @@ const FormPage5 = ({ user }) => {
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [cuentasGasto, setCuentasGasto] = useState([]);
   
-  // Detalles de la factura
+  // Detalles de la factura SIN RETENCIÓN
   const [detalles, setDetalles] = useState([
     { 
       base: '', 
@@ -84,10 +88,13 @@ const FormPage5 = ({ user }) => {
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
         
-        // SERIE Y ANALITICO FIJOS
-        const serieCliente = canalRes.data?.serie || 'EM';
-        const analiticoCliente = canalRes.data?.analitico || 'EM';
-        setSerie(serieCliente);
+        // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+        const serieCliente = canalRes.data?.serie || 'ERROR';
+        const analiticoCliente = canalRes.data?.analitico || 'ERROR';
+        const serieConC = `C${serieCliente}`;
+        
+        setSerieBase(serieCliente);
+        setSerie(serieConC);
         setAnalitico(analiticoCliente);
         
         // CUENTA CAJA
@@ -98,13 +105,13 @@ const FormPage5 = ({ user }) => {
           setCuentaGasto(gastosRes.data[0].id);
         }
         
-        console.log(`✅ FormPage5 - Serie: ${serieCliente}, Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
+        console.log(`✅ FormPage5 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
         // Valores por defecto en caso de error
-        setSerie('ERROR');
-        setAnalitico('ERROR');
+        setSerie('CEM');
+        setAnalitico('EM');
         setCuentaCaja('570000000');
       }
     };
@@ -129,7 +136,7 @@ const FormPage5 = ({ user }) => {
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // Manejo de detalles
+  // Manejo de detalles SIN RETENCIÓN
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -166,7 +173,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // Cálculo de totales
+  // Cálculo de totales SIN RETENCIÓN
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -192,8 +199,14 @@ const FormPage5 = ({ user }) => {
     if (!numDocumento.trim()) {
       errores.push('El número de documento es obligatorio');
     }
+    if (!concepto.trim()) {
+      errores.push('El concepto es obligatorio');
+    }
     if (!cuentaP) {
       errores.push('Debe seleccionar un proveedor');
+    }
+    if (!cuentaGasto) {
+      errores.push('Debe seleccionar una cuenta de gasto');
     }
     
     const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
@@ -225,48 +238,56 @@ const FormPage5 = ({ user }) => {
     setLoading(true);
 
     try {
+      // COMENTARIO COMBINADO: Nº FRA + Concepto
+      const comentarioCombinado = `${numFRA || ''} ${concepto}`.trim().substring(0, 40);
+
       const datosEnvio = {
-        // Datos de documento
-        serie,
+        // Datos de documento (IGUALES A FORMPAGE4)
+        serie, // SERIE con 'C' + base
         numDocumento,
+        numFRA,
         fechaReg,
+        fechaFactura,
+        fechaOper,
         concepto,
-        comentario: concepto,
-        analitico,
+        comentario: comentarioCombinado,
         
         // Datos de proveedor
         proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable,
+          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
           codigoProveedor: cuentaP,
           cif: datosCuentaP.cif,
           nombre: datosCuentaP.nombre,
           cp: datosCuentaP.cp
         },
         
-        // Datos específicos del pago
+        // Datos específicos
         cuentaGasto,
+        analitico,
         cuentaCaja,
         
-        // Detalles
+        // Detalles SIN RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // Totales
+        // Archivo
+        archivo: archivo,
+        
+        // Totales SIN RETENCIÓN
         totalBase: totales.base,
         totalIVA: totales.iva,
-        totalFactura: totales.total,
-        
-        // Archivo
-        archivo: archivo
+        totalFactura: totales.total
       };
 
       console.log('📤 Enviando datos FormPage5:', datosEnvio);
 
-      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/pago-caja-proveedor`, datosEnvio, {
-        withCredentials: true
-      });
+      const response = await axios.post(
+        `${config.apiBaseUrl}/api/asiento/compra-pago`, 
+        datosEnvio, 
+        { withCredentials: true }
+      );
 
       if (response.data.success) {
-        alert(`✅ Asiento #${response.data.asiento} - Pago en Caja a Proveedor creado correctamente`);
+        alert(`✅ Asiento #${response.data.asiento} - Compra con Pago creado correctamente`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -283,18 +304,27 @@ const FormPage5 = ({ user }) => {
     setCuentaP('');
     setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
+    setNumFRA('');
     setConcepto('');
-    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
+    setFechaOper('');
+    setDetalles([{ 
+      base: '', 
+      tipoIVA: '21', 
+      cuotaIVA: 0,
+      importeTotalLinea: 0 
+    }]);
     setArchivo(null);
     
-    // Restablecer cuenta de gasto a la primera opción
+    // Restablecer cuenta de gasto
     if (cuentasGasto.length > 0) {
       setCuentaGasto(cuentasGasto[0].id);
     }
     
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { withCredentials: true });
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
+          withCredentials: true 
+        });
         setNumAsiento(response.data.contador);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -303,27 +333,32 @@ const FormPage5 = ({ user }) => {
     fetchNewContador();
   };
 
+  // Obtener nombre de la cuenta seleccionada
+  const getNombreCuentaGasto = () => {
+    const cuenta = cuentasGasto.find(c => c.id === cuentaGasto);
+    return cuenta ? cuenta.nombre : '';
+  };
+
   return (
     <div className={styles.fp5Container}>
       <div className={styles.fp5Header}>
         <h2>
           <FaHandHoldingUsd />
-          Pago en Caja a Proveedor
+          Compra con Pago Inmediato
         </h2>
         <div className={styles.fp5AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
-          <span>Serie: <strong>{serie}</strong></span>
+          <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
           <span>Analítico: <strong>{analitico}</strong></span>
           <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
 
-
       <form onSubmit={handleSubmit} className={styles.fp5Form}>
-        {/* Sección de Datos del Documento */}
+        {/* Sección de Datos del Documento - IGUAL A FORMPAGE4 */}
         <div className={styles.fp5Section}>
-          <h3>📄 Datos del Documento</h3>
+          <h3>Datos del Documento</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>Serie</label>
@@ -345,6 +380,32 @@ const FormPage5 = ({ user }) => {
               />
             </div>
             <div className={styles.fp5FormGroup}>
+              <label>Nº Factura Proveedor</label>
+              <input 
+                type="text" 
+                value={numFRA}
+                onChange={(e) => setNumFRA(e.target.value)}
+                placeholder="Número de factura del proveedor"
+              />
+            </div>
+          </div>
+          
+          {/* Campo Concepto */}
+          <div className={styles.fp5FormRow}>
+            <div className={styles.fp5FormGroup}>
+              <label>Concepto *</label>
+              <input 
+                type="text" 
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                placeholder="Descripción del gasto/proveedor"
+                required
+              />
+            </div>
+          </div>
+
+          <div className={styles.fp5FormRow}>
+            <div className={styles.fp5FormGroup}>
               <label>Fecha de Registro *</label>
               <input
                 type="date"
@@ -353,24 +414,30 @@ const FormPage5 = ({ user }) => {
                 required
               />
             </div>
-          </div>
-          <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Concepto</label>
-              <input 
-                type="text" 
-                value={concepto}
-                onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del pago"
-                className={styles.fp5FullWidth}
+              <label>Fecha de Factura *</label>
+              <input
+                type="date"
+                value={fechaFactura}
+                onChange={(e) => setFechaFactura(e.target.value)}
+                required
               />
             </div>
+            <div className={styles.fp5FormGroup}>
+              <label>Fecha de Operación</label>
+              <input
+                type="date"
+                value={fechaOper}
+                onChange={(e) => setFechaOper(e.target.value)}
+              />
+            </div>
+            {/* NO INCLUIMOS VENCIMIENTO - DIFERENCIA CON FORMPAGE4 */}
           </div>
         </div>
 
         {/* Sección de Datos del Proveedor */}
         <div className={styles.fp5Section}>
-          <h3>🏢 Datos del Proveedor</h3>
+          <h3>Datos del Proveedor</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>Seleccionar Proveedor *</label>
@@ -382,14 +449,14 @@ const FormPage5 = ({ user }) => {
                 <option value="">-- Seleccionar proveedor --</option>
                 {proveedores.map(prov => (
                   <option key={prov.codigo} value={prov.codigo}>
-                    {prov.codigo} - {prov.nombre}
+                    {prov.codigo} - {prov.nombre} - Cuenta: {proveedoresCuentas.find(p => p.codigo === prov.codigo)?.cuenta || '400000000'}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Mostrar datos del proveedor seleccionado */}
+          {/* DATOS DEL PROVEEDOR SELECCIONADO */}
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>CIF/NIF</label>
@@ -430,12 +497,12 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Detalles Económicos */}
+        {/* Sección de Detalles Económicos SIN RETENCIÓN */}
         <div className={styles.fp5Section}>
-          <h3>💰 Detalles Económicos</h3>
+          <h3>Detalles Económicos</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Código Analítico (Fijo del usuario)</label>
+              <label>Código Analítico</label>
               <input 
                 type="text" 
                 value={analitico}
@@ -517,6 +584,8 @@ const FormPage5 = ({ user }) => {
                     />
                   </div>
                   
+                  {/* SIN CAMPOS DE RETENCIÓN */}
+                  
                   <div className={styles.fp5FormGroup}>
                     <label>Total Línea</label>
                     <input 
@@ -536,66 +605,78 @@ const FormPage5 = ({ user }) => {
               Añadir línea de factura
             </button>
           </div>
+
+          {/* Resumen de Totales SIN RETENCIÓN */}
+          <div className={styles.fp5Totales}>
+            <h4>Resumen de Totales:</h4>
+            <div className={styles.fp5TotalItem}>
+              <span>Base Imponible:</span>
+              <span>{totales.base.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp5TotalItem}>
+              <span>IVA:</span>
+              <span>+ {totales.iva.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp5TotalItem + ' ' + styles.fp5TotalFinal}>
+              <span>
+                <strong>TOTAL FACTURA:</strong>
+              </span>
+              <span>
+                <strong>{totales.total.toFixed(2)} €</strong>
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Sección de Archivo */}
         <div className={styles.fp5Section}>
-          <h3>📎 Archivo Adjunto</h3>
+          <h3>Archivo</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Justificante (Factura, Ticket, etc.)</label>
+              <label>Adjuntar Archivo</label>
               <input 
                 type="file" 
                 onChange={handleFileChange}
                 className={styles.fp5FileInput}
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
               {archivo && (
-                <span className={styles.fp5FileName}>📄 {archivo.split('\\').pop()}</span>
+                <span className={styles.fp5FileName}>{archivo}</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Resumen del Asiento */}
+        {/* Resumen del Asiento SIN RETENCIÓN */}
         <div className={styles.fp5Section}>
-          <h3>📊 Resumen del Asiento</h3>
+          <h3>Resumen del Asiento</h3>
           <div className={styles.fp5Resumen}>
             <div className={styles.fp5ResumenItem}>
-              <span className={styles.fp5DebeHaber}>DEBE</span>
-              <span className={styles.fp5CuentaInfo}>
-                {cuentaGasto} - {cuentasGasto.find(c => c.id === cuentaGasto)?.nombre}
-              </span>
-              <span className={styles.fp5Importe}>
-                {totales.total.toFixed(2)} €
-              </span>
+              <span>DEBE:</span>
+              <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
+              <span>{totales.base.toFixed(2)} €</span>
+            </div>
+            {totales.iva > 0 && (
+              <div className={styles.fp5ResumenItem}>
+                <span>DEBE:</span>
+                <span>472000000 - IVA Soportado</span>
+                <span>{totales.iva.toFixed(2)} €</span>
+              </div>
+            )}
+            <div className={styles.fp5ResumenItem}>
+              <span>HABER:</span>
+              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            {/* Línea de pago en caja */}
+            <div className={styles.fp5ResumenItem}>
+              <span>DEBE:</span>
+              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
+              <span>{totales.total.toFixed(2)} €</span>
             </div>
             <div className={styles.fp5ResumenItem}>
-              <span className={styles.fp5DebeHaber}>HABER</span>
-              <span className={styles.fp5CuentaInfo}>
-                {datosCuentaP.cuentaContable} - Proveedores
-              </span>
-              <span className={styles.fp5Importe}>
-                {totales.total.toFixed(2)} €
-              </span>
-            </div>
-            <div className={styles.fp5ResumenItem}>
-              <span className={styles.fp5DebeHaber}>DEBE</span>
-              <span className={styles.fp5CuentaInfo}>
-                {datosCuentaP.cuentaContable} - Proveedores
-              </span>
-              <span className={styles.fp5Importe}>
-                {totales.total.toFixed(2)} €
-              </span>
-            </div>
-            <div className={styles.fp5ResumenItem}>
-              <span className={styles.fp5DebeHaber}>HABER</span>
-              <span className={styles.fp5CuentaInfo}>
-                {cuentaCaja} - Caja
-              </span>
-              <span className={styles.fp5Importe}>
-                {totales.total.toFixed(2)} €
-              </span>
+              <span>HABER:</span>
+              <span>{cuentaCaja} - Caja</span>
+              <span>{totales.total.toFixed(2)} €</span>
             </div>
           </div>
         </div>
@@ -608,7 +689,7 @@ const FormPage5 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            ← Volver
+            Cancelar
           </button>
           <button 
             type="button" 
@@ -616,14 +697,14 @@ const FormPage5 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            🗑️ Limpiar
+            Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp5SubmitBtn} 
-            disabled={loading || !cuentaP || !numDocumento || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}
+            disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}
           >
-            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Pago'}
+            {loading ? 'Procesando...' : 'Crear Asiento de Compra con Pago'}
           </button>
         </div>
       </form>

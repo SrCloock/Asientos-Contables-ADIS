@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN CORREGIDA
+// pages/FormPage4.jsx - VERSIÓN COMPLETA Y CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -46,12 +46,14 @@ const FormPage4 = ({ user }) => {
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Detalles adaptados para IVA no deducible
+  // Detalles adaptados para IVA no deducible CON RETENCIÓN
   const [detalles, setDetalles] = useState([
     { 
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
+      retencion: '15', // NUEVO: campo de retención
+      cuotaRetencion: 0, // NUEVO: cuota de retención calculada
       importeTotalLinea: 0
     }
   ]);
@@ -138,20 +140,24 @@ const FormPage4 = ({ user }) => {
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // Manejo de detalles - IVA NO DEDUCIBLE (sin cambios)
+  // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
 
     const baseNum = parseFloat(newDetalles[index].base) || 0;
     const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
+    const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
     
     if (!isNaN(baseNum) && baseNum >= 0) {
       const cuotaIVA = (baseNum * tipoIVANum) / 100;
+      const cuotaRetencion = (baseNum * retencionNum) / 100;
       newDetalles[index].cuotaIVA = cuotaIVA;
-      newDetalles[index].importeTotalLinea = baseNum + cuotaIVA;
+      newDetalles[index].cuotaRetencion = cuotaRetencion;
+      newDetalles[index].importeTotalLinea = baseNum + cuotaIVA - cuotaRetencion;
     } else {
       newDetalles[index].cuotaIVA = 0;
+      newDetalles[index].cuotaRetencion = 0;
       newDetalles[index].importeTotalLinea = 0;
     }
     
@@ -163,6 +169,8 @@ const FormPage4 = ({ user }) => {
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
+      retencion: '15', // NUEVO: retención por defecto
+      cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
   };
@@ -175,21 +183,23 @@ const FormPage4 = ({ user }) => {
     }
   };
 
-  // Cálculo de totales para IVA no deducible
+  // MODIFICADO: Cálculo de totales para IVA no deducible CON RETENCIÓN
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
       const iva = parseFloat(detalle.cuotaIVA) || 0;
+      const retencion = parseFloat(detalle.cuotaRetencion) || 0;
       
       if (base > 0) {
         return {
           base: acc.base + base,
           iva: acc.iva + iva,
-          total: acc.total + base + iva
+          retencion: acc.retencion + retencion,
+          total: acc.total + base + iva - retencion
         };
       }
       return acc;
-    }, { base: 0, iva: 0, total: 0 });
+    }, { base: 0, iva: 0, retencion: 0, total: 0 });
   };
 
   const totales = calcularTotales();
@@ -271,15 +281,16 @@ const FormPage4 = ({ user }) => {
         cuentaGasto,
         analitico, // ANALITICO FIJO del usuario
         
-        // Detalles
+        // Detalles CON RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
         // Archivo
         archivo: archivo,
         
-        // Totales
+        // Totales CON RETENCIÓN
         totalBase: totales.base,
         totalIVA: totales.iva,
+        totalRetencion: totales.retencion,
         totalFactura: totales.total
       };
 
@@ -290,7 +301,8 @@ const FormPage4 = ({ user }) => {
       });
 
       if (response.data.success) {
-        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA Incluido) creado correctamente`);
+        const lineasCreadas = response.data.detalles.lineas;
+        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA Incluido) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -311,7 +323,14 @@ const FormPage4 = ({ user }) => {
     setConcepto(''); // LIMPIAR CONCEPTO
     setFechaOper('');
     setVencimiento('');
-    setDetalles([{ base: '', tipoIVA: '21', cuotaIVA: 0, importeTotalLinea: 0 }]);
+    setDetalles([{ 
+      base: '', 
+      tipoIVA: '21', 
+      cuotaIVA: 0, 
+      retencion: '15',
+      cuotaRetencion: 0,
+      importeTotalLinea: 0 
+    }]);
     setArchivo(null);
     
     // Restablecer cuenta de gasto
@@ -501,13 +520,12 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resto del código se mantiene igual... */}
-        {/* Sección de Detalles Económicos */}
+        {/* Sección de Detalles Económicos - CON RETENCIÓN AÑADIDA */}
         <div className={styles.fp4Section}>
           <h3>Detalles Económicos</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Código Analítico </label>
+              <label>Código Analítico</label>
               <input 
                 type="text" 
                 value={analitico}
@@ -589,6 +607,31 @@ const FormPage4 = ({ user }) => {
                     />
                   </div>
                   
+                  {/* NUEVO: Campos de Retención */}
+                  <div className={styles.fp4FormGroup}>
+                    <label>% Retención</label>
+                    <select
+                      value={line.retencion}
+                      onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
+                    >
+                      <option value="15">15% Profesional</option>
+                      <option value="7">7% Reducido</option>
+                      <option value="1">1% Especial</option>
+                      <option value="0">0% Sin retención</option>
+                    </select>
+                  </div>
+                  
+                  <div className={styles.fp4FormGroup}>
+                    <label>Cuota Retención</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      readOnly 
+                      value={line.cuotaRetencion.toFixed(2)} 
+                      className={styles.fp4Readonly}
+                    />
+                  </div>
+                  
                   <div className={styles.fp4FormGroup}>
                     <label>Total Línea</label>
                     <input 
@@ -607,6 +650,31 @@ const FormPage4 = ({ user }) => {
               <FaPlus />
               Añadir línea de factura
             </button>
+          </div>
+
+          {/* Resumen de Totales CON RETENCIÓN */}
+          <div className={styles.fp4Totales}>
+            <h4>Resumen de Totales:</h4>
+            <div className={styles.fp4TotalItem}>
+              <span>Base Imponible:</span>
+              <span>{totales.base.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp4TotalItem}>
+              <span>IVA:</span>
+              <span>+ {totales.iva.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp4TotalItem}>
+              <span>Retención:</span>
+              <span>- {totales.retencion.toFixed(2)} €</span>
+            </div>
+            <div className={styles.fp4TotalItem + ' ' + styles.fp4TotalFinal}>
+              <span>
+                <strong>TOTAL FACTURA:</strong>
+              </span>
+              <span>
+                <strong>{totales.total.toFixed(2)} €</strong>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -631,19 +699,31 @@ const FormPage4 = ({ user }) => {
         {/* Resumen del Asiento - ACTUALIZADO */}
         <div className={styles.fp4Section}>
           <h3>Resumen del Asiento</h3>
-          <div className={styles.fp4InfoBox}>
-          </div>
           <div className={styles.fp4Resumen}>
             <div className={styles.fp4ResumenItem}>
               <span>DEBE:</span>
               <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
-              <span>{totales.total.toFixed(2)} €</span>
+              <span>{totales.base.toFixed(2)} €</span>
             </div>
+            {totales.iva > 0 && (
+              <div className={styles.fp4ResumenItem}>
+                <span>DEBE:</span>
+                <span>629000000 - IVA No Deducible</span>
+                <span>{totales.iva.toFixed(2)} €</span>
+              </div>
+            )}
             <div className={styles.fp4ResumenItem}>
               <span>HABER:</span>
               <span>{datosCuentaP.cuentaContable} - Proveedores</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
+            {totales.retencion > 0 && (
+              <div className={styles.fp4ResumenItem}>
+                <span>HABER:</span>
+                <span>475100000 - Retenciones Practicadas</span>
+                <span>{totales.retencion.toFixed(2)} €</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -670,7 +750,7 @@ const FormPage4 = ({ user }) => {
             className={styles.fp4SubmitBtn} 
             disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento || !cuentaGasto}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento Corregido'}
+            {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
         </div>
       </form>
