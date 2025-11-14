@@ -1,4 +1,4 @@
-// pages/FormPage5.jsx - VERSIÓN COMPLETA SIN RETENCIÓN
+// pages/FormPage5.jsx - VERSIÓN COMPLETA CON NUEVO PROVEEDOR
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaHandHoldingUsd, FaPlus, FaTrash } from 'react-icons/fa';
@@ -37,6 +37,8 @@ const FormPage5 = ({ user }) => {
     cp: '', 
     cuentaContable: ''
   });
+  
+  const isNuevoProveedor = cuentaP === '4000';
   
   // Campos específicos para el pago
   const [cuentaGasto, setCuentaGasto] = useState('');
@@ -109,7 +111,6 @@ const FormPage5 = ({ user }) => {
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        // Valores por defecto en caso de error
         setSerie('CEM');
         setAnalitico('EM');
         setCuentaCaja('570000000');
@@ -118,23 +119,44 @@ const FormPage5 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // Actualizar datos proveedor - USAR CUENTA CONTABLE REAL
+  // Actualizar datos proveedor - CON OPCIÓN NUEVO PROVEEDOR
   useEffect(() => {
     if (cuentaP) {
-      const proveedor = proveedores.find(p => p.codigo === cuentaP);
-      const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
-      
-      if (proveedor) {
+      if (cuentaP === '4000') {
+        // NUEVO PROVEEDOR - Campos editables
         setDatosCuentaP({
-          cif: proveedor.cif || '',
-          nombre: proveedor.nombre || '',
-          cp: proveedor.cp || '',
-          cuentaContable: cuentaProv?.cuenta || '400000000'
+          cif: '',
+          nombre: '',
+          cp: '',
+          cuentaContable: '400000000'
         });
-        console.log(`✅ Proveedor seleccionado: ${proveedor.nombre}, Cuenta: ${cuentaProv?.cuenta}`);
+      } else {
+        // Proveedor existente
+        const proveedor = proveedores.find(p => p.codigo === cuentaP);
+        const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
+        
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '400000000'
+          });
+          console.log(`✅ Proveedor seleccionado: ${proveedor.nombre}, Cuenta: ${cuentaProv?.cuenta}`);
+        }
       }
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
+
+  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
+  const handleDatosProveedorChange = (field, value) => {
+    if (isNuevoProveedor) {
+      setDatosCuentaP(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
 
   // Manejo de detalles SIN RETENCIÓN
   const handleDetalleChange = (index, field, value) => {
@@ -209,6 +231,16 @@ const FormPage5 = ({ user }) => {
       errores.push('Debe seleccionar una cuenta de gasto');
     }
     
+    // Validar campos de nuevo proveedor si es necesario
+    if (isNuevoProveedor) {
+      if (!datosCuentaP.cif.trim()) {
+        errores.push('El CIF/NIF es obligatorio para nuevo proveedor');
+      }
+      if (!datosCuentaP.nombre.trim()) {
+        errores.push('La razón social es obligatoria para nuevo proveedor');
+      }
+    }
+    
     const lineasValidas = detalles.filter(d => d.base && parseFloat(d.base) > 0);
     if (lineasValidas.length === 0) {
       errores.push('Debe ingresar al menos una línea con base imponible mayor a 0');
@@ -238,12 +270,12 @@ const FormPage5 = ({ user }) => {
     setLoading(true);
 
     try {
-      // COMENTARIO COMBINADO: Nº FRA + Concepto
-      const comentarioCombinado = `${numFRA || ''} ${concepto}`.trim().substring(0, 40);
+      // COMENTARIO COMBINADO: Nº FRA - Concepto (formato corregido)
+      const comentarioCombinado = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
         // Datos de documento (IGUALES A FORMPAGE4)
-        serie, // SERIE con 'C' + base
+        serie,
         numDocumento,
         numFRA,
         fechaReg,
@@ -344,7 +376,7 @@ const FormPage5 = ({ user }) => {
       <div className={styles.fp5Header}>
         <h2>
           <FaHandHoldingUsd />
-          Compra con Pago Inmediato
+          Compra con Pago Inmediato - CON NUEVO PROVEEDOR
         </h2>
         <div className={styles.fp5AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -431,11 +463,10 @@ const FormPage5 = ({ user }) => {
                 onChange={(e) => setFechaOper(e.target.value)}
               />
             </div>
-            {/* NO INCLUIMOS VENCIMIENTO - DIFERENCIA CON FORMPAGE4 */}
           </div>
         </div>
 
-        {/* Sección de Datos del Proveedor */}
+        {/* Sección de Datos del Proveedor - CON OPCIÓN NUEVO PROVEEDOR */}
         <div className={styles.fp5Section}>
           <h3>Datos del Proveedor</h3>
           <div className={styles.fp5FormRow}>
@@ -447,6 +478,7 @@ const FormPage5 = ({ user }) => {
                 required
               >
                 <option value="">-- Seleccionar proveedor --</option>
+                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
                 {proveedores.map(prov => (
                   <option key={prov.codigo} value={prov.codigo}>
                     {prov.codigo} - {prov.nombre} - Cuenta: {proveedoresCuentas.find(p => p.codigo === prov.codigo)?.cuenta || '400000000'}
@@ -456,24 +488,28 @@ const FormPage5 = ({ user }) => {
             </div>
           </div>
 
-          {/* DATOS DEL PROVEEDOR SELECCIONADO */}
+          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>CIF/NIF</label>
+              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.cif}
-                readOnly
-                className={styles.fp5Readonly}
+                onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp5Readonly : ''}
+                required={isNuevoProveedor}
               />
             </div>
             <div className={styles.fp5FormGroup}>
-              <label>Razón Social</label>
+              <label>Razón Social {isNuevoProveedor && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.nombre}
-                readOnly
-                className={styles.fp5Readonly}
+                onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp5Readonly : ''}
+                required={isNuevoProveedor}
               />
             </div>
             <div className={styles.fp5FormGroup}>
@@ -481,8 +517,9 @@ const FormPage5 = ({ user }) => {
               <input 
                 type="text" 
                 value={datosCuentaP.cp}
-                readOnly
-                className={styles.fp5Readonly}
+                onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp5Readonly : ''}
               />
             </div>
             <div className={styles.fp5FormGroup}>
@@ -583,8 +620,6 @@ const FormPage5 = ({ user }) => {
                       className={styles.fp5Readonly}
                     />
                   </div>
-                  
-                  {/* SIN CAMPOS DE RETENCIÓN */}
                   
                   <div className={styles.fp5FormGroup}>
                     <label>Total Línea</label>

@@ -1,12 +1,15 @@
-// pages/FormPage6.jsx - VERSIÓN COMPLETA Y CORREGIDA
+// pages/FormPage6.jsx - VERSIÓN CON CUENTA FIJA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaMoneyBillWave, FaEuroSign, FaWallet } from 'react-icons/fa';
+import { FaMoneyBillWave } from 'react-icons/fa';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
 const FormPage6 = ({ user }) => {
+  // Estados base
   const [numAsiento, setNumAsiento] = useState('');
+  const [proveedores, setProveedores] = useState([]);
+  const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
@@ -16,17 +19,30 @@ const FormPage6 = ({ user }) => {
   
   // CUENTA CAJA desde tabla Clientes
   const [cuentaCaja, setCuentaCaja] = useState('');
-  
-  // Campos de documento
+
+  // CAMPOS UNIFICADOS DE DOCUMENTO (iguales a FormPage4 y FormPage5)
   const [numDocumento, setNumDocumento] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [numFRA, setNumFRA] = useState('');
+  const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaOper, setFechaOper] = useState('');
   const [concepto, setConcepto] = useState('');
-  
-  // Cuentas de ingreso (519) desde BD
-  const [cuentasIngreso, setCuentasIngreso] = useState([]);
-  const [cuentaIngreso, setCuentaIngreso] = useState('');
-  const [importe, setImporte] = useState('');
   const [archivo, setArchivo] = useState(null);
+  
+  // CAMPOS DE PROVEEDOR (iguales a otros formularios)
+  const [cuentaP, setCuentaP] = useState('');
+  const [datosCuentaP, setDatosCuentaP] = useState({ 
+    cif: '', 
+    nombre: '', 
+    cp: '', 
+    cuentaContable: ''
+  });
+  
+  const isNuevoProveedor = cuentaP === '4000';
+
+  // CUENTA DE INGRESO FIJA - NO SELECCIONABLE
+  const cuentaIngresoFija = '519000000';
+  const [importe, setImporte] = useState('');
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -47,16 +63,19 @@ const FormPage6 = ({ user }) => {
     const fetchDatosMaestros = async () => {
       try {
         const [
-          ingresosRes,
+          proveedoresRes, 
+          cuentasRes, 
           canalRes,
           cuentaCajaRes
         ] = await Promise.all([
-          axios.get(`${config.apiBaseUrl}/api/cuentas/ingresos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
         ]);
         
-        setCuentasIngreso(ingresosRes.data || []);
+        setProveedores(proveedoresRes.data || []);
+        setProveedoresCuentas(cuentasRes.data || []);
         
         // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
         const serieCliente = canalRes.data?.serie || 'ERROR';
@@ -69,11 +88,6 @@ const FormPage6 = ({ user }) => {
         
         // CUENTA CAJA
         setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
-        
-        // Establecer primera cuenta de ingreso por defecto si existe
-        if (ingresosRes.data && ingresosRes.data.length > 0) {
-          setCuentaIngreso(ingresosRes.data[0].id);
-        }
         
         console.log(`✅ FormPage6 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
         
@@ -88,6 +102,45 @@ const FormPage6 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
+  // ACTUALIZADO: Manejo de proveedor - CON OPCIÓN NUEVO PROVEEDOR
+  useEffect(() => {
+    if (cuentaP) {
+      if (cuentaP === '4000') {
+        // NUEVO PROVEEDOR - Campos editables
+        setDatosCuentaP({
+          cif: '',
+          nombre: '',
+          cp: '',
+          cuentaContable: '400000000'
+        });
+      } else {
+        // Proveedor existente
+        const proveedor = proveedores.find(p => p.codigo === cuentaP);
+        const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
+        
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '400000000'
+          });
+          console.log(`✅ Proveedor seleccionado: ${proveedor.nombre}, Cuenta: ${cuentaProv?.cuenta}`);
+        }
+      }
+    }
+  }, [cuentaP, proveedores, proveedoresCuentas]);
+
+  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
+  const handleDatosProveedorChange = (field, value) => {
+    if (isNuevoProveedor) {
+      setDatosCuentaP(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -98,13 +151,24 @@ const FormPage6 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cuentaIngreso || !importe || !concepto || !numDocumento) {
-      alert('Por favor complete todos los campos obligatorios');
-      return;
+    // Validación
+    const errores = [];
+    if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
+    if (!concepto.trim()) errores.push('El concepto es obligatorio');
+    if (!importe || parseFloat(importe) <= 0) errores.push('El importe debe ser mayor a 0');
+    
+    // Validar campos de nuevo proveedor si es necesario
+    if (isNuevoProveedor) {
+      if (!datosCuentaP.cif.trim()) {
+        errores.push('El CIF/NIF es obligatorio para nuevo proveedor');
+      }
+      if (!datosCuentaP.nombre.trim()) {
+        errores.push('La razón social es obligatoria para nuevo proveedor');
+      }
     }
-
-    if (parseFloat(importe) <= 0) {
-      alert('El importe debe ser mayor a 0');
+    
+    if (errores.length > 0) {
+      alert('Errores en el formulario:\n• ' + errores.join('\n• '));
       return;
     }
 
@@ -112,13 +176,28 @@ const FormPage6 = ({ user }) => {
 
     try {
       const datosEnvio = {
+        // DATOS DE DOCUMENTO UNIFICADOS
         serie,
         numDocumento,
-        fecha,
+        numFRA,
+        fechaReg,
+        fechaFactura,
+        fechaOper,
         concepto,
-        comentario: concepto,
+        comentario: `${numFRA || ''} - ${concepto}`.trim().substring(0, 40),
+        
+        // DATOS DE PROVEEDOR
+        proveedor: {
+          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
+          codigoProveedor: cuentaP,
+          cif: datosCuentaP.cif,
+          nombre: datosCuentaP.nombre,
+          cp: datosCuentaP.cp
+        },
+        
+        // DATOS ESPECÍFICOS
         analitico,
-        cuentaIngreso,
+        cuentaIngreso: cuentaIngresoFija, // ✅ CUENTA FIJA
         cuentaCaja,
         importe: parseFloat(importe),
         archivo
@@ -147,10 +226,13 @@ const FormPage6 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaIngreso(cuentasIngreso.length > 0 ? cuentasIngreso[0].id : '');
-    setImporte('');
-    setConcepto('');
+    setCuentaP('');
+    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
+    setNumFRA('');
+    setConcepto('');
+    setFechaOper('');
+    setImporte('');
     setArchivo(null);
     
     const fetchNewContador = async () => {
@@ -171,7 +253,7 @@ const FormPage6 = ({ user }) => {
       <div className={styles.fp6Header}>
         <h2>
           <FaMoneyBillWave />
-          Ingreso en Caja
+          Ingreso en Caja - CUENTA FIJA
         </h2>
         <div className={styles.fp6AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -183,12 +265,12 @@ const FormPage6 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp6Form}>
-        {/* Sección de Datos del Documento */}
+        {/* SECCIÓN DE DATOS DEL DOCUMENTO - UNIFICADA */}
         <div className={styles.fp6Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Serie </label>
+              <label>Serie</label>
               <input 
                 type="text" 
                 value={serie}
@@ -207,20 +289,16 @@ const FormPage6 = ({ user }) => {
               />
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Fecha *</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                required
+              <label>Nº Factura Proveedor</label>
+              <input 
+                type="text" 
+                value={numFRA}
+                onChange={(e) => setNumFRA(e.target.value)}
+                placeholder="Número de factura del proveedor"
               />
             </div>
           </div>
-        </div>
-
-        {/* Sección de Importe y Cuenta */}
-        <div className={styles.fp6Section}>
-          <h3>💰 Importe y Cuenta</h3>
+          
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
               <label>Concepto *</label>
@@ -232,10 +310,121 @@ const FormPage6 = ({ user }) => {
                 required
               />
             </div>
+          </div>
+
+          <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>
-                <FaEuroSign /> Importe *
-              </label>
+              <label>Fecha de Registro *</label>
+              <input
+                type="date"
+                value={fechaReg}
+                onChange={(e) => setFechaReg(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Fecha de Factura *</label>
+              <input
+                type="date"
+                value={fechaFactura}
+                onChange={(e) => setFechaFactura(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Fecha de Operación</label>
+              <input
+                type="date"
+                value={fechaOper}
+                onChange={(e) => setFechaOper(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECCIÓN DE PROVEEDOR - UNIFICADA */}
+        <div className={styles.fp6Section}>
+          <h3>👥 Datos del Proveedor/Cliente</h3>
+          <div className={styles.fp6FormRow}>
+            <div className={styles.fp6FormGroup}>
+              <label>Seleccionar Proveedor</label>
+              <select
+                value={cuentaP}
+                onChange={(e) => setCuentaP(e.target.value)}
+              >
+                <option value="">-- Seleccionar proveedor --</option>
+                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
+                {proveedores.map(prov => (
+                  <option key={prov.codigo} value={prov.codigo}>
+                    {prov.codigo} - {prov.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
+          <div className={styles.fp6FormRow}>
+            <div className={styles.fp6FormGroup}>
+              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cif}
+                onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
+                required={isNuevoProveedor}
+              />
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Razón Social {isNuevoProveedor && '*'}</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.nombre}
+                onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
+                required={isNuevoProveedor}
+              />
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Código Postal</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cp}
+                onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
+              />
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Cuenta Contable Real</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cuentaContable}
+                readOnly
+                className={styles.fp6Readonly}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECCIÓN DE IMPORTE Y CUENTA - CON CUENTA FIJA */}
+        <div className={styles.fp6Section}>
+          <h3>💰 Importe y Cuenta</h3>
+          <div className={styles.fp6FormRow}>
+            <div className={styles.fp6FormGroup}>
+              <label>Cuenta de Ingreso</label>
+              <input 
+                type="text" 
+                value={cuentaIngresoFija}
+                readOnly
+                className={styles.fp6Readonly}
+              />
+              <small className={styles.fp6HelpText}>Cuenta fija para ingresos</small>
+            </div>
+            <div className={styles.fp6FormGroup}>
+              <label>Importe *</label>
               <input 
                 type="number" 
                 step="0.01"
@@ -246,25 +435,10 @@ const FormPage6 = ({ user }) => {
                 required
               />
             </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso *</label>
-              <select
-                value={cuentaIngreso}
-                onChange={(e) => setCuentaIngreso(e.target.value)}
-                required
-              >
-                <option value="">-- Seleccionar cuenta de ingreso --</option>
-                {cuentasIngreso.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.id} - {cuenta.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* SECCIÓN DE ARCHIVO */}
         <div className={styles.fp6Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
@@ -274,7 +448,6 @@ const FormPage6 = ({ user }) => {
                 type="file" 
                 onChange={handleFileChange}
                 className={styles.fp6FileInput}
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
               {archivo && (
                 <span className={styles.fp6FileName}>📄 {archivo.split('\\').pop()}</span>
@@ -283,14 +456,14 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento */}
+        {/* RESUMEN DEL ASIENTO */}
         <div className={styles.fp6Section}>
           <h3>📊 Resumen del Asiento</h3>
           <div className={styles.fp6Resumen}>
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>DEBE</span>
               <span className={styles.fp6CuentaInfo}>
-                <FaWallet /> {cuentaCaja} - Caja
+                {cuentaCaja} - Caja
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
@@ -299,7 +472,7 @@ const FormPage6 = ({ user }) => {
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>HABER</span>
               <span className={styles.fp6CuentaInfo}>
-                {cuentaIngreso} - {cuentasIngreso.find(c => c.id === cuentaIngreso)?.nombre}
+                {cuentaIngresoFija} - Ingresos Varios
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
@@ -308,7 +481,7 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Botones */}
+        {/* BOTONES */}
         <div className={styles.fp6ButtonGroup}>
           <button 
             type="button" 
@@ -329,7 +502,7 @@ const FormPage6 = ({ user }) => {
           <button 
             type="submit" 
             className={styles.fp6SubmitBtn} 
-            disabled={loading || !importe || !cuentaIngreso || !concepto || !numDocumento}
+            disabled={loading || !importe || !concepto || !numDocumento}
           >
             {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Ingreso'}
           </button>

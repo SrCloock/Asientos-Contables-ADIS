@@ -1,12 +1,15 @@
-// pages/FormPage7.jsx - VERSIÓN COMPLETA Y CORREGIDA
+// pages/FormPage7.jsx - VERSIÓN CORREGIDA Y UNIFICADA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaReceipt, FaEuroSign, FaWallet } from 'react-icons/fa';
+import { FaReceipt, FaPlus, FaTrash } from 'react-icons/fa';
 import styles from '../styles/FormPage7.module.css';
 import config from '../config/config';
 
 const FormPage7 = ({ user }) => {
+  // Estados base
   const [numAsiento, setNumAsiento] = useState('');
+  const [proveedores, setProveedores] = useState([]);
+  const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
@@ -16,17 +19,31 @@ const FormPage7 = ({ user }) => {
   
   // CUENTA CAJA desde tabla Clientes
   const [cuentaCaja, setCuentaCaja] = useState('');
-  
-  // Campos del formulario
+
+  // CAMPOS UNIFICADOS DE DOCUMENTO (iguales a otros formularios)
   const [numDocumento, setNumDocumento] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [numFRA, setNumFRA] = useState('');
+  const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaOper, setFechaOper] = useState('');
   const [concepto, setConcepto] = useState('');
-  const [cuentaGasto, setCuentaGasto] = useState('');
-  const [importe, setImporte] = useState('');
   const [archivo, setArchivo] = useState(null);
+  
+  // CAMPOS DE PROVEEDOR (iguales a otros formularios)
+  const [cuentaP, setCuentaP] = useState('');
+  const [datosCuentaP, setDatosCuentaP] = useState({ 
+    cif: '', 
+    nombre: '', 
+    cp: '', 
+    cuentaContable: ''
+  });
+  
+  const isNuevoProveedor = cuentaP === '4000';
 
   // Cuentas de gasto (6xx) desde BD
   const [cuentasGasto, setCuentasGasto] = useState([]);
+  const [cuentaGasto, setCuentaGasto] = useState('');
+  const [importe, setImporte] = useState('');
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -47,15 +64,21 @@ const FormPage7 = ({ user }) => {
     const fetchDatosMaestros = async () => {
       try {
         const [
+          proveedoresRes, 
+          cuentasRes, 
           gastosRes,
           canalRes,
           cuentaCajaRes
         ] = await Promise.all([
+          axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
         ]);
         
+        setProveedores(proveedoresRes.data || []);
+        setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
         
         // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
@@ -88,6 +111,44 @@ const FormPage7 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
+  // ACTUALIZADO: Manejo de proveedor - USAR CUENTA CONTABLE REAL
+  useEffect(() => {
+    if (cuentaP) {
+      if (cuentaP === '4000') {
+        // NUEVO PROVEEDOR - Campos editables
+        setDatosCuentaP({
+          cif: '',
+          nombre: '',
+          cp: '',
+          cuentaContable: '400000000'
+        });
+      } else {
+        // Proveedor existente
+        const proveedor = proveedores.find(p => p.codigo === cuentaP);
+        const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
+        
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '400000000'
+          });
+        }
+      }
+    }
+  }, [cuentaP, proveedores, proveedoresCuentas]);
+
+  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
+  const handleDatosProveedorChange = (field, value) => {
+    if (isNuevoProveedor) {
+      setDatosCuentaP(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -98,13 +159,15 @@ const FormPage7 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cuentaGasto || !importe || !concepto || !numDocumento) {
-      alert('Por favor complete todos los campos obligatorios');
-      return;
-    }
-
-    if (parseFloat(importe) <= 0) {
-      alert('El importe debe ser mayor a 0');
+    // Validación
+    const errores = [];
+    if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
+    if (!concepto.trim()) errores.push('El concepto es obligatorio');
+    if (!cuentaGasto) errores.push('Debe seleccionar una cuenta de gasto');
+    if (!importe || parseFloat(importe) <= 0) errores.push('El importe debe ser mayor a 0');
+    
+    if (errores.length > 0) {
+      alert('Errores en el formulario:\n• ' + errores.join('\n• '));
       return;
     }
 
@@ -112,11 +175,26 @@ const FormPage7 = ({ user }) => {
 
     try {
       const datosEnvio = {
+        // DATOS DE DOCUMENTO UNIFICADOS
         serie,
         numDocumento,
-        fecha,
+        numFRA,
+        fechaReg,
+        fechaFactura,
+        fechaOper,
         concepto,
         comentario: concepto,
+        
+        // DATOS DE PROVEEDOR
+        proveedor: {
+          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
+          codigoProveedor: cuentaP,
+          cif: datosCuentaP.cif,
+          nombre: datosCuentaP.nombre,
+          cp: datosCuentaP.cp
+        },
+        
+        // DATOS ESPECÍFICOS
         analitico,
         cuentaGasto,
         cuentaCaja,
@@ -147,11 +225,19 @@ const FormPage7 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaGasto(cuentasGasto.length > 0 ? cuentasGasto[0].id : '');
-    setImporte('');
-    setConcepto('');
+    setCuentaP('');
+    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
+    setNumFRA('');
+    setConcepto('');
+    setFechaOper('');
+    setImporte('');
     setArchivo(null);
+    
+    // Restablecer cuenta de gasto
+    if (cuentasGasto.length > 0) {
+      setCuentaGasto(cuentasGasto[0].id);
+    }
     
     const fetchNewContador = async () => {
       try {
@@ -169,10 +255,10 @@ const FormPage7 = ({ user }) => {
   return (
     <div className={styles.fp7Container}>
       <div className={styles.fp7Header}>
-        <div className={styles.fp7Title}>
-          <FaReceipt className={styles.fp7Icon} />
-          <h2>Gasto Directo en Caja - CORREGIDO</h2>
-        </div>
+        <h2>
+          <FaReceipt />
+          Gasto Directo en Caja - UNIFICADO
+        </h2>
         <div className={styles.fp7AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Usuario: <strong>{user?.usuario}</strong></span>
@@ -181,8 +267,9 @@ const FormPage7 = ({ user }) => {
           <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
+
       <form onSubmit={handleSubmit} className={styles.fp7Form}>
-        {/* Sección de Datos del Documento */}
+        {/* SECCIÓN DE DATOS DEL DOCUMENTO - UNIFICADA */}
         <div className={styles.fp7Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp7FormRow}>
@@ -206,20 +293,16 @@ const FormPage7 = ({ user }) => {
               />
             </div>
             <div className={styles.fp7FormGroup}>
-              <label>Fecha *</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                required
+              <label>Nº Factura Proveedor</label>
+              <input 
+                type="text" 
+                value={numFRA}
+                onChange={(e) => setNumFRA(e.target.value)}
+                placeholder="Número de factura del proveedor"
               />
             </div>
           </div>
-        </div>
-
-        {/* Sección de Importe y Cuenta */}
-        <div className={styles.fp7Section}>
-          <h3>💰 Importe y Cuenta</h3>
+          
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
               <label>Concepto *</label>
@@ -227,24 +310,113 @@ const FormPage7 = ({ user }) => {
                 type="text" 
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del gasto (ticket, liquidación, etc.)"
+                placeholder="Descripción del gasto"
+                required
+              />
+            </div>
+          </div>
+
+          <div className={styles.fp7FormRow}>
+            <div className={styles.fp7FormGroup}>
+              <label>Fecha de Registro *</label>
+              <input
+                type="date"
+                value={fechaReg}
+                onChange={(e) => setFechaReg(e.target.value)}
                 required
               />
             </div>
             <div className={styles.fp7FormGroup}>
-              <label>
-                <FaEuroSign /> Importe*
-              </label>
-              <input 
-                type="number" 
-                step="0.01"
-                min="0.01"
-                value={importe}
-                onChange={(e) => setImporte(e.target.value)}
-                placeholder="0.00"
+              <label>Fecha de Factura *</label>
+              <input
+                type="date"
+                value={fechaFactura}
+                onChange={(e) => setFechaFactura(e.target.value)}
                 required
               />
             </div>
+            <div className={styles.fp7FormGroup}>
+              <label>Fecha de Operación</label>
+              <input
+                type="date"
+                value={fechaOper}
+                onChange={(e) => setFechaOper(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECCIÓN DE PROVEEDOR - UNIFICADA */}
+        <div className={styles.fp7Section}>
+          <h3>👥 Datos del Proveedor</h3>
+          <div className={styles.fp7FormRow}>
+            <div className={styles.fp7FormGroup}>
+              <label>Seleccionar Proveedor</label>
+              <select
+                value={cuentaP}
+                onChange={(e) => setCuentaP(e.target.value)}
+              >
+                <option value="">-- Seleccionar proveedor --</option>
+                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
+                {proveedores.map(prov => (
+                  <option key={prov.codigo} value={prov.codigo}>
+                    {prov.codigo} - {prov.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
+          <div className={styles.fp7FormRow}>
+            <div className={styles.fp7FormGroup}>
+              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cif}
+                onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
+                required={isNuevoProveedor}
+              />
+            </div>
+            <div className={styles.fp7FormGroup}>
+              <label>Razón Social {isNuevoProveedor && '*'}</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.nombre}
+                onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
+                required={isNuevoProveedor}
+              />
+            </div>
+            <div className={styles.fp7FormGroup}>
+              <label>Código Postal</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cp}
+                onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
+                readOnly={!isNuevoProveedor}
+                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
+              />
+            </div>
+            <div className={styles.fp7FormGroup}>
+              <label>Cuenta Contable Real</label>
+              <input 
+                type="text" 
+                value={datosCuentaP.cuentaContable}
+                readOnly
+                className={styles.fp7Readonly}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECCIÓN DE IMPORTE Y CUENTA */}
+        <div className={styles.fp7Section}>
+          <h3>💰 Importe y Cuenta</h3>
+          <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
               <label>Cuenta de Gasto *</label>
               <select
@@ -260,10 +432,22 @@ const FormPage7 = ({ user }) => {
                 ))}
               </select>
             </div>
+            <div className={styles.fp7FormGroup}>
+              <label>Importe *</label>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0.01"
+                value={importe}
+                onChange={(e) => setImporte(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* SECCIÓN DE ARCHIVO */}
         <div className={styles.fp7Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp7FormRow}>
@@ -273,7 +457,6 @@ const FormPage7 = ({ user }) => {
                 type="file" 
                 onChange={handleFileChange}
                 className={styles.fp7FileInput}
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
               {archivo && (
                 <span className={styles.fp7FileName}>📄 {archivo.split('\\').pop()}</span>
@@ -282,32 +465,7 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento */}
-        <div className={styles.fp7Section}>
-          <h3>📊 Resumen del Asiento</h3>
-          <div className={styles.fp7Resumen}>
-            <div className={styles.fp7ResumenItem}>
-              <span className={styles.fp7DebeHaber}>DEBE</span>
-              <span className={styles.fp7CuentaInfo}>
-                {cuentaGasto} - {cuentasGasto.find(c => c.id === cuentaGasto)?.nombre}
-              </span>
-              <span className={styles.fp7Importe}>
-                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
-              </span>
-            </div>
-            <div className={styles.fp7ResumenItem}>
-              <span className={styles.fp7DebeHaber}>HABER</span>
-              <span className={styles.fp7CuentaInfo}>
-                <FaWallet /> {cuentaCaja} - Caja
-              </span>
-              <span className={styles.fp7Importe}>
-                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Botones */}
+        {/* BOTONES */}
         <div className={styles.fp7ButtonGroup}>
           <button 
             type="button" 
