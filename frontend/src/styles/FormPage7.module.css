@@ -1,8 +1,10 @@
-/* styles/FormPage7.module.css */
+/* styles/FormPage7.module.css - ESTILO UNIFICADO */
 .fp7Container {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  background: #f8fafc;
+  min-height: 100vh;
 }
 
 .fp7Header {
@@ -10,39 +12,58 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e2e8f0;
+  padding: 1.5rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #ed8936; /* Naranja para Gastos */
 }
 
 .fp7Header h2 {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   color: #2d3748;
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .fp7AsientoInfo {
   display: flex;
   gap: 1.5rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #718096;
+  flex-wrap: wrap;
+}
+
+.fp7AsientoInfo span {
+  background: #f7fafc;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
 .fp7AsientoInfo strong {
   color: #2d3748;
+  font-weight: 600;
 }
 
 .fp7Form {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
 .fp7Section {
-  padding: 1.5rem;
+  padding: 2rem;
   border-bottom: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.fp7Section:hover {
+  background: #fafbfc;
 }
 
 .fp7Section:last-child {
@@ -50,15 +71,19 @@
 }
 
 .fp7Section h3 {
-  margin: 0 0 1rem 0;
-  color: #4a5568;
-  font-size: 1.1rem;
+  margin: 0 0 1.5rem 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .fp7FormRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .fp7FormGroup {
@@ -75,67 +100,71 @@
 
 .fp7FormGroup input,
 .fp7FormGroup select {
-  padding: 0.75rem;
+  padding: 0.875rem;
   border: 1px solid #cbd5e0;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  background: white;
 }
 
 .fp7FormGroup input:focus,
 .fp7FormGroup select:focus {
   outline: none;
-  border-color: #4299e1;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+  border-color: #ed8936;
+  box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.15);
+  transform: translateY(-1px);
 }
 
-.fp7Resumen {
-  background: #f7fafc;
-  padding: 1rem;
-  border-radius: 4px;
-  border-left: 4px solid #4299e1;
+.fp7Readonly {
+  background-color: #f7fafc !important;
+  color: #718096 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed;
 }
 
-.fp7ResumenItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e2e8f0;
+/* File Input */
+.fp7FileInput {
+  padding: 0.75rem;
+  border: 2px dashed #cbd5e0;
+  border-radius: 8px;
+  background: #fafbfc;
+  transition: all 0.2s ease;
 }
 
-.fp7ResumenItem:last-child {
-  border-bottom: none;
+.fp7FileInput:hover {
+  border-color: #ed8936;
+  background: #fffaf0;
 }
 
-.fp7ResumenItem span:first-child {
-  font-weight: 600;
-  color: #2d3748;
-  min-width: 80px;
+.fp7FileName {
+  display: block;
+  margin-top: 0.5rem;
+  color: #ed8936;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
-.fp7ResumenItem span:nth-child(2) {
-  flex: 1;
-  margin: 0 1rem;
-  color: #4a5568;
-}
-
+/* Button Group */
 .fp7ButtonGroup {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 2rem;
   background: #f7fafc;
+  border-top: 1px solid #e2e8f0;
 }
 
 .fp7CancelBtn,
+.fp7ClearBtn,
 .fp7SubmitBtn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.75rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .fp7CancelBtn {
@@ -145,23 +174,40 @@
 
 .fp7CancelBtn:hover:not(:disabled) {
   background: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.fp7ClearBtn {
+  background: #fbd38d;
+  color: #744210;
+}
+
+.fp7ClearBtn:hover:not(:disabled) {
+  background: #f6ad55;
+  transform: translateY(-1px);
 }
 
 .fp7SubmitBtn {
-  background: #4299e1;
+  background: #ed8936;
   color: white;
+  box-shadow: 0 2px 4px rgba(237, 137, 54, 0.3);
 }
 
 .fp7SubmitBtn:hover:not(:disabled) {
-  background: #3182ce;
+  background: #dd6b20;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(237, 137, 54, 0.4);
 }
 
 .fp7SubmitBtn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-@media (max-width: 768px) {
+/* Responsive Design */
+@media (max-width: 1024px) {
   .fp7Container {
     padding: 1rem;
   }
@@ -172,11 +218,44 @@
     align-items: flex-start;
   }
   
+  .fp7AsientoInfo {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
   .fp7FormRow {
     grid-template-columns: 1fr;
   }
   
   .fp7ButtonGroup {
     flex-direction: column;
+  }
+  
+  .fp7Section {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fp7Container {
+    padding: 0.5rem;
+  }
+  
+  .fp7Section {
+    padding: 1rem;
+  }
+  
+  .fp7Header {
+    padding: 1rem;
+  }
+  
+  .fp7AsientoInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fp7ButtonGroup {
+    padding: 1rem;
   }
 }

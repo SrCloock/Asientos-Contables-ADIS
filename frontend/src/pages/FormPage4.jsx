@@ -325,7 +325,7 @@ const FormPage4 = ({ user }) => {
 
       console.log('📤 Enviando datos FormPage4:', datosEnvio);
 
-      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-incluido`, datosEnvio, {
+      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-no-deducible`,  datosEnvio, {
         withCredentials: true
       });
 

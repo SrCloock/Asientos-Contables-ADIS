@@ -1,8 +1,10 @@
-/* styles/FormPage5.module.css */
+/* styles/FormPage5.module.css - ESTILO UNIFICADO CON FORMPAGE4 */
 .fp5Container {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  background: #f8fafc;
+  min-height: 100vh;
 }
 
 .fp5Header {
@@ -10,39 +12,58 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e2e8f0;
+  padding: 1.5rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #48bb78; /* Verde para Pago */
 }
 
 .fp5Header h2 {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   color: #2d3748;
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .fp5AsientoInfo {
   display: flex;
   gap: 1.5rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #718096;
+  flex-wrap: wrap;
+}
+
+.fp5AsientoInfo span {
+  background: #f7fafc;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
 .fp5AsientoInfo strong {
   color: #2d3748;
+  font-weight: 600;
 }
 
 .fp5Form {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
 .fp5Section {
-  padding: 1.5rem;
+  padding: 2rem;
   border-bottom: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.fp5Section:hover {
+  background: #fafbfc;
 }
 
 .fp5Section:last-child {
@@ -50,15 +71,26 @@
 }
 
 .fp5Section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.fp5Section h4 {
+  margin: 1.5rem 0 1rem 0;
   color: #4a5568;
   font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .fp5FormRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .fp5FormGroup {
@@ -75,32 +107,141 @@
 
 .fp5FormGroup input,
 .fp5FormGroup select {
-  padding: 0.75rem;
+  padding: 0.875rem;
   border: 1px solid #cbd5e0;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  background: white;
 }
 
 .fp5FormGroup input:focus,
 .fp5FormGroup select:focus {
   outline: none;
-  border-color: #4299e1;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+  border-color: #48bb78; /* Verde para Pago */
+  box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.15);
+  transform: translateY(-1px);
 }
 
+.fp5Readonly {
+  background-color: #f7fafc !important;
+  color: #718096 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed;
+}
+
+/* Detalles Container */
+.fp5Detalles {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.fp5DetalleLinea {
+  background: white;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.fp5LineaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fp5LineaHeader span {
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.fp5RemoveBtn {
+  background: #fed7d7;
+  color: #c53030;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.fp5RemoveBtn:hover {
+  background: #feb2b2;
+  transform: translateY(-1px);
+}
+
+.fp5AddBtn {
+  background: #48bb78;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.fp5AddBtn:hover {
+  background: #38a169;
+  transform: translateY(-1px);
+}
+
+/* Totales Section */
+.fp5Totales {
+  background: #f0fff4;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #c6f6d5;
+  margin-top: 2rem;
+}
+
+.fp5TotalItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fp5TotalItem:last-child {
+  border-bottom: none;
+}
+
+.fp5TotalFinal {
+  border-top: 2px solid #48bb78;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  font-size: 1.1rem;
+}
+
+/* Resumen Section */
 .fp5Resumen {
-  background: #f7fafc;
-  padding: 1rem;
-  border-radius: 4px;
-  border-left: 4px solid #4299e1;
+  background: #ebf8ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #bee3f8;
 }
 
 .fp5ResumenItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -120,22 +261,48 @@
   color: #4a5568;
 }
 
+/* File Input */
+.fp5FileInput {
+  padding: 0.75rem;
+  border: 2px dashed #cbd5e0;
+  border-radius: 8px;
+  background: #fafbfc;
+  transition: all 0.2s ease;
+}
+
+.fp5FileInput:hover {
+  border-color: #48bb78;
+  background: #f0fff4;
+}
+
+.fp5FileName {
+  display: block;
+  margin-top: 0.5rem;
+  color: #48bb78;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Button Group */
 .fp5ButtonGroup {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 2rem;
   background: #f7fafc;
+  border-top: 1px solid #e2e8f0;
 }
 
 .fp5CancelBtn,
+.fp5ClearBtn,
 .fp5SubmitBtn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.75rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .fp5CancelBtn {
@@ -145,23 +312,40 @@
 
 .fp5CancelBtn:hover:not(:disabled) {
   background: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.fp5ClearBtn {
+  background: #fbd38d;
+  color: #744210;
+}
+
+.fp5ClearBtn:hover:not(:disabled) {
+  background: #f6ad55;
+  transform: translateY(-1px);
 }
 
 .fp5SubmitBtn {
-  background: #4299e1;
+  background: #48bb78;
   color: white;
+  box-shadow: 0 2px 4px rgba(72, 187, 120, 0.3);
 }
 
 .fp5SubmitBtn:hover:not(:disabled) {
-  background: #3182ce;
+  background: #38a169;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
 }
 
 .fp5SubmitBtn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-@media (max-width: 768px) {
+/* Responsive Design */
+@media (max-width: 1024px) {
   .fp5Container {
     padding: 1rem;
   }
@@ -172,11 +356,48 @@
     align-items: flex-start;
   }
   
+  .fp5AsientoInfo {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
   .fp5FormRow {
     grid-template-columns: 1fr;
   }
   
   .fp5ButtonGroup {
     flex-direction: column;
+  }
+  
+  .fp5Section {
+    padding: 1.5rem;
+  }
+  
+  .fp5DetalleLinea {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fp5Container {
+    padding: 0.5rem;
+  }
+  
+  .fp5Section {
+    padding: 1rem;
+  }
+  
+  .fp5Header {
+    padding: 1rem;
+  }
+  
+  .fp5AsientoInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fp5ButtonGroup {
+    padding: 1rem;
   }
 }
