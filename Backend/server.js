@@ -1428,6 +1428,260 @@ app.post('/api/asiento/compra-pago', requireAuth, async (req, res) => {
 });
 
 // ============================================
+// 📋 ENDPOINTS PARA HISTORIAL DE ASIENTOS
+// ============================================
+
+app.get('/api/historial-asientos', requireAuth, async (req, res) => {
+  try {
+    const pagina = parseInt(req.query.pagina) || 1;
+    const porPagina = parseInt(req.query.porPagina) || 10;
+    const codigoCanal = req.session.user?.codigoCanal;
+    
+    console.log('🔍 Solicitando historial:', { pagina, porPagina, codigoCanal });
+    
+    if (!codigoCanal) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'CodigoCanal no disponible en la sesión' 
+      });
+    }
+
+    const offset = (pagina - 1) * porPagina;
+    
+    console.log(`📋 Obteniendo historial de asientos - Canal: ${codigoCanal}, Página: ${pagina}`);
+
+    // Consulta principal con paginación
+    const result = await pool.request()
+      .input('CodigoCanal', sql.VarChar, codigoCanal)
+      .input('Offset', sql.Int, offset)
+      .input('PageSize', sql.Int, porPagina)
+      .query(`
+        SELECT 
+          m.Asiento,
+          m.Ejercicio,
+          m.FechaAsiento,
+          m.Comentario,
+          m.CodigoCuenta,
+          m.CargoAbono,
+          m.ImporteAsiento,
+          m.CodigoCanal,
+          m.CodigoDepartamento,
+          m.CodigoSeccion,
+          m.CodigoProyecto,
+          m.IdDelegacion,
+          m.FechaGrabacion,
+          COUNT(*) OVER() as TotalRegistros
+        FROM Movimientos m
+        WHERE m.CodigoEmpresa = 9999
+          AND m.Ejercicio = 2025
+          AND m.CodigoCanal = @CodigoCanal
+          AND m.TipoMov = 0
+        ORDER BY m.Asiento DESC, m.FechaGrabacion DESC
+        OFFSET @Offset ROWS 
+        FETCH NEXT @PageSize ROWS ONLY
+      `);
+
+    // Consulta para estadísticas
+    const statsResult = await pool.request()
+      .input('CodigoCanal', sql.VarChar, codigoCanal)
+      .query(`
+        SELECT 
+          COUNT(*) as TotalAsientos,
+          SUM(CASE WHEN CargoAbono = 'D' THEN ImporteAsiento ELSE 0 END) as TotalDebe,
+          SUM(CASE WHEN CargoAbono = 'H' THEN ImporteAsiento ELSE 0 END) as TotalHaber
+        FROM Movimientos 
+        WHERE CodigoEmpresa = 9999
+          AND Ejercicio = 2025
+          AND CodigoCanal = @CodigoCanal
+          AND TipoMov = 0
+      `);
+
+    const totalRegistros = result.recordset.length > 0 ? result.recordset[0].TotalRegistros : 0;
+    const totalPaginas = Math.ceil(totalRegistros / porPagina);
+
+    // Agrupar movimientos por asiento
+    const asientosAgrupados = {};
+    result.recordset.forEach(movimiento => {
+      const asiento = movimiento.Asiento;
+      if (!asientosAgrupados[asiento]) {
+        asientosAgrupados[asiento] = {
+          asiento: asiento,
+          ejercicio: movimiento.Ejercicio,
+          fechaAsiento: movimiento.FechaAsiento,
+          comentario: movimiento.Comentario,
+          codigoCanal: movimiento.CodigoCanal,
+          fechaGrabacion: movimiento.FechaGrabacion,
+          movimientos: [],
+          totalDebe: 0,
+          totalHaber: 0
+        };
+      }
+      
+      asientosAgrupados[asiento].movimientos.push({
+        codigoCuenta: movimiento.CodigoCuenta,
+        cargoAbono: movimiento.CargoAbono,
+        importeAsiento: parseFloat(movimiento.ImporteAsiento),
+        codigoDepartamento: movimiento.CodigoDepartamento,
+        codigoSeccion: movimiento.CodigoSeccion,
+        codigoProyecto: movimiento.CodigoProyecto,
+        idDelegacion: movimiento.IdDelegacion
+      });
+
+      // Calcular totales
+      if (movimiento.CargoAbono === 'D') {
+        asientosAgrupados[asiento].totalDebe += parseFloat(movimiento.ImporteAsiento);
+      } else {
+        asientosAgrupados[asiento].totalHaber += parseFloat(movimiento.ImporteAsiento);
+      }
+    });
+
+    const asientos = Object.values(asientosAgrupados);
+
+    console.log(`✅ Historial obtenido: ${asientos.length} asientos de ${totalRegistros} totales`);
+
+    res.json({
+      success: true,
+      asientos,
+      paginacion: {
+        paginaActual: pagina,
+        porPagina: porPagina,
+        totalRegistros,
+        totalPaginas
+      },
+      estadisticas: {
+        totalAsientos: statsResult.recordset[0]?.TotalAsientos || 0,
+        totalDebe: parseFloat(statsResult.recordset[0]?.TotalDebe || 0),
+        totalHaber: parseFloat(statsResult.recordset[0]?.TotalHaber || 0)
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Error obteniendo historial de asientos:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error obteniendo historial de asientos: ' + err.message 
+    });
+  }
+});
+
+// Endpoint para buscar asientos específicos
+app.get('/api/historial-asientos/buscar', requireAuth, async (req, res) => {
+  try {
+    const { asiento, fechaDesde, fechaHasta, cuenta } = req.query;
+    const codigoCanal = req.session.user?.codigoCanal;
+    
+    console.log('🔍 Búsqueda de asientos:', { asiento, fechaDesde, fechaHasta, cuenta, codigoCanal });
+    
+    if (!codigoCanal) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'CodigoCanal no disponible en la sesión' 
+      });
+    }
+
+    let query = `
+      SELECT 
+        m.Asiento,
+        m.Ejercicio,
+        m.FechaAsiento,
+        m.Comentario,
+        m.CodigoCuenta,
+        m.CargoAbono,
+        m.ImporteAsiento,
+        m.CodigoCanal,
+        m.CodigoDepartamento,
+        m.CodigoSeccion,
+        m.CodigoProyecto,
+        m.IdDelegacion,
+        m.FechaGrabacion
+      FROM Movimientos m
+      WHERE m.CodigoEmpresa = 9999
+        AND m.Ejercicio = 2025
+        AND m.CodigoCanal = @CodigoCanal
+        AND m.TipoMov = 0
+    `;
+
+    const request = pool.request().input('CodigoCanal', sql.VarChar, codigoCanal);
+
+    if (asiento) {
+      query += ` AND m.Asiento = @Asiento`;
+      request.input('Asiento', sql.Int, parseInt(asiento));
+    }
+    
+    if (fechaDesde) {
+      query += ` AND m.FechaAsiento >= @FechaDesde`;
+      request.input('FechaDesde', sql.Date, new Date(fechaDesde));
+    }
+    
+    if (fechaHasta) {
+      query += ` AND m.FechaAsiento <= @FechaHasta`;
+      request.input('FechaHasta', sql.Date, new Date(fechaHasta));
+    }
+    
+    if (cuenta) {
+      query += ` AND m.CodigoCuenta LIKE @Cuenta`;
+      request.input('Cuenta', sql.VarChar, cuenta + '%');
+    }
+
+    query += ` ORDER BY m.Asiento DESC, m.FechaGrabacion DESC`;
+
+    const result = await request.query(query);
+
+    // Agrupar movimientos por asiento
+    const asientosAgrupados = {};
+    result.recordset.forEach(movimiento => {
+      const asiento = movimiento.Asiento;
+      if (!asientosAgrupados[asiento]) {
+        asientosAgrupados[asiento] = {
+          asiento: asiento,
+          ejercicio: movimiento.Ejercicio,
+          fechaAsiento: movimiento.FechaAsiento,
+          comentario: movimiento.Comentario,
+          codigoCanal: movimiento.CodigoCanal,
+          fechaGrabacion: movimiento.FechaGrabacion,
+          movimientos: [],
+          totalDebe: 0,
+          totalHaber: 0
+        };
+      }
+      
+      asientosAgrupados[asiento].movimientos.push({
+        codigoCuenta: movimiento.CodigoCuenta,
+        cargoAbono: movimiento.CargoAbono,
+        importeAsiento: parseFloat(movimiento.ImporteAsiento),
+        codigoDepartamento: movimiento.CodigoDepartamento,
+        codigoSeccion: movimiento.CodigoSeccion,
+        codigoProyecto: movimiento.CodigoProyecto,
+        idDelegacion: movimiento.IdDelegacion
+      });
+
+      if (movimiento.CargoAbono === 'D') {
+        asientosAgrupados[asiento].totalDebe += parseFloat(movimiento.ImporteAsiento);
+      } else {
+        asientosAgrupados[asiento].totalHaber += parseFloat(movimiento.ImporteAsiento);
+      }
+    });
+
+    const asientos = Object.values(asientosAgrupados);
+
+    console.log(`✅ Búsqueda completada: ${asientos.length} asientos encontrados`);
+
+    res.json({
+      success: true,
+      asientos,
+      totalRegistros: asientos.length
+    });
+
+  } catch (err) {
+    console.error('❌ Error buscando asientos:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error buscando asientos: ' + err.message 
+    });
+  }
+});
+
+// ============================================
 // 📊 ENDPOINTS PARA DATOS MAESTROS - CORREGIDOS
 // ============================================
 
@@ -1576,8 +1830,19 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
 
     console.log('🔨 Iniciando creación de asiento FormPage4 (IVA NO DEDUCIBLE)...');
     
-    // Obtener datos analíticos del usuario
-    const userAnalytics = req.session.user;
+    // Obtener datos analíticos - PRIORIDAD: body > session
+    const bodyAnalytics = req.body.datosAnaliticos || {};
+    const sessionAnalytics = req.session.user || {};
+    
+    const userAnalytics = {
+      codigoCanal: bodyAnalytics.codigoCanal || sessionAnalytics.codigoCanal,
+      codigoProyecto: bodyAnalytics.codigoProyecto || sessionAnalytics.codigoProyecto,
+      codigoSeccion: bodyAnalytics.codigoSeccion || sessionAnalytics.codigoSeccion,
+      codigoDepartamento: bodyAnalytics.codigoDepartamento || sessionAnalytics.codigoDepartamento,
+      idDelegacion: bodyAnalytics.idDelegacion || sessionAnalytics.idDelegacion,
+      cuentaCaja: req.body.cuentaCaja || sessionAnalytics.cuentaCaja
+    };
+
     const {
       codigoCanal,
       codigoProyecto,
@@ -1587,7 +1852,19 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       cuentaCaja
     } = userAnalytics;
 
-    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+    console.log('📊 Datos analíticos FormPage4:', {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja
+    });
+    
+    // Validar datos analíticos críticos
+    if (!codigoCanal || !idDelegacion) {
+      throw new Error('Datos analíticos incompletos: codigoCanal e idDelegacion son requeridos');
+    }
     
     const contadorResult = await transaction.request()
       .query(`
@@ -1617,9 +1894,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       numFRA,
       fechaFactura, 
       vencimiento, 
-      concepto,
-      cuentaGasto,
-      analitico
+      concepto
     } = req.body;
 
     // Validaciones
@@ -1633,6 +1908,10 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
     
     if (!proveedor) {
       throw new Error('Datos del proveedor requeridos');
+    }
+
+    if (!concepto) {
+      throw new Error('Concepto requerido');
     }
 
     // Buscar cuenta proveedor real
@@ -1650,6 +1929,8 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       if (cuentaContableResult.recordset.length > 0) {
         cuentaProveedorReal = cuentaContableResult.recordset[0].CodigoCuenta;
         console.log(`✅ Cuenta contable encontrada: ${cuentaProveedorReal}`);
+      } else {
+        console.log(`⚠️ Usando cuenta por defecto: ${cuentaProveedorReal}`);
       }
     } catch (error) {
       console.error('❌ Error buscando cuenta contable:', error);
@@ -1715,7 +1996,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('ImporteAsiento', sql.Decimal(18, 2), totalFactura)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -1785,7 +2066,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         .input('ImporteAsiento', sql.Decimal(18, 2), totalIVA)
         .input('StatusAcumulacion', sql.Int, -1)
         .input('CodigoDiario', sql.TinyInt, 0)
-        // NUEVOS CAMPOS ANALÍTICOS
+        // CAMPOS ANALÍTICOS COMPLETOS
         .input('CodigoCanal', sql.VarChar(10), codigoCanal)
         .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
         .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -1825,7 +2106,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
       .input('CargoAbono', sql.VarChar(1), 'D')
-      .input('CodigoCuenta', sql.VarChar(15), cuentaGasto)
+      .input('CodigoCuenta', sql.VarChar(15), req.body.cuentaGasto)
       .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
       .input('TipoDocumento', sql.VarChar(6), '')
@@ -1834,7 +2115,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('ImporteAsiento', sql.Decimal(18, 2), totalBase)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -1884,7 +2165,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         .input('ImporteAsiento', sql.Decimal(18, 2), totalRetencion)
         .input('StatusAcumulacion', sql.Int, -1)
         .input('CodigoDiario', sql.TinyInt, 0)
-        // NUEVOS CAMPOS ANALÍTICOS
+        // CAMPOS ANALÍTICOS COMPLETOS
         .input('CodigoCanal', sql.VarChar(10), codigoCanal)
         .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
         .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -1922,10 +2203,10 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('CodigoEmpresa', sql.SmallInt, 9999)
       .input('Ejercicio', sql.SmallInt, 2025)
       .input('Año', sql.SmallInt, 2025)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('IdDelegacion', sql.VarChar(10), idDelegacion)
-      .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+      .input('Serie', sql.VarChar(10), serie || codigoCanal)
       .input('Factura', sql.Int, parseInt(numDocumento) || 0)
       .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
       .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
@@ -1950,7 +2231,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
          @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
       `);
 
-    // NUEVO: Insertar en MovimientosIva - IMPORTANTE PARA FORMPAGE4
+    // Insertar en MovimientosIva - IMPORTANTE PARA FORMPAGE4
     if (totalIVA > 0 && movPosicionIVA) {
       const tipoIVAPrincipal = detalles[0]?.tipoIVA || '21';
       console.log('Insertando en MovimientosIva para FormPage4...');
@@ -2017,7 +2298,14 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         base: totalBase,
         iva: totalIVA,
         retencion: totalRetencion,
-        total: totalFactura
+        total: totalFactura,
+        datosAnaliticos: {
+          codigoCanal,
+          codigoProyecto,
+          codigoSeccion,
+          codigoDepartamento,
+          idDelegacion
+        }
       }
     });
   } catch (err) {
@@ -2048,6 +2336,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
     });
   }
 });
+
 // ============================================
 // 💰 ENDPOINT COMPLETO FORMPAGE5 - PAGO A PROVEEDOR
 // ============================================
@@ -2060,6 +2349,42 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
     await transaction.begin();
 
     console.log('🔨 Iniciando creación de asiento FormPage5 (Pago Proveedor)...');
+    
+    // Obtener datos analíticos - PRIORIDAD: body > session
+    const bodyAnalytics = req.body.datosAnaliticos || {};
+    const sessionAnalytics = req.session.user || {};
+    
+    const userAnalytics = {
+      codigoCanal: bodyAnalytics.codigoCanal || sessionAnalytics.codigoCanal,
+      codigoProyecto: bodyAnalytics.codigoProyecto || sessionAnalytics.codigoProyecto,
+      codigoSeccion: bodyAnalytics.codigoSeccion || sessionAnalytics.codigoSeccion,
+      codigoDepartamento: bodyAnalytics.codigoDepartamento || sessionAnalytics.codigoDepartamento,
+      idDelegacion: bodyAnalytics.idDelegacion || sessionAnalytics.idDelegacion,
+      cuentaCaja: req.body.cuentaCaja || sessionAnalytics.cuentaCaja
+    };
+
+    const {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    } = userAnalytics;
+
+    console.log('📊 Datos analíticos FormPage5:', {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    });
+
+    // Validar datos analíticos críticos
+    if (!codigoCanal || !idDelegacion) {
+      throw new Error('Datos analíticos incompletos: codigoCanal e idDelegacion son requeridos');
+    }
     
     const contadorResult = await transaction.request()
       .query(`
@@ -2116,12 +2441,17 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       if (cuentaContableResult.recordset.length > 0) {
         cuentaProveedorReal = cuentaContableResult.recordset[0].CodigoCuenta;
         console.log(`✅ Cuenta contable encontrada: ${cuentaProveedorReal}`);
+      } else {
+        console.log(`⚠️ Usando cuenta por defecto: ${cuentaProveedorReal}`);
       }
     } catch (error) {
       console.error('❌ Error buscando cuenta contable:', error);
     }
 
     const comentarioCorto = concepto.substring(0, 40);
+
+    // Usar cuenta caja del usuario si no viene en el request
+    const cuentaCajaFinal = cuentaCaja || cuentaCajaUsuario;
 
     // LÍNEA 1: Proveedor (DEBE) - Se reduce la deuda al proveedor
     const movPosicionProveedor = uuidv4();
@@ -2143,7 +2473,12 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico)
+      // CAMPOS ANALÍTICOS COMPLETOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2157,12 +2492,12 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
 
@@ -2177,7 +2512,7 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
       .input('CargoAbono', sql.VarChar(1), 'H')
-      .input('CodigoCuenta', sql.VarChar(15), cuentaCaja)
+      .input('CodigoCuenta', sql.VarChar(15), cuentaCajaFinal)
       .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
       .input('TipoDocumento', sql.VarChar(6), '')
@@ -2186,7 +2521,12 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico)
+      // CAMPOS ANALÍTICOS COMPLETOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2200,13 +2540,50 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+
+    // Insertar en MovimientosFacturas para registro del pago
+    console.log('Insertando en MovimientosFacturas para pago...');
+    
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('Año', sql.SmallInt, 2025)
+      // CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
+      .input('Serie', sql.VarChar(10), serie || codigoCanal)
+      .input('Factura', sql.Int, parseInt(numDocumento) || 0)
+      .input('SuFacturaNo', sql.VarChar(40), numDocumento)
+      .input('FechaFactura', sql.DateTime, fechaAsiento)
+      .input('Fecha347', sql.DateTime, fechaAsiento)
+      .input('ImporteFactura', sql.Decimal(18, 2), importeNum)
+      .input('TipoFactura', sql.VarChar(1), 'P') // P para Pago
+      .input('CodigoCuentaFactura', sql.VarChar(15), cuentaProveedorReal)
+      .input('CifDni', sql.VarChar(13), (proveedor.cif || '').substring(0, 13))
+      .input('Nombre', sql.VarChar(35), (proveedor.nombre || '').substring(0, 35))
+      .input('CodigoRetencion', sql.SmallInt, 0)
+      .input('BaseRetencion', sql.Decimal(18, 2), 0)
+      .input('PorcentajeRetencion', sql.Decimal(18, 2), 0)
+      .input('ImporteRetencion', sql.Decimal(18, 2), 0)
+      .query(`
+        INSERT INTO MovimientosFacturas 
+        (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
+         FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
+         CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
+        VALUES 
+        (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
+         @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
+         @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
       `);
 
     // Actualizar contador
@@ -2232,7 +2609,14 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
         lineas: 2,
         importe: importeNum,
         cuentaProveedor: cuentaProveedorReal,
-        cuentaCaja: cuentaCaja
+        cuentaCaja: cuentaCajaFinal,
+        datosAnaliticos: {
+          codigoCanal,
+          codigoProyecto,
+          codigoSeccion,
+          codigoDepartamento,
+          idDelegacion
+        }
       }
     });
 
@@ -2248,19 +2632,24 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       }
     }
     
+    let errorMessage = 'Error creando asiento de pago: ' + err.message;
+    
+    if (err.code === 'EREQUEST') {
+      if (err.originalError && err.originalError.info) {
+        errorMessage += `\nDetalles SQL: ${err.originalError.info.message}`;
+      }
+    }
+    
     res.status(500).json({ 
       success: false,
-      error: 'Error creando asiento de pago: ' + err.message
+      error: errorMessage,
+      detalles: err.details || null
     });
   }
 });
 
 // ============================================
-// 🏦 ENDPOINT PARA INGRESO EN CAJA (FORMPAGE6)
-// ============================================
-
-// ============================================
-// 💰 ENDPOINT FORMPAGE6 - INGRESO EN CAJA CON DATOS ANALÍTICOS
+// 🏦 ENDPOINT COMPLETO FORMPAGE6 - INGRESO EN CAJA
 // ============================================
 
 app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
@@ -2272,8 +2661,19 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
 
     console.log('🔨 Iniciando creación de asiento Ingreso Caja...');
     
-    // Obtener datos analíticos del usuario
-    const userAnalytics = req.session.user;
+    // Obtener datos analíticos - PRIORIDAD: body > session
+    const bodyAnalytics = req.body.datosAnaliticos || {};
+    const sessionAnalytics = req.session.user || {};
+    
+    const userAnalytics = {
+      codigoCanal: bodyAnalytics.codigoCanal || sessionAnalytics.codigoCanal,
+      codigoProyecto: bodyAnalytics.codigoProyecto || sessionAnalytics.codigoProyecto,
+      codigoSeccion: bodyAnalytics.codigoSeccion || sessionAnalytics.codigoSeccion,
+      codigoDepartamento: bodyAnalytics.codigoDepartamento || sessionAnalytics.codigoDepartamento,
+      idDelegacion: bodyAnalytics.idDelegacion || sessionAnalytics.idDelegacion,
+      cuentaCaja: req.body.cuentaCaja || sessionAnalytics.cuentaCaja
+    };
+
     const {
       codigoCanal,
       codigoProyecto,
@@ -2283,7 +2683,19 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       cuentaCaja: cuentaCajaUsuario
     } = userAnalytics;
 
-    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+    console.log('📊 Datos analíticos FormPage6:', {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    });
+
+    // Validar datos analíticos críticos
+    if (!codigoCanal || !idDelegacion) {
+      throw new Error('Datos analíticos incompletos: codigoCanal e idDelegacion son requeridos');
+    }
     
     const contadorResult = await transaction.request()
       .query(`
@@ -2365,12 +2777,12 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('DocumentoConta', sql.VarChar(9), '')
       .input('SerieCliente', sql.VarChar(10), serie || '')
       .input('NumeroDoc', sql.VarChar(20), numDocumento)
-      .input('RutaDocumento', sql.VarChar(500), archivo || '') // ✅ MANTENIDO PARA ARCHIVOS
+      .input('RutaDocumento', sql.VarChar(500), archivo || '')
       .input('Comentario', sql.VarChar(40), comentarioCorto)
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -2416,12 +2828,12 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('DocumentoConta', sql.VarChar(9), '')
       .input('SerieCliente', sql.VarChar(10), serie || '')
       .input('NumeroDoc', sql.VarChar(20), numDocumento)
-      .input('RutaDocumento', sql.VarChar(500), archivo || '') // ✅ MANTENIDO PARA ARCHIVOS
+      .input('RutaDocumento', sql.VarChar(500), archivo || '')
       .input('Comentario', sql.VarChar(40), comentarioCorto)
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -2458,10 +2870,10 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('CodigoEmpresa', sql.SmallInt, 9999)
       .input('Ejercicio', sql.SmallInt, 2025)
       .input('Año', sql.SmallInt, 2025)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('IdDelegacion', sql.VarChar(10), idDelegacion)
-      .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+      .input('Serie', sql.VarChar(10), serie || codigoCanal)
       .input('Factura', sql.Int, parseInt(numDocumento) || 0)
       .input('SuFacturaNo', sql.VarChar(40), numFRA || '')
       .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
@@ -2510,7 +2922,14 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
         importe: importeNum,
         cuentaIngreso: cuentaIngreso,
         cuentaCaja: cuentaCajaFinal,
-        archivo: archivo || 'No subido'
+        archivo: archivo || 'No subido',
+        datosAnaliticos: {
+          codigoCanal,
+          codigoProyecto,
+          codigoSeccion,
+          codigoDepartamento,
+          idDelegacion
+        }
       }
     });
 
@@ -2544,11 +2963,7 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// 💰 ENDPOINT PARA GASTO DIRECTO EN CAJA (FORMPAGE7)
-// ============================================
-
-// ============================================
-// 💰 ENDPOINT FORMPAGE7 - GASTO DIRECTO CAJA ACTUALIZADO
+// 💰 ENDPOINT FORMPAGE7 COMPLETO - GASTO DIRECTO CAJA
 // ============================================
 
 app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
@@ -2560,8 +2975,19 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
 
     console.log('🔨 Iniciando creación de asiento FormPage7 (Gasto Directo Caja)...');
     
-    // Obtener datos analíticos del usuario
-    const userAnalytics = req.session.user;
+    // Obtener datos analíticos - PRIORIDAD: body > session
+    const bodyAnalytics = req.body.datosAnaliticos || {};
+    const sessionAnalytics = req.session.user || {};
+    
+    const userAnalytics = {
+      codigoCanal: bodyAnalytics.codigoCanal || sessionAnalytics.codigoCanal,
+      codigoProyecto: bodyAnalytics.codigoProyecto || sessionAnalytics.codigoProyecto,
+      codigoSeccion: bodyAnalytics.codigoSeccion || sessionAnalytics.codigoSeccion,
+      codigoDepartamento: bodyAnalytics.codigoDepartamento || sessionAnalytics.codigoDepartamento,
+      idDelegacion: bodyAnalytics.idDelegacion || sessionAnalytics.idDelegacion,
+      cuentaCaja: req.body.cuentaCaja || sessionAnalytics.cuentaCaja
+    };
+
     const {
       codigoCanal,
       codigoProyecto,
@@ -2571,7 +2997,19 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       cuentaCaja: cuentaCajaUsuario
     } = userAnalytics;
 
-    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+    console.log('📊 Datos analíticos FormPage7:', {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    });
+
+    // Validar datos analíticos críticos
+    if (!codigoCanal || !idDelegacion) {
+      throw new Error('Datos analíticos incompletos: codigoCanal e idDelegacion son requeridos');
+    }
 
     const contadorResult = await transaction.request()
       .query(`
@@ -2658,7 +3096,7 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -2709,7 +3147,7 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      // NUEVOS CAMPOS ANALÍTICOS
+      // CAMPOS ANALÍTICOS COMPLETOS
       .input('CodigoCanal', sql.VarChar(10), codigoCanal)
       .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
       .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
@@ -2747,10 +3185,10 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
         .input('CodigoEmpresa', sql.SmallInt, 9999)
         .input('Ejercicio', sql.SmallInt, 2025)
         .input('Año', sql.SmallInt, 2025)
-        // NUEVOS CAMPOS ANALÍTICOS
+        // CAMPOS ANALÍTICOS
         .input('CodigoCanal', sql.VarChar(10), codigoCanal)
         .input('IdDelegacion', sql.VarChar(10), idDelegacion)
-        .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+        .input('Serie', sql.VarChar(10), serie || codigoCanal)
         .input('Factura', sql.Int, parseInt(numDocumento) || 0)
         .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
         .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
