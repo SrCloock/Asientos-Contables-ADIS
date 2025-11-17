@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
+// pages/FormPage4.jsx - VERSIÓN CORREGIDA CON RESUMEN SEPARADO
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -390,7 +390,7 @@ const FormPage4 = ({ user }) => {
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0, 
-      retencion: '15',
+      retencion: '0',
       cuotaRetencion: 0,
       importeTotalLinea: 0 
     }]);
@@ -683,6 +683,7 @@ const FormPage4 = ({ user }) => {
                       value={line.retencion}
                       onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
                     >
+                      <option value="19">19% Alquileres</option>
                       <option value="15">15% Profesional</option>
                       <option value="7">7% Reducido</option>
                       <option value="1">1% Especial</option>
@@ -729,7 +730,7 @@ const FormPage4 = ({ user }) => {
               <span>{totales.base.toFixed(2)} €</span>
             </div>
             <div className={styles.fp4TotalItem}>
-              <span>IVA:</span>
+              <span>IVA (No Deducible):</span>
               <span>+ {totales.iva.toFixed(2)} €</span>
             </div>
             <div className={styles.fp4TotalItem}>
@@ -738,7 +739,7 @@ const FormPage4 = ({ user }) => {
             </div>
             <div className={styles.fp4TotalItem + ' ' + styles.fp4TotalFinal}>
               <span>
-                <strong>TOTAL FACTURA:</strong>
+                <strong>TOTAL A PAGAR:</strong>
               </span>
               <span>
                 <strong>{totales.total.toFixed(2)} €</strong>
@@ -765,27 +766,34 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento - ACTUALIZADO */}
+        {/* Resumen del Asiento - CORREGIDO: DOS LÍNEAS SEPARADAS */}
         <div className={styles.fp4Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp4Resumen}>
+            {/* LÍNEA 1: BASE IMPONIBLE */}
             <div className={styles.fp4ResumenItem}>
               <span>DEBE:</span>
               <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
               <span>{totales.base.toFixed(2)} €</span>
             </div>
+            
+            {/* LÍNEA 2: IVA NO DEDUCIBLE - MISMA CUENTA DE GASTO */}
             {totales.iva > 0 && (
               <div className={styles.fp4ResumenItem}>
                 <span>DEBE:</span>
-                <span>629000000 - IVA No Deducible</span>
+                <span>{cuentaGasto} - IVA No Deducible</span>
                 <span>{totales.iva.toFixed(2)} €</span>
               </div>
             )}
+            
+            {/* LÍNEA 3: PROVEEDOR */}
             <div className={styles.fp4ResumenItem}>
               <span>HABER:</span>
               <span>{datosCuentaP.cuentaContable} - Proveedores</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
+            
+            {/* LÍNEA 4: RETENCIÓN */}
             {totales.retencion > 0 && (
               <div className={styles.fp4ResumenItem}>
                 <span>HABER:</span>

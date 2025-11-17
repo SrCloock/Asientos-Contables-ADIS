@@ -1,4 +1,4 @@
-// pages/FormPage6.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
+// pages/FormPage6.jsx - VERSIÓN CORREGIDA (ANALÍTICO = SERIE)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
@@ -8,14 +8,12 @@ import config from '../config/config';
 const FormPage6 = ({ user }) => {
   // Estados base
   const [numAsiento, setNumAsiento] = useState('');
-  const [proveedores, setProveedores] = useState([]);
-  const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
-  const [analitico, setAnalitico] = useState('');
+  const [analitico, setAnalitico] = useState(''); // Ahora será igual a serie
   const [cuentaCaja, setCuentaCaja] = useState('');
   const [datosAnaliticos, setDatosAnaliticos] = useState({
     codigoCanal: '',
@@ -25,26 +23,12 @@ const FormPage6 = ({ user }) => {
     idDelegacion: ''
   });
   
-  // CAMPOS UNIFICADOS DE DOCUMENTO
+  // CAMPOS UNIFICADOS DE DOCUMENTO (CAMPOS ELIMINADOS)
   const [numDocumento, setNumDocumento] = useState('');
-  const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaOper, setFechaOper] = useState('');
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // CAMPOS DE PROVEEDOR
-  const [cuentaP, setCuentaP] = useState('');
-  const [datosCuentaP, setDatosCuentaP] = useState({ 
-    cif: '', 
-    nombre: '', 
-    cp: '', 
-    cuentaContable: ''
-  });
-  
-  const isNuevoProveedor = cuentaP === '4000';
-
   // CUENTA DE INGRESO FIJA - NO SELECCIONABLE
   const cuentaIngresoFija = '519000000';
   const [importe, setImporte] = useState('');
@@ -75,16 +59,13 @@ const FormPage6 = ({ user }) => {
         if (sessionRes.data.authenticated) {
           const userData = sessionRes.data.user;
           
-          // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+          // SERIE Y ANALITICO FIJOS - ANALITICO = SERIE
           const serieCliente = userData.codigoCanal || 'EM';
-          const analiticoCliente = userData.idDelegacion || 'EM';
           const serieConC = `C${serieCliente}`;
           
           setSerieBase(serieCliente);
           setSerie(serieConC);
-          setAnalitico(analiticoCliente);
-          
-          // CUENTA CAJA
+          setAnalitico(serieConC); // ✅ ANALITICO = SERIE
           setCuentaCaja(userData.cuentaCaja || '570000000');
           
           setDatosAnaliticos({
@@ -97,7 +78,7 @@ const FormPage6 = ({ user }) => {
 
           console.log(`✅ FormPage6 - Datos analíticos cargados:`, {
             serie: serieConC,
-            analitico: analiticoCliente,
+            analitico: serieConC, // Mismo valor que serie
             cuentaCaja: userData.cuentaCaja,
             canal: userData.codigoCanal,
             proyecto: userData.codigoProyecto,
@@ -106,65 +87,18 @@ const FormPage6 = ({ user }) => {
             delegacion: userData.idDelegacion
           });
         }
-
-        // Cargar proveedores
-        const [proveedoresRes, cuentasRes] = await Promise.all([
-          axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true })
-        ]);
-        
-        setProveedores(proveedoresRes.data || []);
-        setProveedoresCuentas(cuentasRes.data || []);
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
         // Valores por defecto en caso de error
-        setSerie('CEM');
-        setAnalitico('EM');
+        const defaultValue = 'CEM';
+        setSerie(defaultValue);
+        setAnalitico(defaultValue); // Mismo valor por defecto
         setCuentaCaja('570000000');
       }
     };
     fetchDatosMaestros();
   }, []);
-
-  // ACTUALIZADO: Manejo de proveedor - CON OPCIÓN NUEVO PROVEEDOR
-  useEffect(() => {
-    if (cuentaP) {
-      if (cuentaP === '4000') {
-        // NUEVO PROVEEDOR - Campos editables
-        setDatosCuentaP({
-          cif: '',
-          nombre: '',
-          cp: '',
-          cuentaContable: '400000000'
-        });
-      } else {
-        // Proveedor existente
-        const proveedor = proveedores.find(p => p.codigo === cuentaP);
-        const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
-        
-        if (proveedor) {
-          setDatosCuentaP({
-            cif: proveedor.cif || '',
-            nombre: proveedor.nombre || '',
-            cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
-          });
-          console.log(`✅ Proveedor seleccionado: ${proveedor.nombre}, Cuenta: ${cuentaProv?.cuenta}`);
-        }
-      }
-    }
-  }, [cuentaP, proveedores, proveedoresCuentas]);
-
-  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
-  const handleDatosProveedorChange = (field, value) => {
-    if (isNuevoProveedor) {
-      setDatosCuentaP(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -182,16 +116,6 @@ const FormPage6 = ({ user }) => {
     if (!concepto.trim()) errores.push('El concepto es obligatorio');
     if (!importe || parseFloat(importe) <= 0) errores.push('El importe debe ser mayor a 0');
     
-    // Validar campos de nuevo proveedor si es necesario
-    if (isNuevoProveedor) {
-      if (!datosCuentaP.cif.trim()) {
-        errores.push('El CIF/NIF es obligatorio para nuevo proveedor');
-      }
-      if (!datosCuentaP.nombre.trim()) {
-        errores.push('La razón social es obligatoria para nuevo proveedor');
-      }
-    }
-    
     if (errores.length > 0) {
       alert('Errores en el formulario:\n• ' + errores.join('\n• '));
       return;
@@ -201,27 +125,15 @@ const FormPage6 = ({ user }) => {
 
     try {
       const datosEnvio = {
-        // DATOS DE DOCUMENTO UNIFICADOS
+        // DATOS DE DOCUMENTO UNIFICADOS (CAMPOS ELIMINADOS)
         serie,
         numDocumento,
-        numFRA,
         fechaReg,
-        fechaFactura,
-        fechaOper,
         concepto,
-        comentario: `${numFRA || ''} - ${concepto}`.trim().substring(0, 40),
-        
-        // DATOS DE PROVEEDOR
-        proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
-          codigoProveedor: cuentaP,
-          cif: datosCuentaP.cif,
-          nombre: datosCuentaP.nombre,
-          cp: datosCuentaP.cp
-        },
+        comentario: concepto.trim().substring(0, 40),
         
         // DATOS ESPECÍFICOS
-        analitico,
+        analitico, // ✅ Ahora analitico = serie
         cuentaIngreso: cuentaIngresoFija, // ✅ CUENTA FIJA
         cuentaCaja,
         importe: parseFloat(importe),
@@ -251,12 +163,8 @@ const FormPage6 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaP('');
-    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
-    setNumFRA('');
     setConcepto('');
-    setFechaOper('');
     setImporte('');
     setArchivo(null);
     
@@ -288,7 +196,7 @@ const FormPage6 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp6Form}>
-        {/* SECCIÓN DE DATOS DEL DOCUMENTO - UNIFICADA */}
+        {/* SECCIÓN DE DATOS DEL DOCUMENTO - SIMPLIFICADA */}
         <div className={styles.fp6Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp6FormRow}>
@@ -309,15 +217,6 @@ const FormPage6 = ({ user }) => {
                 onChange={(e) => setNumDocumento(e.target.value)}
                 placeholder="Número de documento"
                 required
-              />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Nº Factura Proveedor</label>
-              <input 
-                type="text" 
-                value={numFRA}
-                onChange={(e) => setNumFRA(e.target.value)}
-                placeholder="Número de factura del proveedor"
               />
             </div>
           </div>
@@ -345,102 +244,28 @@ const FormPage6 = ({ user }) => {
                 required
               />
             </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Fecha de Factura *</label>
-              <input
-                type="date"
-                value={fechaFactura}
-                onChange={(e) => setFechaFactura(e.target.value)}
-                required
-              />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Fecha de Operación</label>
-              <input
-                type="date"
-                value={fechaOper}
-                onChange={(e) => setFechaOper(e.target.value)}
-              />
-            </div>
           </div>
         </div>
 
-        {/* SECCIÓN DE PROVEEDOR - UNIFICADA */}
+        {/* SECCIÓN DE IMPORTE */}
         <div className={styles.fp6Section}>
-          <h3>👥 Datos del Proveedor/Cliente</h3>
+          <h3>💰 Importe</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Seleccionar Proveedor</label>
-              <select
-                value={cuentaP}
-                onChange={(e) => setCuentaP(e.target.value)}
-              >
-                <option value="">-- Seleccionar proveedor --</option>
-                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
-                {proveedores.map(prov => (
-                  <option key={prov.codigo} value={prov.codigo}>
-                    {prov.codigo} - {prov.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
-          <div className={styles.fp6FormRow}>
-            <div className={styles.fp6FormGroup}>
-              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
+              <label>Código Analítico</label>
               <input 
                 type="text" 
-                value={datosCuentaP.cif}
-                onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
-                required={isNuevoProveedor}
-              />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Razón Social {isNuevoProveedor && '*'}</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.nombre}
-                onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
-                required={isNuevoProveedor}
-              />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Código Postal</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.cp}
-                onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp6Readonly : ''}
-              />
-            </div>
-            <div className={styles.fp6FormGroup}>
-              <label>Cuenta Contable Real</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.cuentaContable}
+                value={analitico}
                 readOnly
                 className={styles.fp6Readonly}
               />
+              <small>Valor fijo (igual a Serie)</small>
             </div>
-          </div>
-        </div>
-
-        {/* SECCIÓN DE IMPORTE Y CUENTA - CON CUENTA FIJA */}
-        <div className={styles.fp6Section}>
-          <h3>💰 Importe y Cuenta</h3>
-          <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso</label>
+              <label>Cuenta de Caja</label>
               <input 
                 type="text" 
-                value={cuentaIngresoFija}
+                value={cuentaCaja}
                 readOnly
                 className={styles.fp6Readonly}
               />

@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
+// pages/FormPage7.jsx - VERSIÓN MODIFICADA (CAMPOS ELIMINADOS)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt, FaPlus, FaTrash } from 'react-icons/fa';
@@ -8,8 +8,6 @@ import config from '../config/config';
 const FormPage7 = ({ user }) => {
   // Estados base
   const [numAsiento, setNumAsiento] = useState('');
-  const [proveedores, setProveedores] = useState([]);
-  const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
@@ -25,26 +23,12 @@ const FormPage7 = ({ user }) => {
     idDelegacion: ''
   });
 
-  // CAMPOS UNIFICADOS DE DOCUMENTO
+  // CAMPOS UNIFICADOS DE DOCUMENTO (CAMPOS ELIMINADOS)
   const [numDocumento, setNumDocumento] = useState('');
-  const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().split('T')[0]);
-  const [fechaOper, setFechaOper] = useState('');
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // CAMPOS DE PROVEEDOR
-  const [cuentaP, setCuentaP] = useState('');
-  const [datosCuentaP, setDatosCuentaP] = useState({ 
-    cif: '', 
-    nombre: '', 
-    cp: '', 
-    cuentaContable: ''
-  });
-  
-  const isNuevoProveedor = cuentaP === '4000';
-
   // Cuentas de gasto (6xx) desde BD
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentaGasto, setCuentaGasto] = useState('');
@@ -106,19 +90,9 @@ const FormPage7 = ({ user }) => {
           });
         }
 
-        // Cargar el resto de datos maestros
-        const [
-          proveedoresRes, 
-          cuentasRes, 
-          gastosRes
-        ] = await Promise.all([
-          axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true })
-        ]);
+        // Cargar cuentas de gasto
+        const gastosRes = await axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true });
         
-        setProveedores(proveedoresRes.data || []);
-        setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
         
         // Establecer primera cuenta de gasto por defecto si existe
@@ -136,44 +110,6 @@ const FormPage7 = ({ user }) => {
     };
     fetchDatosMaestros();
   }, []);
-
-  // ACTUALIZADO: Manejo de proveedor - USAR CUENTA CONTABLE REAL
-  useEffect(() => {
-    if (cuentaP) {
-      if (cuentaP === '4000') {
-        // NUEVO PROVEEDOR - Campos editables
-        setDatosCuentaP({
-          cif: '',
-          nombre: '',
-          cp: '',
-          cuentaContable: '400000000'
-        });
-      } else {
-        // Proveedor existente
-        const proveedor = proveedores.find(p => p.codigo === cuentaP);
-        const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
-        
-        if (proveedor) {
-          setDatosCuentaP({
-            cif: proveedor.cif || '',
-            nombre: proveedor.nombre || '',
-            cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
-          });
-        }
-      }
-    }
-  }, [cuentaP, proveedores, proveedoresCuentas]);
-
-  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
-  const handleDatosProveedorChange = (field, value) => {
-    if (isNuevoProveedor) {
-      setDatosCuentaP(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -201,24 +137,12 @@ const FormPage7 = ({ user }) => {
 
     try {
       const datosEnvio = {
-        // DATOS DE DOCUMENTO UNIFICADOS
+        // DATOS DE DOCUMENTO UNIFICADOS (CAMPOS ELIMINADOS)
         serie,
         numDocumento,
-        numFRA,
         fechaReg,
-        fechaFactura,
-        fechaOper,
         concepto,
         comentario: concepto,
-        
-        // DATOS DE PROVEEDOR
-        proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
-          codigoProveedor: cuentaP,
-          cif: datosCuentaP.cif,
-          nombre: datosCuentaP.nombre,
-          cp: datosCuentaP.cp
-        },
         
         // DATOS ESPECÍFICOS
         analitico,
@@ -251,12 +175,8 @@ const FormPage7 = ({ user }) => {
   };
 
   const resetForm = () => {
-    setCuentaP('');
-    setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
     setNumDocumento('');
-    setNumFRA('');
     setConcepto('');
-    setFechaOper('');
     setImporte('');
     setArchivo(null);
     
@@ -299,7 +219,7 @@ const FormPage7 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp7Form}>
-        {/* SECCIÓN DE DATOS DEL DOCUMENTO - UNIFICADA */}
+        {/* SECCIÓN DE DATOS DEL DOCUMENTO - SIMPLIFICADA */}
         <div className={styles.fp7Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp7FormRow}>
@@ -320,15 +240,6 @@ const FormPage7 = ({ user }) => {
                 onChange={(e) => setNumDocumento(e.target.value)}
                 placeholder="Número de documento/ticket"
                 required
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Nº Factura Proveedor</label>
-              <input 
-                type="text" 
-                value={numFRA}
-                onChange={(e) => setNumFRA(e.target.value)}
-                placeholder="Número de factura del proveedor"
               />
             </div>
           </div>
@@ -354,90 +265,6 @@ const FormPage7 = ({ user }) => {
                 value={fechaReg}
                 onChange={(e) => setFechaReg(e.target.value)}
                 required
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Fecha de Factura *</label>
-              <input
-                type="date"
-                value={fechaFactura}
-                onChange={(e) => setFechaFactura(e.target.value)}
-                required
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Fecha de Operación</label>
-              <input
-                type="date"
-                value={fechaOper}
-                onChange={(e) => setFechaOper(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SECCIÓN DE PROVEEDOR - UNIFICADA */}
-        <div className={styles.fp7Section}>
-          <h3>👥 Datos del Proveedor</h3>
-          <div className={styles.fp7FormRow}>
-            <div className={styles.fp7FormGroup}>
-              <label>Seleccionar Proveedor</label>
-              <select
-                value={cuentaP}
-                onChange={(e) => setCuentaP(e.target.value)}
-              >
-                <option value="">-- Seleccionar proveedor --</option>
-                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
-                {proveedores.map(prov => (
-                  <option key={prov.codigo} value={prov.codigo}>
-                    {prov.codigo} - {prov.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
-          <div className={styles.fp7FormRow}>
-            <div className={styles.fp7FormGroup}>
-              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.cif}
-                onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
-                required={isNuevoProveedor}
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Razón Social {isNuevoProveedor && '*'}</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.nombre}
-                onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
-                required={isNuevoProveedor}
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Código Postal</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.cp}
-                onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp7Readonly : ''}
-              />
-            </div>
-            <div className={styles.fp7FormGroup}>
-              <label>Cuenta Contable Real</label>
-              <input 
-                type="text" 
-                value={datosCuentaP.cuentaContable}
-                readOnly
-                className={styles.fp7Readonly}
               />
             </div>
           </div>
