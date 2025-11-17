@@ -1564,6 +1564,143 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================
+// 📋 ENDPOINTS PARA HISTORIAL DE ASIENTOS - FILTRADO POR CANAL
+// ============================================
+
+app.get('/api/historial-asientos', requireAuth, async (req, res) => {
+  try {
+    const pagina = parseInt(req.query.pagina) || 1;
+    const porPagina = parseInt(req.query.porPagina) || 10;
+    const codigoCanal = req.session.user?.codigoCanal;
+    
+    console.log('🔍 Solicitando historial:', { pagina, porPagina, codigoCanal });
+    
+    if (!codigoCanal) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'CodigoCanal no disponible en la sesión' 
+      });
+    }
+
+    const offset = (pagina - 1) * porPagina;
+    
+    console.log(`📋 Obteniendo historial de asientos - Canal: ${codigoCanal}, Página: ${pagina}`);
+
+    // Consulta principal con paginación
+    const result = await pool.request()
+      .input('CodigoCanal', sql.VarChar, codigoCanal)
+      .input('Offset', sql.Int, offset)
+      .input('PageSize', sql.Int, porPagina)
+      .query(`
+        SELECT 
+          m.Asiento,
+          m.Ejercicio,
+          m.FechaAsiento,
+          m.Comentario,
+          m.CodigoCuenta,
+          m.CargoAbono,
+          m.ImporteAsiento,
+          m.CodigoCanal,
+          m.CodigoDepartamento,
+          m.CodigoSeccion,
+          m.CodigoProyecto,
+          m.IdDelegacion,
+          m.FechaGrabacion,
+          COUNT(*) OVER() as TotalRegistros
+        FROM Movimientos m
+        WHERE m.CodigoEmpresa = 9999
+          AND m.Ejercicio = 2025
+          AND m.CodigoCanal = @CodigoCanal
+          AND m.TipoMov = 0
+        ORDER BY m.Asiento DESC, m.FechaGrabacion DESC
+        OFFSET @Offset ROWS 
+        FETCH NEXT @PageSize ROWS ONLY
+      `);
+
+    // Consulta para estadísticas
+    const statsResult = await pool.request()
+      .input('CodigoCanal', sql.VarChar, codigoCanal)
+      .query(`
+        SELECT 
+          COUNT(*) as TotalAsientos,
+          SUM(CASE WHEN CargoAbono = 'D' THEN ImporteAsiento ELSE 0 END) as TotalDebe,
+          SUM(CASE WHEN CargoAbono = 'H' THEN ImporteAsiento ELSE 0 END) as TotalHaber
+        FROM Movimientos 
+        WHERE CodigoEmpresa = 9999
+          AND Ejercicio = 2025
+          AND CodigoCanal = @CodigoCanal
+          AND TipoMov = 0
+      `);
+
+    const totalRegistros = result.recordset.length > 0 ? result.recordset[0].TotalRegistros : 0;
+    const totalPaginas = Math.ceil(totalRegistros / porPagina);
+
+    // Agrupar movimientos por asiento
+    const asientosAgrupados = {};
+    result.recordset.forEach(movimiento => {
+      const asiento = movimiento.Asiento;
+      if (!asientosAgrupados[asiento]) {
+        asientosAgrupados[asiento] = {
+          asiento: asiento,
+          ejercicio: movimiento.Ejercicio,
+          fechaAsiento: movimiento.FechaAsiento,
+          comentario: movimiento.Comentario,
+          codigoCanal: movimiento.CodigoCanal,
+          fechaGrabacion: movimiento.FechaGrabacion,
+          movimientos: [],
+          totalDebe: 0,
+          totalHaber: 0
+        };
+      }
+      
+      asientosAgrupados[asiento].movimientos.push({
+        codigoCuenta: movimiento.CodigoCuenta,
+        cargoAbono: movimiento.CargoAbono,
+        importeAsiento: parseFloat(movimiento.ImporteAsiento),
+        codigoDepartamento: movimiento.CodigoDepartamento,
+        codigoSeccion: movimiento.CodigoSeccion,
+        codigoProyecto: movimiento.CodigoProyecto,
+        idDelegacion: movimiento.IdDelegacion
+      });
+
+      // Calcular totales
+      if (movimiento.CargoAbono === 'D') {
+        asientosAgrupados[asiento].totalDebe += parseFloat(movimiento.ImporteAsiento);
+      } else {
+        asientosAgrupados[asiento].totalHaber += parseFloat(movimiento.ImporteAsiento);
+      }
+    });
+
+    const asientos = Object.values(asientosAgrupados);
+
+    console.log(`✅ Historial obtenido: ${asientos.length} asientos de ${totalRegistros} totales`);
+
+    res.json({
+      success: true,
+      asientos,
+      paginacion: {
+        paginaActual: pagina,
+        porPagina: porPagina,
+        totalRegistros,
+        totalPaginas
+      },
+      estadisticas: {
+        totalAsientos: statsResult.recordset[0]?.TotalAsientos || 0,
+        totalDebe: parseFloat(statsResult.recordset[0]?.TotalDebe || 0),
+        totalHaber: parseFloat(statsResult.recordset[0]?.TotalHaber || 0)
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Error obteniendo historial de asientos:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error obteniendo historial de asientos: ' + err.message 
+    });
+  }
+});
+
 // Endpoint para buscar asientos específicos
 app.get('/api/historial-asientos/buscar', requireAuth, async (req, res) => {
   try {
@@ -1680,7 +1817,6 @@ app.get('/api/historial-asientos/buscar', requireAuth, async (req, res) => {
     });
   }
 });
-
 // ============================================
 // 📊 ENDPOINTS PARA DATOS MAESTROS - CORREGIDOS
 // ============================================

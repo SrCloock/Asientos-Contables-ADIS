@@ -12,6 +12,7 @@ import {
   FaFileInvoiceDollar,
   FaHandHoldingUsd,
   FaMoneyBillWave,
+  FaHistory,
   FaReceipt
 } from 'react-icons/fa';
 import styles from '../styles/Layout.module.css';
@@ -97,6 +98,15 @@ const Layout = () => {
               >
                 <FaReceipt />
                 Gasto Directo Caja
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/historial" 
+                className={location.pathname === '/historial' ? styles.active : ''}
+              >
+                <FaHistory />
+                Historial Asientos
               </Link>
             </li>
             <li>

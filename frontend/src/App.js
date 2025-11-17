@@ -8,6 +8,7 @@ import FormPage4 from './pages/FormPage4';
 import FormPage5 from './pages/FormPage5';
 import FormPage6 from './pages/FormPage6';
 import FormPage7 from './pages/FormPage7';
+import HistorialAsientos from './pages/HistorialAsientos';
 import Login from './pages/Login';
 
 const ProtectedRoute = ({ children }) => {
@@ -57,6 +58,8 @@ function App() {
             <Route path="form5" element={<FormPage5 />} />
             <Route path="form6" element={<FormPage6 />} />
             <Route path="form7" element={<FormPage7 />} />
+            <Route path="historial" element={<HistorialAsientos />} />
+
           </Route>
         </Routes>
       </Router>
