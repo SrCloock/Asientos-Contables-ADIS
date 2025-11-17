@@ -1,20 +1,16 @@
-// Configuración de la aplicación - Detección automática de entorno
+// config/config.js
 const getConfig = () => {
-  // Detectar si estamos en el mismo puerto (modo integrado) o puertos separados (desarrollo)
-  const isIntegratedMode = window.location.port === '5000' || 
-                          !window.location.port || 
-                          window.location.hostname !== 'localhost';
-
+  const isProduction = window.location.hostname === '99.999.99.999';
+  
   const config = {
-    // URL base de la API
-    apiBaseUrl: isIntegratedMode 
-      ? window.location.origin 
+    // URL base de la API - usa la IP pública en producción
+    apiBaseUrl: isProduction 
+      ? 'http://99.999.99.999:5000'
       : 'http://localhost:5000',
     
     // Modo de la aplicación
-    mode: isIntegratedMode ? 'integrated' : 'development',
+    mode: isProduction ? 'production' : 'development',
     
-    // Otras configuraciones
     appName: 'Sage200 Contabilidad',
     version: '1.0.0',
     
@@ -24,10 +20,9 @@ const getConfig = () => {
       ejercicio: 2025
     },
     
-    // Timeouts
     timeouts: {
       api: 30000,
-      session: 24 * 60 * 60 * 1000 // 24 horas
+      session: 24 * 60 * 60 * 1000
     }
   };
 

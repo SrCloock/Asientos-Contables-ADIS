@@ -1,4 +1,3 @@
-// pages/FormPage6.jsx - VERSIÓN CORREGIDA (ANALÍTICO = SERIE)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
@@ -6,14 +5,11 @@ import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
 const FormPage6 = ({ user }) => {
-  // Estados base
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
-  const [analitico, setAnalitico] = useState(''); // Ahora será igual a serie
+  const [analitico, setAnalitico] = useState('');
   const [cuentaCaja, setCuentaCaja] = useState('');
   const [datosAnaliticos, setDatosAnaliticos] = useState({
     codigoCanal: '',
@@ -22,14 +18,10 @@ const FormPage6 = ({ user }) => {
     codigoDepartamento: '',
     idDelegacion: ''
   });
-  
-  // CAMPOS UNIFICADOS DE DOCUMENTO (CAMPOS ELIMINADOS)
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
-  
-  // CUENTA DE INGRESO FIJA - NO SELECCIONABLE
   const cuentaIngresoFija = '519000000';
   const [importe, setImporte] = useState('');
 
@@ -51,21 +43,18 @@ const FormPage6 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
-        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
         const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
           withCredentials: true 
         });
 
         if (sessionRes.data.authenticated) {
           const userData = sessionRes.data.user;
-          
-          // SERIE Y ANALITICO FIJOS - ANALITICO = SERIE
           const serieCliente = userData.codigoCanal || 'EM';
           const serieConC = `C${serieCliente}`;
           
           setSerieBase(serieCliente);
           setSerie(serieConC);
-          setAnalitico(serieConC); // ✅ ANALITICO = SERIE
+          setAnalitico(serieConC);
           setCuentaCaja(userData.cuentaCaja || '570000000');
           
           setDatosAnaliticos({
@@ -75,25 +64,13 @@ const FormPage6 = ({ user }) => {
             codigoDepartamento: userData.codigoDepartamento || '',
             idDelegacion: userData.idDelegacion || ''
           });
-
-          console.log(`✅ FormPage6 - Datos analíticos cargados:`, {
-            serie: serieConC,
-            analitico: serieConC, // Mismo valor que serie
-            cuentaCaja: userData.cuentaCaja,
-            canal: userData.codigoCanal,
-            proyecto: userData.codigoProyecto,
-            seccion: userData.codigoSeccion,
-            departamento: userData.codigoDepartamento,
-            delegacion: userData.idDelegacion
-          });
         }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        // Valores por defecto en caso de error
         const defaultValue = 'CEM';
         setSerie(defaultValue);
-        setAnalitico(defaultValue); // Mismo valor por defecto
+        setAnalitico(defaultValue);
         setCuentaCaja('570000000');
       }
     };
@@ -110,7 +87,6 @@ const FormPage6 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validación
     const errores = [];
     if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
     if (!concepto.trim()) errores.push('El concepto es obligatorio');
@@ -125,16 +101,13 @@ const FormPage6 = ({ user }) => {
 
     try {
       const datosEnvio = {
-        // DATOS DE DOCUMENTO UNIFICADOS (CAMPOS ELIMINADOS)
         serie,
         numDocumento,
         fechaReg,
         concepto,
         comentario: concepto.trim().substring(0, 40),
-        
-        // DATOS ESPECÍFICOS
-        analitico, // ✅ Ahora analitico = serie
-        cuentaIngreso: cuentaIngresoFija, // ✅ CUENTA FIJA
+        analitico,
+        cuentaIngreso: cuentaIngresoFija,
         cuentaCaja,
         importe: parseFloat(importe),
         archivo
@@ -196,7 +169,6 @@ const FormPage6 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp6Form}>
-        {/* SECCIÓN DE DATOS DEL DOCUMENTO - SIMPLIFICADA */}
         <div className={styles.fp6Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp6FormRow}>
@@ -247,7 +219,6 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DE IMPORTE */}
         <div className={styles.fp6Section}>
           <h3>💰 Importe</h3>
           <div className={styles.fp6FormRow}>
@@ -285,7 +256,6 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DE ARCHIVO */}
         <div className={styles.fp6Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
@@ -303,7 +273,6 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* RESUMEN DEL ASIENTO */}
         <div className={styles.fp6Section}>
           <h3>📊 Resumen del Asiento</h3>
           <div className={styles.fp6Resumen}>
@@ -328,7 +297,6 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* BOTONES */}
         <div className={styles.fp6ButtonGroup}>
           <button 
             type="button" 

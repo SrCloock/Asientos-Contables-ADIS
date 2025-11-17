@@ -1,4 +1,3 @@
-// pages/FormPage7.jsx - VERSIÓN MODIFICADA (CAMPOS ELIMINADOS)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt, FaPlus, FaTrash } from 'react-icons/fa';
@@ -6,11 +5,8 @@ import styles from '../styles/FormPage7.module.css';
 import config from '../config/config';
 
 const FormPage7 = ({ user }) => {
-  // Estados base
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
@@ -22,14 +18,10 @@ const FormPage7 = ({ user }) => {
     codigoDepartamento: '',
     idDelegacion: ''
   });
-
-  // CAMPOS UNIFICADOS DE DOCUMENTO (CAMPOS ELIMINADOS)
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
-  
-  // Cuentas de gasto (6xx) desde BD
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [importe, setImporte] = useState('');
@@ -52,22 +44,18 @@ const FormPage7 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
-        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
         const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
           withCredentials: true 
         });
 
         if (sessionRes.data.authenticated) {
           const userData = sessionRes.data.user;
-          
-          // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
           const serieCliente = userData.codigoCanal || 'EM';
-          const analiticoCliente = userData.idDelegacion || 'EM';
           const serieConC = `C${serieCliente}`;
           
           setSerieBase(serieCliente);
           setSerie(serieConC);
-          setAnalitico(analiticoCliente);
+          setAnalitico(serieConC);
           setCuentaCaja(userData.cuentaCaja || '570000000');
           
           setDatosAnaliticos({
@@ -77,34 +65,19 @@ const FormPage7 = ({ user }) => {
             codigoDepartamento: userData.codigoDepartamento || '',
             idDelegacion: userData.idDelegacion || ''
           });
-
-          console.log(`✅ FormPage7 - Datos analíticos cargados:`, {
-            serie: serieConC,
-            analitico: analiticoCliente,
-            cuentaCaja: userData.cuentaCaja,
-            canal: userData.codigoCanal,
-            proyecto: userData.codigoProyecto,
-            seccion: userData.codigoSeccion,
-            departamento: userData.codigoDepartamento,
-            delegacion: userData.idDelegacion
-          });
         }
 
-        // Cargar cuentas de gasto
         const gastosRes = await axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true });
-        
         setCuentasGasto(gastosRes.data || []);
         
-        // Establecer primera cuenta de gasto por defecto si existe
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
         }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        // Valores por defecto en caso de error
         setSerie('CEM');
-        setAnalitico('EM');
+        setAnalitico('CEM');
         setCuentaCaja('570000000');
       }
     };
@@ -121,7 +94,6 @@ const FormPage7 = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validación
     const errores = [];
     if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
     if (!concepto.trim()) errores.push('El concepto es obligatorio');
@@ -137,14 +109,11 @@ const FormPage7 = ({ user }) => {
 
     try {
       const datosEnvio = {
-        // DATOS DE DOCUMENTO UNIFICADOS (CAMPOS ELIMINADOS)
         serie,
         numDocumento,
         fechaReg,
         concepto,
         comentario: concepto,
-        
-        // DATOS ESPECÍFICOS
         analitico,
         cuentaGasto,
         cuentaCaja,
@@ -180,7 +149,6 @@ const FormPage7 = ({ user }) => {
     setImporte('');
     setArchivo(null);
     
-    // Restablecer cuenta de gasto
     if (cuentasGasto.length > 0) {
       setCuentaGasto(cuentasGasto[0].id);
     }
@@ -198,7 +166,6 @@ const FormPage7 = ({ user }) => {
     fetchNewContador();
   };
 
-  // Obtener nombre de la cuenta seleccionada
   const getNombreCuentaGasto = () => {
     const cuenta = cuentasGasto.find(c => c.id === cuentaGasto);
     return cuenta ? cuenta.nombre : '';
@@ -219,7 +186,6 @@ const FormPage7 = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className={styles.fp7Form}>
-        {/* SECCIÓN DE DATOS DEL DOCUMENTO - SIMPLIFICADA */}
         <div className={styles.fp7Section}>
           <h3>📄 Datos del Documento</h3>
           <div className={styles.fp7FormRow}>
@@ -270,7 +236,6 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DE IMPORTE Y CUENTA */}
         <div className={styles.fp7Section}>
           <h3>💰 Importe y Cuenta</h3>
           <div className={styles.fp7FormRow}>
@@ -304,7 +269,6 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* SECCIÓN DE ARCHIVO */}
         <div className={styles.fp7Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp7FormRow}>
@@ -322,7 +286,6 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* RESUMEN DEL ASIENTO */}
         <div className={styles.fp7Section}>
           <h3>📊 Resumen del Asiento</h3>
           <div className={styles.fp7Resumen}>
@@ -347,7 +310,6 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* BOTONES */}
         <div className={styles.fp7ButtonGroup}>
           <button 
             type="button" 
