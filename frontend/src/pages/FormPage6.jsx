@@ -1,4 +1,4 @@
-// pages/FormPage6.jsx - VERSIÓN CON CUENTA FIJA
+// pages/FormPage6.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
@@ -12,15 +12,20 @@ const FormPage6 = ({ user }) => {
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
+  // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
-  
-  // CUENTA CAJA desde tabla Clientes
   const [cuentaCaja, setCuentaCaja] = useState('');
-
-  // CAMPOS UNIFICADOS DE DOCUMENTO (iguales a FormPage4 y FormPage5)
+  const [datosAnaliticos, setDatosAnaliticos] = useState({
+    codigoCanal: '',
+    codigoProyecto: '',
+    codigoSeccion: '',
+    codigoDepartamento: '',
+    idDelegacion: ''
+  });
+  
+  // CAMPOS UNIFICADOS DE DOCUMENTO
   const [numDocumento, setNumDocumento] = useState('');
   const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
@@ -29,7 +34,7 @@ const FormPage6 = ({ user }) => {
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // CAMPOS DE PROVEEDOR (iguales a otros formularios)
+  // CAMPOS DE PROVEEDOR
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ 
     cif: '', 
@@ -62,34 +67,54 @@ const FormPage6 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
-        const [
-          proveedoresRes, 
-          cuentasRes, 
-          canalRes,
-          cuentaCajaRes
-        ] = await Promise.all([
+        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
+        const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
+          withCredentials: true 
+        });
+
+        if (sessionRes.data.authenticated) {
+          const userData = sessionRes.data.user;
+          
+          // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+          const serieCliente = userData.codigoCanal || 'EM';
+          const analiticoCliente = userData.idDelegacion || 'EM';
+          const serieConC = `C${serieCliente}`;
+          
+          setSerieBase(serieCliente);
+          setSerie(serieConC);
+          setAnalitico(analiticoCliente);
+          
+          // CUENTA CAJA
+          setCuentaCaja(userData.cuentaCaja || '570000000');
+          
+          setDatosAnaliticos({
+            codigoCanal: userData.codigoCanal || '',
+            codigoProyecto: userData.codigoProyecto || '',
+            codigoSeccion: userData.codigoSeccion || '',
+            codigoDepartamento: userData.codigoDepartamento || '',
+            idDelegacion: userData.idDelegacion || ''
+          });
+
+          console.log(`✅ FormPage6 - Datos analíticos cargados:`, {
+            serie: serieConC,
+            analitico: analiticoCliente,
+            cuentaCaja: userData.cuentaCaja,
+            canal: userData.codigoCanal,
+            proyecto: userData.codigoProyecto,
+            seccion: userData.codigoSeccion,
+            departamento: userData.codigoDepartamento,
+            delegacion: userData.idDelegacion
+          });
+        }
+
+        // Cargar proveedores
+        const [proveedoresRes, cuentasRes] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true })
         ]);
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
-        
-        // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
-        const serieCliente = canalRes.data?.serie || 'ERROR';
-        const analiticoCliente = canalRes.data?.analitico || 'ERROR';
-        const serieConC = `C${serieCliente}`;
-        
-        setSerieBase(serieCliente);
-        setSerie(serieConC);
-        setAnalitico(analiticoCliente);
-        
-        // CUENTA CAJA
-        setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
-        
-        console.log(`✅ FormPage6 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
@@ -253,13 +278,11 @@ const FormPage6 = ({ user }) => {
       <div className={styles.fp6Header}>
         <h2>
           <FaMoneyBillWave />
-          Ingreso en Caja - CUENTA FIJA
+          Ingreso en Caja
         </h2>
         <div className={styles.fp6AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
-          <span>Usuario: <strong>{user?.usuario}</strong></span>
           <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
-          <span>Analítico: <strong>{analitico}</strong></span>
           <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
@@ -421,7 +444,6 @@ const FormPage6 = ({ user }) => {
                 readOnly
                 className={styles.fp6Readonly}
               />
-              <small className={styles.fp6HelpText}>Cuenta fija para ingresos</small>
             </div>
             <div className={styles.fp6FormGroup}>
               <label>Importe *</label>

@@ -124,7 +124,7 @@ const requireAuth = (req, res, next) => {
 };
 
 // ============================================
-// 🔄 FUNCIONES AUXILIARES PARA EFECTOS
+// 🔄 FUNCIONES AUXILIARES PARA EFECTOS - VERSIÓN CORREGIDA
 // ============================================
 
 const gestionarEfecto = async (transaction, movimientoData) => {
@@ -142,6 +142,8 @@ const gestionarEfecto = async (transaction, movimientoData) => {
     comentario,
     codigoClienteProveedor,
     suFacturaNo,
+    serieFactura, // NUEVO: Serie del formulario
+    factura, // NUEVO: Nº Documento del formulario
     esPago = false
   } = movimientoData;
 
@@ -169,12 +171,13 @@ const gestionarEfecto = async (transaction, movimientoData) => {
     
     return true;
   } else {
-    // CREAR NUEVO EFECTO - SOLO CAMPOS QUE SABEMOS QUE FUNCIONAN + FACTURA
+    // CREAR NUEVO EFECTO - SOLO CAMPOS QUE SABEMOS QUE FUNCIONAN + CAMPOS NUEVOS
     console.log(`📄 Creando nuevo efecto para cuenta: ${codigoCuenta}`);
     
     // Convertir número de documento a entero para el campo Factura
-    const facturaNumero = parseInt(suFacturaNo) || 0;
+    const facturaNumero = parseInt(factura) || 0;
     
+    // USAR LA VERSIÓN ORIGINAL QUE FUNCIONABA + AÑADIR CAMPOS NUEVOS
     await transaction.request()
       .input('MovPosicion', sql.UniqueIdentifier, movPosicion)
       .input('CodigoEmpresa', sql.SmallInt, codigoEmpresa)
@@ -185,20 +188,28 @@ const gestionarEfecto = async (transaction, movimientoData) => {
       .input('FechaEmision', sql.DateTime, fechaAsiento)
       .input('FechaFactura', sql.DateTime, fechaAsiento)
       .input('FechaVencimiento', sql.DateTime, fechaVencimiento)
-      .input('Factura', sql.Int, facturaNumero)
-      .input('SuFacturaNo', sql.VarChar(40), suFacturaNo || '')
+      .input('Factura', sql.Int, facturaNumero) // NUEVO: Usar numDocumento
+      .input('SuFacturaNo', sql.VarChar(40), suFacturaNo || '') // NUEVO: Usar numFRA
       .input('Comentario', sql.VarChar(40), comentario)
       .input('EmpresaOrigen', sql.SmallInt, codigoEmpresa)
+      // CAMPOS ADICIONALES QUE PUEDEN SER NECESARIOS
+      .input('ImporteEfecto', sql.Decimal(18, 2), importe)
+      .input('ImportePendiente', sql.Decimal(18, 2), importe)
+      .input('SerieFactura', sql.VarChar(10), serieFactura || '') // NUEVO: Serie del formulario
       .query(`
         INSERT INTO CarteraEfectos 
         (MovPosicion, CodigoEmpresa, Ejercicio, Prevision, 
          CodigoClienteProveedor, CodigoCuenta, 
-         FechaEmision, FechaFactura, FechaVencimiento, Factura, SuFacturaNo, Comentario, EmpresaOrigen)
+         FechaEmision, FechaFactura, FechaVencimiento, Factura, SuFacturaNo, Comentario, EmpresaOrigen,
+         ImporteEfecto, ImportePendiente, SerieFactura)
         VALUES 
         (@MovPosicion, @CodigoEmpresa, @Ejercicio, @Prevision,
          @CodigoClienteProveedor, @CodigoCuenta,
-         @FechaEmision, @FechaFactura, @FechaVencimiento, @Factura, @SuFacturaNo, @Comentario, @EmpresaOrigen)
+         @FechaEmision, @FechaFactura, @FechaVencimiento, @Factura, @SuFacturaNo, @Comentario, @EmpresaOrigen,
+         @ImporteEfecto, @ImportePendiente, @SerieFactura)
       `);
+    
+    console.log(`✅ Efecto creado correctamente: Serie=${serieFactura}, Factura=${facturaNumero}, SuFacturaNo=${suFacturaNo}, Importe=${importe}`);
     
     return true;
   }
@@ -229,7 +240,14 @@ app.post('/login', async (req, res) => {
           CodigoNacion,
           Nacion,
           SiglaNacion,
-          StatusAdministrador
+          StatusAdministrador,
+          -- NUEVOS CAMPOS ANALÍTICOS
+          CodigoCanal,
+          CodigoProyecto,
+          CodigoSeccion,
+          CodigoDepartamento,
+          CuentaCaja,
+          IdDelegacion
         FROM CLIENTES 
         WHERE UsuarioLogicNet = @username 
         AND ContraseñaLogicNet = @password
@@ -253,8 +271,24 @@ app.post('/login', async (req, res) => {
         codigoNacion: userData.CodigoNacion || 'ES',
         nacion: userData.Nacion || '',
         siglaNacion: userData.SiglaNacion || 'ES',
-        isAdmin: isAdmin
+        isAdmin: isAdmin,
+        // NUEVOS CAMPOS ANALÍTICOS
+        codigoCanal: userData.CodigoCanal || 'EM',
+        codigoProyecto: userData.CodigoProyecto || '',
+        codigoSeccion: userData.CodigoSeccion || '',
+        codigoDepartamento: userData.CodigoDepartamento || '',
+        cuentaCaja: userData.CuentaCaja || '570000000',
+        idDelegacion: userData.IdDelegacion || 'EM'
       };
+
+      console.log(`✅ Usuario ${username} logueado. Datos analíticos:`, {
+        canal: req.session.user.codigoCanal,
+        proyecto: req.session.user.codigoProyecto,
+        seccion: req.session.user.codigoSeccion,
+        departamento: req.session.user.codigoDepartamento,
+        cuentaCaja: req.session.user.cuentaCaja,
+        delegacion: req.session.user.idDelegacion
+      });
 
       return res.status(200).json({ 
         success: true, 
@@ -1542,6 +1576,19 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
 
     console.log('🔨 Iniciando creación de asiento FormPage4 (IVA NO DEDUCIBLE)...');
     
+    // Obtener datos analíticos del usuario
+    const userAnalytics = req.session.user;
+    const {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja
+    } = userAnalytics;
+
+    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+    
     const contadorResult = await transaction.request()
       .query(`
         SELECT sysContadorValor 
@@ -1668,7 +1715,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('ImporteAsiento', sql.Decimal(18, 2), totalFactura)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico)
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), vencimiento ? 'P' : '')
       .input('FechaVencimiento', sql.DateTime, fechaVencimientoFormateada)
@@ -1682,12 +1734,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
 
@@ -1733,7 +1785,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         .input('ImporteAsiento', sql.Decimal(18, 2), totalIVA)
         .input('StatusAcumulacion', sql.Int, -1)
         .input('CodigoDiario', sql.TinyInt, 0)
-        .input('CodigoCanal', sql.VarChar(10), analitico)
+        // NUEVOS CAMPOS ANALÍTICOS
+        .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+        .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+        .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+        .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+        .input('IdDelegacion', sql.VarChar(10), idDelegacion)
         .input('CodigoActividad', sql.VarChar(1), '')
         .input('Previsiones', sql.VarChar(1), '')
         .input('FechaVencimiento', sql.DateTime, null)
@@ -1747,12 +1804,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
           INSERT INTO Movimientos 
           (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
            Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-           StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+           StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
            StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
           VALUES 
           (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
            @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-           @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+           @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
            @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
         `);
     }
@@ -1777,7 +1834,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       .input('ImporteAsiento', sql.Decimal(18, 2), totalBase)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico)
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -1791,16 +1853,16 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
 
-    // LÍNEA 4: Retención (HABER) si existe
+    // LÍNEA 4: Retención (DEBE) - SOLO SI HAY RETENCIÓN
     let movPosicionRetencion = null;
     if (totalRetencion > 0) {
       movPosicionRetencion = uuidv4();
@@ -1812,7 +1874,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         .input('CodigoEmpresa', sql.SmallInt, 9999)
         .input('TipoMov', sql.TinyInt, 0)
         .input('Asiento', sql.Int, siguienteAsiento)
-        .input('CargoAbono', sql.VarChar(1), 'H')
+        .input('CargoAbono', sql.VarChar(1), 'D')
         .input('CodigoCuenta', sql.VarChar(15), '475100000')
         .input('Contrapartida', sql.VarChar(15), '')
         .input('FechaAsiento', sql.DateTime, fechaAsiento)
@@ -1822,7 +1884,12 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         .input('ImporteAsiento', sql.Decimal(18, 2), totalRetencion)
         .input('StatusAcumulacion', sql.Int, -1)
         .input('CodigoDiario', sql.TinyInt, 0)
-        .input('CodigoCanal', sql.VarChar(10), analitico)
+        // NUEVOS CAMPOS ANALÍTICOS
+        .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+        .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+        .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+        .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+        .input('IdDelegacion', sql.VarChar(10), idDelegacion)
         .input('CodigoActividad', sql.VarChar(1), '')
         .input('Previsiones', sql.VarChar(1), '')
         .input('FechaVencimiento', sql.DateTime, null)
@@ -1836,99 +1903,90 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
           INSERT INTO Movimientos 
           (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
            Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, Comentario, ImporteAsiento, 
-           StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+           StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
            StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
           VALUES 
           (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
            @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @Comentario, @ImporteAsiento, 
-           @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+           @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
            @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
         `);
     }
 
-    // 🔥🔥🔥 CORRECIÓN CRÍTICA: INSERTAR EN MOVIMIENTOSFACTURAS - USANDO MISMO FORMATO QUE FORMPAGE1
-    console.log('🔥 Insertando en MovimientosFacturas...');
+    // Insertar en MovimientosFacturas con campos analíticos
+    console.log('Insertando en MovimientosFacturas...');
     
-    try {
-      await transaction.request()
-        .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
-        .input('TipoMov', sql.TinyInt, 0)
-        .input('CodigoEmpresa', sql.SmallInt, 9999)
-        .input('Ejercicio', sql.SmallInt, 2025)
-        .input('Año', sql.SmallInt, 2025)
-        .input('CodigoCanal', sql.VarChar(10), '') // Cambiado a vacío como en FormPage1
-        .input('IdDelegacion', sql.VarChar(10), '')
-        .input('Serie', sql.VarChar(10), '') // Cambiado a vacío como en FormPage1
-        .input('Factura', sql.Int, parseInt(numDocumento) || 0)
-        .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
-        .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
-        .input('Fecha347', sql.DateTime, fechaFactura || fechaAsiento)
-        .input('ImporteFactura', sql.Decimal(18, 2), totalFactura)
-        .input('TipoFactura', sql.VarChar(1), 'R')
-        .input('CodigoCuentaFactura', sql.VarChar(15), cuentaProveedorReal)
-        .input('CifDni', sql.VarChar(13), (proveedor.cif || '').substring(0, 13))
-        .input('Nombre', sql.VarChar(35), (proveedor.nombre || '').substring(0, 35))
-        .input('CodigoRetencion', sql.SmallInt, totalRetencion > 0 ? 15 : 0)
-        .input('BaseRetencion', sql.Decimal(18, 2), totalRetencion > 0 ? totalBase : 0)
-        .input('PorcentajeRetencion', sql.Decimal(18, 2), totalRetencion > 0 ? 15 : 0)
-        .input('ImporteRetencion', sql.Decimal(18, 2), totalRetencion)
-        .query(`
-          INSERT INTO MovimientosFacturas 
-          (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
-           FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
-           CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
-          VALUES 
-          (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
-           @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
-           @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
-        `);
-      console.log('✅ MovimientosFacturas insertado correctamente');
-    } catch (error) {
-      console.error('❌ Error insertando en MovimientosFacturas:', error);
-      throw error;
-    }
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('Año', sql.SmallInt, 2025)
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
+      .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+      .input('Factura', sql.Int, parseInt(numDocumento) || 0)
+      .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
+      .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
+      .input('Fecha347', sql.DateTime, fechaFactura || fechaAsiento)
+      .input('ImporteFactura', sql.Decimal(18, 2), totalFactura)
+      .input('TipoFactura', sql.VarChar(1), 'R')
+      .input('CodigoCuentaFactura', sql.VarChar(15), cuentaProveedorReal)
+      .input('CifDni', sql.VarChar(13), (proveedor.cif || '').substring(0, 13))
+      .input('Nombre', sql.VarChar(35), (proveedor.nombre || '').substring(0, 35))
+      .input('CodigoRetencion', sql.SmallInt, totalRetencion > 0 ? parseInt(detalles[0]?.retencion) : 0)
+      .input('BaseRetencion', sql.Decimal(18, 2), totalRetencion > 0 ? totalBase : 0)
+      .input('PorcentajeRetencion', sql.Decimal(18, 2), totalRetencion > 0 ? parseFloat(detalles[0]?.retencion) : 0)
+      .input('ImporteRetencion', sql.Decimal(18, 2), totalRetencion)
+      .query(`
+        INSERT INTO MovimientosFacturas 
+        (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
+         FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
+         CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
+        VALUES 
+        (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
+         @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
+         @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
+      `);
 
-    // 🔥🔥🔥 CORRECIÓN CRÍTICA: INSERTAR EN MOVIMIENTOSIVA - USANDO MISMO FORMATO QUE FORMPAGE1
+    // NUEVO: Insertar en MovimientosIva - IMPORTANTE PARA FORMPAGE4
     if (totalIVA > 0 && movPosicionIVA) {
       const tipoIVAPrincipal = detalles[0]?.tipoIVA || '21';
-      console.log('🔥 Insertando en MovimientosIva...');
-
-      try {
-        await transaction.request()
-          .input('CodigoEmpresa', sql.SmallInt, 9999)
-          .input('Ejercicio', sql.SmallInt, 2025)
-          .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor) // MovPosicion de la línea de proveedor
-          .input('TipoMov', sql.TinyInt, 0)
-          .input('Orden', sql.TinyInt, 1)
-          .input('Año', sql.SmallInt, 2025)
-          .input('CodigoIva', sql.SmallInt, parseInt(tipoIVAPrincipal))
-          .input('IvaPosicion', sql.UniqueIdentifier, movPosicionIVA) // MovPosicion de la línea de IVA
-          .input('RecPosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
-          .input('BasePosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
-          .input('BaseIva', sql.Decimal(18, 2), totalBase)
-          .input('PorcentajeBaseCorrectora', sql.Decimal(18, 2), 0)
-          .input('PorcentajeIva', sql.Decimal(18, 2), parseFloat(tipoIVAPrincipal))
-          .input('CuotaIva', sql.Decimal(18, 2), totalIVA)
-          .input('PorcentajeRecargoEquivalencia', sql.Decimal(18, 2), 0)
-          .input('RecargoEquivalencia', sql.Decimal(18, 2), 0)
-          .input('CodigoTransaccion', sql.TinyInt, 1)
-          .input('Deducible', sql.SmallInt, 0) // 0 = NO DEDUCIBLE (629)
-          .input('BaseUtilizada', sql.Decimal(18, 2), totalFactura)
-          .query(`
-            INSERT INTO MovimientosIva 
-            (CodigoEmpresa, Ejercicio, MovPosicion, TipoMov, Orden, Año, CodigoIva, 
-             IvaPosicion, RecPosicion, BasePosicion, BaseIva, [%BaseCorrectora], [%Iva], CuotaIva, 
-             [%RecargoEquivalencia], RecargoEquivalencia, CodigoTransaccion, Deducible, BaseUtilizada)
-            VALUES 
-            (@CodigoEmpresa, @Ejercicio, @MovPosicion, @TipoMov, @Orden, @Año, @CodigoIva,
-             @IvaPosicion, @RecPosicion, @BasePosicion, @BaseIva, @PorcentajeBaseCorrectora, @PorcentajeIva, @CuotaIva,
-             @PorcentajeRecargoEquivalencia, @RecargoEquivalencia, @CodigoTransaccion, @Deducible, @BaseUtilizada)
-          `);
-        console.log('✅ MovimientosIva insertado correctamente');
-      } catch (error) {
-        console.error('❌ Error insertando en MovimientosIva:', error);
-        throw error;
-      }
+      console.log('Insertando en MovimientosIva para FormPage4...');
+      
+      await transaction.request()
+        .input('CodigoEmpresa', sql.SmallInt, 9999)
+        .input('Ejercicio', sql.SmallInt, 2025)
+        .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
+        .input('TipoMov', sql.TinyInt, 0)
+        .input('Orden', sql.TinyInt, 1)
+        .input('Año', sql.SmallInt, 2025)
+        .input('CodigoIva', sql.SmallInt, parseInt(tipoIVAPrincipal))
+        .input('IvaPosicion', sql.UniqueIdentifier, movPosicionIVA)
+        .input('RecPosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
+        .input('BasePosicion', sql.UniqueIdentifier, '00000000-0000-0000-0000-000000000000')
+        .input('BaseIva', sql.Decimal(18, 2), totalBase)
+        .input('PorcentajeBaseCorrectora', sql.Decimal(18, 2), 0)
+        .input('PorcentajeIva', sql.Decimal(18, 2), parseFloat(tipoIVAPrincipal))
+        .input('CuotaIva', sql.Decimal(18, 2), totalIVA)
+        .input('PorcentajeRecargoEquivalencia', sql.Decimal(18, 2), 0)
+        .input('RecargoEquivalencia', sql.Decimal(18, 2), 0)
+        .input('CodigoTransaccion', sql.TinyInt, 1)
+        .input('Deducible', sql.SmallInt, 0) // IMPORTANTE: 0 para IVA NO DEDUCIBLE
+        .input('BaseUtilizada', sql.Decimal(18, 2), totalBase)
+        .query(`
+          INSERT INTO MovimientosIva 
+          (CodigoEmpresa, Ejercicio, MovPosicion, TipoMov, Orden, Año, CodigoIva, 
+           IvaPosicion, RecPosicion, BasePosicion, BaseIva, [%BaseCorrectora], [%Iva], CuotaIva, 
+           [%RecargoEquivalencia], RecargoEquivalencia, CodigoTransaccion, Deducible, BaseUtilizada)
+          VALUES 
+          (@CodigoEmpresa, @Ejercicio, @MovPosicion, @TipoMov, @Orden, @Año, @CodigoIva,
+           @IvaPosicion, @RecPosicion, @BasePosicion, @BaseIva, @PorcentajeBaseCorrectora, @PorcentajeIva, @CuotaIva,
+           @PorcentajeRecargoEquivalencia, @RecargoEquivalencia, @CodigoTransaccion, @Deducible, @BaseUtilizada)
+        `);
+      
+      console.log(`✅ Insertado en MovimientosIva: Base=${totalBase}, IVA=${totalIVA}, Tipo=${tipoIVAPrincipal}%, Deducible=NO`);
     }
 
     // Actualizar contador
@@ -1944,26 +2002,30 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       `);
 
     await transaction.commit();
-    console.log(`🎉 Asiento FormPage4 #${siguienteAsiento} creado exitosamente`);
+    
+    // Calcular número total de líneas creadas
+    const totalLineas = 3 + (totalRetencion > 0 ? 1 : 0);
+    
+    console.log(`🎉 Asiento FormPage4 #${siguienteAsiento} creado exitosamente con ${totalLineas} líneas`);
 
     res.json({ 
       success: true, 
       asiento: siguienteAsiento,
-      message: `Asiento Factura Proveedor (IVA No Deducible) #${siguienteAsiento} creado correctamente`,
+      message: `Asiento #${siguienteAsiento} - Factura Proveedor (IVA Incluido) creado correctamente`,
       detalles: {
-        lineas: totalRetencion > 0 ? 4 : 3,
+        lineas: totalLineas,
         base: totalBase,
         iva: totalIVA,
         retencion: totalRetencion,
         total: totalFactura
       }
     });
-
   } catch (err) {
     console.error('❌ Error detallado creando asiento FormPage4:', err);
     
     if (transaction) {
       try {
+        console.log('Intentando rollback...');
         await transaction.rollback();
         console.log('Rollback completado');
       } catch (rollbackErr) {
@@ -1971,9 +2033,18 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       }
     }
     
+    let errorMessage = 'Error creando asiento: ' + err.message;
+    
+    if (err.code === 'EREQUEST') {
+      if (err.originalError && err.originalError.info) {
+        errorMessage += `\nDetalles SQL: ${err.originalError.info.message}`;
+      }
+    }
+    
     res.status(500).json({ 
       success: false,
-      error: 'Error creando asiento: ' + err.message
+      error: errorMessage,
+      detalles: err.details || null
     });
   }
 });
@@ -2188,6 +2259,10 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
 // 🏦 ENDPOINT PARA INGRESO EN CAJA (FORMPAGE6)
 // ============================================
 
+// ============================================
+// 💰 ENDPOINT FORMPAGE6 - INGRESO EN CAJA CON DATOS ANALÍTICOS
+// ============================================
+
 app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
   let transaction;
   
@@ -2195,7 +2270,21 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
     transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    console.log('1. Obteniendo contador para ingreso caja...');
+    console.log('🔨 Iniciando creación de asiento Ingreso Caja...');
+    
+    // Obtener datos analíticos del usuario
+    const userAnalytics = req.session.user;
+    const {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    } = userAnalytics;
+
+    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+    
     const contadorResult = await transaction.request()
       .query(`
         SELECT sysContadorValor 
@@ -2211,7 +2300,7 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
     }
     
     const siguienteAsiento = contadorResult.recordset[0].sysContadorValor;
-    const fechaAsiento = new Date(new Date().setHours(0, 0, 0, 0)); // ✅ FIXED: Fecha sin hora
+    const fechaAsiento = new Date(new Date().setHours(0, 0, 0, 0));
     const usuario = req.session.user?.usuario || 'Sistema';
 
     console.log(`📝 Asiento Ingreso Caja #${siguienteAsiento} - Usuario: ${usuario}`);
@@ -2251,7 +2340,10 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       throw new Error('El importe debe ser mayor a 0');
     }
 
-    console.log(`💰 Ingreso Caja: Importe=${importeNum}, Cuenta Ingreso=${cuentaIngreso}, Caja=${cuentaCaja}`);
+    // Usar cuenta caja del usuario si no viene en el body
+    const cuentaCajaFinal = cuentaCaja || cuentaCajaUsuario;
+
+    console.log(`💰 Ingreso Caja: Importe=${importeNum}, Cuenta Ingreso=${cuentaIngreso}, Caja=${cuentaCajaFinal}, Archivo=${archivo}`);
 
     const comentarioCorto = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
 
@@ -2273,12 +2365,17 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('DocumentoConta', sql.VarChar(9), '')
       .input('SerieCliente', sql.VarChar(10), serie || '')
       .input('NumeroDoc', sql.VarChar(20), numDocumento)
-      .input('RutaDocumento', sql.VarChar(500), archivo || '')
+      .input('RutaDocumento', sql.VarChar(500), archivo || '') // ✅ MANTENIDO PARA ARCHIVOS
       .input('Comentario', sql.VarChar(40), comentarioCorto)
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico || '')
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2292,12 +2389,12 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, SerieCliente, NumeroDoc, RutaDocumento, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @SerieCliente, @NumeroDoc, @RutaDocumento, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
 
@@ -2312,19 +2409,24 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
       .input('CargoAbono', sql.VarChar(1), 'D')
-      .input('CodigoCuenta', sql.VarChar(15), cuentaCaja)
+      .input('CodigoCuenta', sql.VarChar(15), cuentaCajaFinal)
       .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
       .input('TipoDocumento', sql.VarChar(6), '')
       .input('DocumentoConta', sql.VarChar(9), '')
       .input('SerieCliente', sql.VarChar(10), serie || '')
       .input('NumeroDoc', sql.VarChar(20), numDocumento)
-      .input('RutaDocumento', sql.VarChar(500), archivo || '')
+      .input('RutaDocumento', sql.VarChar(500), archivo || '') // ✅ MANTENIDO PARA ARCHIVOS
       .input('Comentario', sql.VarChar(40), comentarioCorto)
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico || '')
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2338,13 +2440,50 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, SerieCliente, NumeroDoc, RutaDocumento, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @SerieCliente, @NumeroDoc, @RutaDocumento, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
+      `);
+
+    // Insertar en MovimientosFacturas para registro de documento
+    console.log('Insertando en MovimientosFacturas...');
+    
+    await transaction.request()
+      .input('MovPosicion', sql.UniqueIdentifier, movPosicionCaja)
+      .input('TipoMov', sql.TinyInt, 0)
+      .input('CodigoEmpresa', sql.SmallInt, 9999)
+      .input('Ejercicio', sql.SmallInt, 2025)
+      .input('Año', sql.SmallInt, 2025)
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
+      .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+      .input('Factura', sql.Int, parseInt(numDocumento) || 0)
+      .input('SuFacturaNo', sql.VarChar(40), numFRA || '')
+      .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
+      .input('Fecha347', sql.DateTime, fechaFactura || fechaAsiento)
+      .input('ImporteFactura', sql.Decimal(18, 2), importeNum)
+      .input('TipoFactura', sql.VarChar(1), 'I')
+      .input('CodigoCuentaFactura', sql.VarChar(15), cuentaCajaFinal)
+      .input('CifDni', sql.VarChar(13), proveedor?.cif || '')
+      .input('Nombre', sql.VarChar(35), proveedor?.nombre || 'INGRESO CAJA')
+      .input('CodigoRetencion', sql.SmallInt, 0)
+      .input('BaseRetencion', sql.Decimal(18, 2), 0)
+      .input('PorcentajeRetencion', sql.Decimal(18, 2), 0)
+      .input('ImporteRetencion', sql.Decimal(18, 2), 0)
+      .query(`
+        INSERT INTO MovimientosFacturas 
+        (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
+         FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
+         CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
+        VALUES 
+        (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
+         @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
+         @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
       `);
 
     // Actualizar contador
@@ -2370,7 +2509,8 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
         lineas: 2,
         importe: importeNum,
         cuentaIngreso: cuentaIngreso,
-        cuentaCaja: cuentaCaja
+        cuentaCaja: cuentaCajaFinal,
+        archivo: archivo || 'No subido'
       }
     });
 
@@ -2407,6 +2547,10 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
 // 💰 ENDPOINT PARA GASTO DIRECTO EN CAJA (FORMPAGE7)
 // ============================================
 
+// ============================================
+// 💰 ENDPOINT FORMPAGE7 - GASTO DIRECTO CAJA ACTUALIZADO
+// ============================================
+
 app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
   let transaction;
   
@@ -2414,7 +2558,21 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
     transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    console.log('1. Obteniendo contador para gasto directo caja...');
+    console.log('🔨 Iniciando creación de asiento FormPage7 (Gasto Directo Caja)...');
+    
+    // Obtener datos analíticos del usuario
+    const userAnalytics = req.session.user;
+    const {
+      codigoCanal,
+      codigoProyecto,
+      codigoSeccion,
+      codigoDepartamento,
+      idDelegacion,
+      cuentaCaja: cuentaCajaUsuario
+    } = userAnalytics;
+
+    console.log('📊 Datos analíticos del usuario:', userAnalytics);
+
     const contadorResult = await transaction.request()
       .query(`
         SELECT sysContadorValor 
@@ -2430,7 +2588,7 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
     }
     
     const siguienteAsiento = contadorResult.recordset[0].sysContadorValor;
-    const fechaAsiento = new Date(new Date().setHours(0, 0, 0, 0)); // ✅ FIXED: Fecha sin hora
+    const fechaAsiento = new Date(new Date().setHours(0, 0, 0, 0));
     const usuario = req.session.user?.usuario || 'Sistema';
 
     console.log(`📝 Asiento Gasto Directo Caja #${siguienteAsiento} - Usuario: ${usuario}`);
@@ -2470,7 +2628,10 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       throw new Error('El importe debe ser mayor a 0');
     }
 
-    console.log(`💰 Gasto Directo Caja: Importe=${importeNum}, Cuenta Gasto=${cuentaGasto}, Caja=${cuentaCaja}`);
+    // Usar cuenta caja del usuario si no viene en el request
+    const cuentaCajaFinal = cuentaCaja || cuentaCajaUsuario;
+
+    console.log(`💰 Gasto Directo Caja: Importe=${importeNum}, Cuenta Gasto=${cuentaGasto}, Caja=${cuentaCajaFinal}`);
 
     const comentarioCorto = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
 
@@ -2497,7 +2658,12 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico || '')
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2511,12 +2677,12 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, SerieCliente, NumeroDoc, RutaDocumento, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @SerieCliente, @NumeroDoc, @RutaDocumento, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
 
@@ -2531,7 +2697,7 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('TipoMov', sql.TinyInt, 0)
       .input('Asiento', sql.Int, siguienteAsiento)
       .input('CargoAbono', sql.VarChar(1), 'H')
-      .input('CodigoCuenta', sql.VarChar(15), cuentaCaja)
+      .input('CodigoCuenta', sql.VarChar(15), cuentaCajaFinal)
       .input('Contrapartida', sql.VarChar(15), '')
       .input('FechaAsiento', sql.DateTime, fechaAsiento)
       .input('TipoDocumento', sql.VarChar(6), '')
@@ -2543,7 +2709,12 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('ImporteAsiento', sql.Decimal(18, 2), importeNum)
       .input('StatusAcumulacion', sql.Int, -1)
       .input('CodigoDiario', sql.TinyInt, 0)
-      .input('CodigoCanal', sql.VarChar(10), analitico || '')
+      // NUEVOS CAMPOS ANALÍTICOS
+      .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+      .input('CodigoDepartamento', sql.VarChar(10), codigoDepartamento)
+      .input('CodigoSeccion', sql.VarChar(10), codigoSeccion)
+      .input('CodigoProyecto', sql.VarChar(10), codigoProyecto)
+      .input('IdDelegacion', sql.VarChar(10), idDelegacion)
       .input('CodigoActividad', sql.VarChar(1), '')
       .input('Previsiones', sql.VarChar(1), '')
       .input('FechaVencimiento', sql.DateTime, null)
@@ -2557,14 +2728,53 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
         INSERT INTO Movimientos 
         (MovPosicion, Ejercicio, CodigoEmpresa, TipoMov, Asiento, CargoAbono, CodigoCuenta, 
          Contrapartida, FechaAsiento, TipoDocumento, DocumentoConta, SerieCliente, NumeroDoc, RutaDocumento, Comentario, ImporteAsiento, 
-         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
+         StatusAcumulacion, CodigoDiario, CodigoCanal, CodigoDepartamento, CodigoSeccion, CodigoProyecto, IdDelegacion, CodigoActividad, Previsiones, FechaVencimiento, NumeroPeriodo,
          StatusConciliacion, StatusSaldo, StatusTraspaso, CodigoUsuario, FechaGrabacion)
         VALUES 
         (@MovPosicion, @Ejercicio, @CodigoEmpresa, @TipoMov, @Asiento, @CargoAbono, @CodigoCuenta,
          @Contrapartida, @FechaAsiento, @TipoDocumento, @DocumentoConta, @SerieCliente, @NumeroDoc, @RutaDocumento, @Comentario, @ImporteAsiento, 
-         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
+         @StatusAcumulacion, @CodigoDiario, @CodigoCanal, @CodigoDepartamento, @CodigoSeccion, @CodigoProyecto, @IdDelegacion, @CodigoActividad, @Previsiones, @FechaVencimiento, @NumeroPeriodo,
          @StatusConciliacion, @StatusSaldo, @StatusTraspaso, @CodigoUsuario, @FechaGrabacion)
       `);
+
+    // Insertar en MovimientosFacturas si hay datos de proveedor
+    if (proveedor && proveedor.codigoProveedor && proveedor.codigoProveedor !== '4000') {
+      console.log('Insertando en MovimientosFacturas...');
+      
+      await transaction.request()
+        .input('MovPosicion', sql.UniqueIdentifier, movPosicionGasto)
+        .input('TipoMov', sql.TinyInt, 0)
+        .input('CodigoEmpresa', sql.SmallInt, 9999)
+        .input('Ejercicio', sql.SmallInt, 2025)
+        .input('Año', sql.SmallInt, 2025)
+        // NUEVOS CAMPOS ANALÍTICOS
+        .input('CodigoCanal', sql.VarChar(10), codigoCanal)
+        .input('IdDelegacion', sql.VarChar(10), idDelegacion)
+        .input('Serie', sql.VarChar(10), codigoCanal) // Serie = CodigoCanal
+        .input('Factura', sql.Int, parseInt(numDocumento) || 0)
+        .input('SuFacturaNo', sql.VarChar(40), (numFRA || '').substring(0, 40))
+        .input('FechaFactura', sql.DateTime, fechaFactura || fechaAsiento)
+        .input('Fecha347', sql.DateTime, fechaFactura || fechaAsiento)
+        .input('ImporteFactura', sql.Decimal(18, 2), importeNum)
+        .input('TipoFactura', sql.VarChar(1), 'R')
+        .input('CodigoCuentaFactura', sql.VarChar(15), cuentaGasto)
+        .input('CifDni', sql.VarChar(13), (proveedor.cif || '').substring(0, 13))
+        .input('Nombre', sql.VarChar(35), (proveedor.nombre || '').substring(0, 35))
+        .input('CodigoRetencion', sql.SmallInt, 0)
+        .input('BaseRetencion', sql.Decimal(18, 2), 0)
+        .input('PorcentajeRetencion', sql.Decimal(18, 2), 0)
+        .input('ImporteRetencion', sql.Decimal(18, 2), 0)
+        .query(`
+          INSERT INTO MovimientosFacturas 
+          (MovPosicion, TipoMov, CodigoEmpresa, Ejercicio, Año, CodigoCanal, IdDelegacion, Serie, Factura, SuFacturaNo, 
+           FechaFactura, Fecha347, ImporteFactura, TipoFactura, CodigoCuentaFactura, CifDni, Nombre, 
+           CodigoRetencion, BaseRetencion, [%Retencion], ImporteRetencion)
+          VALUES 
+          (@MovPosicion, @TipoMov, @CodigoEmpresa, @Ejercicio, @Año, @CodigoCanal, @IdDelegacion, @Serie, @Factura, @SuFacturaNo,
+           @FechaFactura, @Fecha347, @ImporteFactura, @TipoFactura, @CodigoCuentaFactura, @CifDni, @Nombre,
+           @CodigoRetencion, @BaseRetencion, @PorcentajeRetencion, @ImporteRetencion)
+        `);
+    }
 
     // Actualizar contador
     console.log('Actualizando contador...');
@@ -2589,7 +2799,14 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
         lineas: 2,
         importe: importeNum,
         cuentaGasto: cuentaGasto,
-        cuentaCaja: cuentaCaja
+        cuentaCaja: cuentaCajaFinal,
+        datosAnaliticos: {
+          codigoCanal,
+          codigoProyecto,
+          codigoSeccion,
+          codigoDepartamento,
+          idDelegacion
+        }
       }
     });
 

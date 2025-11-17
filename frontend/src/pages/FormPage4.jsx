@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN COMPLETA Y CORREGIDA CON NUEVO PROVEEDOR
+// pages/FormPage4.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -16,9 +16,17 @@ const FormPage4 = ({ user }) => {
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentasProveedores, setCuentasProveedores] = useState([]);
   
-  // SERIE Y ANALITICO FIJOS desde tabla Clientes
+  // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serie, setSerie] = useState('');
-  const [analitico, setAnalitico] = useState('');
+  const [analitico, setAnalitico] = useState(''); // Ahora será igual a serie
+  const [cuentaCaja, setCuentaCaja] = useState('');
+  const [datosAnaliticos, setDatosAnaliticos] = useState({
+    codigoCanal: '',
+    codigoProyecto: '',
+    codigoSeccion: '',
+    codigoDepartamento: '',
+    idDelegacion: ''
+  });
   
   // Campos de documento
   const [numDocumento, setNumDocumento] = useState('');
@@ -76,33 +84,56 @@ const FormPage4 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
+        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
+        const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
+          withCredentials: true 
+        });
+
+        if (sessionRes.data.authenticated) {
+          const userData = sessionRes.data.user;
+          
+          // DATOS ANALÍTICOS FIJOS desde tabla Clientes
+          // Serie = CodigoCanal
+          // Analítico = Serie (mismo valor que CodigoCanal)
+          const serieValue = userData.codigoCanal || 'EM';
+          setSerie(serieValue);
+          setAnalitico(serieValue); // Analítico igual a Serie
+          setCuentaCaja(userData.cuentaCaja || '570000000');
+          
+          setDatosAnaliticos({
+            codigoCanal: userData.codigoCanal || '',
+            codigoProyecto: userData.codigoProyecto || '',
+            codigoSeccion: userData.codigoSeccion || '',
+            codigoDepartamento: userData.codigoDepartamento || '',
+            idDelegacion: userData.idDelegacion || ''
+          });
+
+          console.log('✅ Datos analíticos cargados:', {
+            serie: serieValue,
+            analitico: serieValue, // Mismo valor que serie
+            cuentaCaja: userData.cuentaCaja,
+            proyecto: userData.codigoProyecto,
+            seccion: userData.codigoSeccion,
+            departamento: userData.codigoDepartamento,
+            delegacion: userData.idDelegacion
+          });
+        }
+
+        // Cargar el resto de datos maestros
         const [
           proveedoresRes, 
           cuentasRes, 
-          gastosRes, 
-          proveedoresCuentasRes,
-          canalRes
+          gastosRes
         ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/proveedores`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true })
         ]);
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
-        setCuentasProveedores(proveedoresCuentasRes.data || []);
-        
-        // SERIE Y ANALITICO FIJOS desde tabla Clientes
-        const serieCliente = canalRes.data?.serie || 'EM';
-        const analiticoCliente = canalRes.data?.analitico || 'EM';
-        setSerie(serieCliente);
-        setAnalitico(analiticoCliente);
-        
-        console.log(`✅ Serie fija: ${serieCliente}, Analítico fijo: ${analiticoCliente}`);
-        
+
         // Establecer primera cuenta de gasto por defecto si existe
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
@@ -112,8 +143,11 @@ const FormPage4 = ({ user }) => {
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        setSerie('ERROR');
-        setAnalitico('ERROR');
+        // Valores por defecto en caso de error
+        const defaultValue = 'EM';
+        setSerie(defaultValue);
+        setAnalitico(defaultValue);
+        setCuentaCaja('570000000');
         setCuentaGasto('600000000');
       }
     };
@@ -308,7 +342,7 @@ const FormPage4 = ({ user }) => {
         
         // Datos específicos
         cuentaGasto,
-        analitico,
+        analitico, // Ahora es igual a serie
         
         // Detalles CON RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
@@ -325,7 +359,7 @@ const FormPage4 = ({ user }) => {
 
       console.log('📤 Enviando datos FormPage4:', datosEnvio);
 
-      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-no-deducible`,  datosEnvio, {
+      const response = await axios.post(`${config.apiBaseUrl}/api/asiento/factura-iva-no-deducible`, datosEnvio, {
         withCredentials: true
       });
 
@@ -389,13 +423,12 @@ const FormPage4 = ({ user }) => {
       <div className={styles.fp4Header}>
         <h2>
           <FaFileInvoiceDollar />
-          Factura de Proveedor - CON NUEVO PROVEEDOR
+          Factura de Proveedor
         </h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
-          <span>Usuario: <strong>{user?.usuario}</strong></span>
           <span>Serie: <strong>{serie}</strong></span>
-          <span>Analítico: <strong>{analitico}</strong></span>
+          <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
 
@@ -567,6 +600,7 @@ const FormPage4 = ({ user }) => {
                 readOnly
                 className={styles.fp4Readonly}
               />
+              <small>Valor fijo (igual a Serie)</small>
             </div>
             <div className={styles.fp4FormGroup}>
               <label>Cuenta de Gasto *</label>

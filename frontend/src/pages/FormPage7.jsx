@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx - VERSIÓN CORREGIDA Y UNIFICADA
+// pages/FormPage7.jsx - VERSIÓN ACTUALIZADA CON DATOS ANALÍTICOS AUTOMÁTICOS
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt, FaPlus, FaTrash } from 'react-icons/fa';
@@ -12,15 +12,20 @@ const FormPage7 = ({ user }) => {
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // SERIE Y ANALITICO FIJOS desde tabla Clientes + 'C' al principio
+  // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
-  
-  // CUENTA CAJA desde tabla Clientes
   const [cuentaCaja, setCuentaCaja] = useState('');
+  const [datosAnaliticos, setDatosAnaliticos] = useState({
+    codigoCanal: '',
+    codigoProyecto: '',
+    codigoSeccion: '',
+    codigoDepartamento: '',
+    idDelegacion: ''
+  });
 
-  // CAMPOS UNIFICADOS DE DOCUMENTO (iguales a otros formularios)
+  // CAMPOS UNIFICADOS DE DOCUMENTO
   const [numDocumento, setNumDocumento] = useState('');
   const [numFRA, setNumFRA] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
@@ -29,7 +34,7 @@ const FormPage7 = ({ user }) => {
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // CAMPOS DE PROVEEDOR (iguales a otros formularios)
+  // CAMPOS DE PROVEEDOR
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ 
     cif: '', 
@@ -63,42 +68,63 @@ const FormPage7 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
+        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
+        const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
+          withCredentials: true 
+        });
+
+        if (sessionRes.data.authenticated) {
+          const userData = sessionRes.data.user;
+          
+          // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
+          const serieCliente = userData.codigoCanal || 'EM';
+          const analiticoCliente = userData.idDelegacion || 'EM';
+          const serieConC = `C${serieCliente}`;
+          
+          setSerieBase(serieCliente);
+          setSerie(serieConC);
+          setAnalitico(analiticoCliente);
+          setCuentaCaja(userData.cuentaCaja || '570000000');
+          
+          setDatosAnaliticos({
+            codigoCanal: userData.codigoCanal || '',
+            codigoProyecto: userData.codigoProyecto || '',
+            codigoSeccion: userData.codigoSeccion || '',
+            codigoDepartamento: userData.codigoDepartamento || '',
+            idDelegacion: userData.idDelegacion || ''
+          });
+
+          console.log(`✅ FormPage7 - Datos analíticos cargados:`, {
+            serie: serieConC,
+            analitico: analiticoCliente,
+            cuentaCaja: userData.cuentaCaja,
+            canal: userData.codigoCanal,
+            proyecto: userData.codigoProyecto,
+            seccion: userData.codigoSeccion,
+            departamento: userData.codigoDepartamento,
+            delegacion: userData.idDelegacion
+          });
+        }
+
+        // Cargar el resto de datos maestros
         const [
           proveedoresRes, 
           cuentasRes, 
-          gastosRes,
-          canalRes,
-          cuentaCajaRes
+          gastosRes
         ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cliente/canal`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cliente/cuenta-caja`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true })
         ]);
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
         
-        // SERIE Y ANALITICO FIJOS + 'C' al principio de la serie
-        const serieCliente = canalRes.data?.serie || 'ERROR';
-        const analiticoCliente = canalRes.data?.analitico || 'ERROR';
-        const serieConC = `C${serieCliente}`;
-        
-        setSerieBase(serieCliente);
-        setSerie(serieConC);
-        setAnalitico(analiticoCliente);
-        
-        // CUENTA CAJA
-        setCuentaCaja(cuentaCajaRes.data?.cuentaCaja || '570000000');
-        
         // Establecer primera cuenta de gasto por defecto si existe
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
         }
-        
-        console.log(`✅ FormPage7 - Serie: ${serieConC} (base: ${serieCliente}), Analítico: ${analiticoCliente}, Caja: ${cuentaCajaRes.data?.cuentaCaja}`);
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
@@ -252,18 +278,22 @@ const FormPage7 = ({ user }) => {
     fetchNewContador();
   };
 
+  // Obtener nombre de la cuenta seleccionada
+  const getNombreCuentaGasto = () => {
+    const cuenta = cuentasGasto.find(c => c.id === cuentaGasto);
+    return cuenta ? cuenta.nombre : '';
+  };
+
   return (
     <div className={styles.fp7Container}>
       <div className={styles.fp7Header}>
         <h2>
           <FaReceipt />
-          Gasto Directo en Caja - UNIFICADO
+          Gasto Directo en Caja
         </h2>
         <div className={styles.fp7AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
-          <span>Usuario: <strong>{user?.usuario}</strong></span>
           <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
-          <span>Analítico: <strong>{analitico}</strong></span>
           <span>Caja: <strong>{cuentaCaja}</strong></span>
         </div>
       </div>
@@ -461,6 +491,31 @@ const FormPage7 = ({ user }) => {
               {archivo && (
                 <span className={styles.fp7FileName}>📄 {archivo.split('\\').pop()}</span>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* RESUMEN DEL ASIENTO */}
+        <div className={styles.fp7Section}>
+          <h3>📊 Resumen del Asiento</h3>
+          <div className={styles.fp7Resumen}>
+            <div className={styles.fp7ResumenItem}>
+              <span className={styles.fp7DebeHaber}>DEBE</span>
+              <span className={styles.fp7CuentaInfo}>
+                {cuentaGasto} - {getNombreCuentaGasto()}
+              </span>
+              <span className={styles.fp7Importe}>
+                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
+              </span>
+            </div>
+            <div className={styles.fp7ResumenItem}>
+              <span className={styles.fp7DebeHaber}>HABER</span>
+              <span className={styles.fp7CuentaInfo}>
+                {cuentaCaja} - Caja
+              </span>
+              <span className={styles.fp7Importe}>
+                {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
+              </span>
             </div>
           </div>
         </div>
