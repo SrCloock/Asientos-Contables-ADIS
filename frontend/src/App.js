@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import FormPage1 from './pages/FormPage1';
 import FormPage4 from './pages/FormPage4';
 import FormPage5 from './pages/FormPage5';
 import FormPage6 from './pages/FormPage6';
@@ -12,21 +11,16 @@ import HistorialAsientos from './pages/HistorialAsientos';
 import Login from './pages/Login';
 
 const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, loading, checkSession } = useAuth();
-
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+  const { isLoggedIn, loading } = useAuth();
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
-        flexDirection: 'column',
-        gap: '1rem'
+        flexDirection: 'column'
       }}>
         <div style={{ fontSize: '2rem' }}>⏳</div>
         <p>Verificando autenticación...</p>
@@ -42,9 +36,11 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
+          
           <Route path="/login" element={<Login />} />
-          <Route 
-            path="/" 
+
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Layout />
@@ -53,14 +49,13 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="form1" element={<FormPage4 />} />
             <Route path="form4" element={<FormPage4 />} />
             <Route path="form5" element={<FormPage5 />} />
             <Route path="form6" element={<FormPage6 />} />
             <Route path="form7" element={<FormPage7 />} />
             <Route path="historial" element={<HistorialAsientos />} />
-
           </Route>
+
         </Routes>
       </Router>
     </AuthProvider>

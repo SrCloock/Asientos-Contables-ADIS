@@ -1,221 +1,323 @@
-/* ===== Login.module.css ===== */
+/* =====================================
+   🎨 CONTENEDOR GENERAL
+   ===================================== */
 .lgContainer {
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(135deg, #003d7a 0%, #0077c8 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: #f8fafc;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #fff;
 }
 
+/* =====================================
+   🧩 TARJETA PRINCIPAL
+   ===================================== */
 .lgContent {
-  width: 100%;
-  max-width: 400px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: row;
+  width: 880px;
+  max-width: 95%;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px);
+  animation: fadeIn 0.6s ease;
+  transition: all 0.3s ease;
 }
 
+/* =====================================
+   🏢 PANEL IZQUIERDO (BRANDING)
+   ===================================== */
 .lgBranding {
+  width: 45%;
+  min-height: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
-  margin-bottom: 2rem;
+  color: #ffffff;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .lgLogoContainer {
   display: flex;
   justify-content: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .lgLogo {
-  width: 64px;
-  height: 64px;
-  background: #2563eb;
-  border-radius: 12px;
+  width: 90px;
+  height: 90px;
+  background: #ffffff;
+  color: #003d7a;
+  font-size: 2.8rem;
+  font-weight: bold;
+  border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.lgLogo:hover {
+  transform: scale(1.1);
 }
 
 .lgAppName {
-  font-size: 1.5rem;
-  margin: 0.5rem 0;
-  color: #1e293b;
-  font-weight: 600;
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
 }
 
 .lgIntegrationText {
-  font-size: 0.875rem;
-  color: #64748b;
+  font-size: 0.95rem;
+  opacity: 0.85;
+  margin-top: 0.3rem;
 }
 
+/* =====================================
+   📝 FORMULARIO
+   ===================================== */
 .lgForm {
-  width: 100%;
-}
-
-.lgFormHeader {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  width: 55%;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 0 22px 22px 0;
+  transition: all 0.3s ease;
 }
 
 .lgFormTitle {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 1.8rem;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
 }
 
 .lgFormSubtitle {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin-top: 0.25rem;
+  color: #e7e7e7;
+  margin-bottom: 1.8rem;
+  font-size: 0.95rem;
 }
 
-.lgError {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+/* =====================================
+   🔢 INPUT GROUP
+   ===================================== */
+.lgInputGroup {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.lgInputGroup label {
+  color: #ffffff;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #dc2626;
-  font-size: 0.875rem;
-}
-
-.lgErrorIcon {
-  font-size: 1rem;
-}
-
-.lgInputGroup {
-  margin-bottom: 1.25rem;
-}
-
-.lgLabel {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  color: #374151;
-  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .lgInputContainer {
-  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transition: border 0.3s, background 0.3s;
 }
 
-.lgInput {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-  background: #ffffff;
+.lgInputContainer:hover,
+.lgInputContainer:focus-within {
+  border-color: #00c6ff;
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.lgInput:focus {
+.lgInputContainer input {
+  background: transparent;
+  border: none;
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  width: 100%;
+  color: #ffffff;
+  font-size: 1rem;
+  padding: 0.4rem 0;
+  transition: color 0.3s ease;
+}
+
+.lgInputContainer input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
 }
 
 .lgPasswordToggle {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 0.75rem;
-  color: #64748b;
+  color: #ffffff;
   cursor: pointer;
-  padding: 0.25rem;
-}
-
-.lgRememberForgot {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 1.5rem;
-}
-
-.lgCheckboxLabel {
+  font-size: 1.2rem;
+  padding-left: 0.5rem;
   display: flex;
   align-items: center;
-  font-size: 0.875rem;
-  color: #64748b;
-  cursor: pointer;
-  gap: 0.5rem;
+  transition: opacity 0.2s;
 }
 
-.lgCheckbox {
+.lgPasswordToggle:hover {
+  opacity: 0.8;
+}
+
+/* =====================================
+   🔘 RECORDAR USUARIO
+   ===================================== */
+.lgCheckboxLabel {
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 1.3rem;
+}
+
+.lgCheckboxLabel input {
+  cursor: pointer;
   width: 16px;
   height: 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #ffffff;
 }
 
+/* =====================================
+   🚀 BOTÓN DE ACCESO
+   ===================================== */
 .lgButton {
-  width: 100%;
-  padding: 0.75rem 1.5rem;
-  background: #2563eb;
-  color: #ffffff;
+  background: linear-gradient(135deg, #009ad8, #00c6ff);
   border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.9rem;
+  width: 100%;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 
 .lgButton:hover {
-  background: #1d4ed8;
+  background: linear-gradient(135deg, #00b2f0, #00d8ff);
+  transform: translateY(-2px);
+}
+
+.lgButton:active {
+  transform: translateY(0);
 }
 
 .lgButton:disabled {
-  background: #9ca3af;
+  background: #7ab5d4;
   cursor: not-allowed;
+  opacity: 0.8;
 }
 
 .lgButtonSpinner {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #ffffff;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  animation: lgSpin 0.7s linear infinite;
+  margin-right: 0.5rem;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes lgSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* =====================================
+   ❗ MENSAJE DE ERROR
+   ===================================== */
+.lgError {
+  background: rgba(255, 70, 70, 0.25);
+  border-left: 4px solid #ff4747;
+  padding: 0.8rem;
+  color: #ffffff;
+  border-radius: 8px;
+  margin-bottom: 1.2rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
 }
 
+.lgErrorIcon {
+  font-weight: bold;
+  background: #ff4747;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* =====================================
+   📌 FOOTER
+   ===================================== */
 .lgFooter {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
+  color: #ffffff;
+  opacity: 0.8;
 }
 
 .lgFooterText {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* =====================================
+   📱 RESPONSIVE
+   ===================================== */
+@media (max-width: 850px) {
+  .lgContent {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .lgBranding {
+    width: 100%;
+    padding: 2rem 1rem;
+  }
+
+  .lgForm {
+    width: 100%;
+    padding: 2rem 1.5rem;
+    border-radius: 0 0 22px 22px;
+  }
 }
 
 @media (max-width: 480px) {
-  .lgContent {
-    padding: 2rem 1.5rem;
-    margin: 1rem;
+  .lgLogo {
+    width: 75px;
+    height: 75px;
+    font-size: 2.2rem;
   }
+
+  .lgFormTitle {
+    font-size: 1.4rem;
+  }
+
+  .lgButton {
+    font-size: 1rem;
+  }
+}
+
+/* =====================================
+   🔄 ANIMACIONES
+   ===================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

@@ -1,6 +1,8 @@
+// pages/FormPage7.jsx - VERSIÓN ACTUALIZADA CON SELECT CON BÚSQUEDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaReceipt, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaReceipt } from 'react-icons/fa';
+import Select from 'react-select';
 import styles from '../styles/FormPage7.module.css';
 import config from '../config/config';
 
@@ -25,6 +27,9 @@ const FormPage7 = ({ user }) => {
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [importe, setImporte] = useState('');
+
+  // Estado para react-select
+  const [cuentasGastoOptions, setCuentasGastoOptions] = useState([]);
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -70,6 +75,14 @@ const FormPage7 = ({ user }) => {
         const gastosRes = await axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true });
         setCuentasGasto(gastosRes.data || []);
         
+        // Preparar opciones para select
+        const gastosOpts = gastosRes.data.map(cuenta => ({
+          value: cuenta.id,
+          label: `${cuenta.id} - ${cuenta.nombre}`,
+          cuentaData: cuenta
+        }));
+        setCuentasGastoOptions(gastosOpts);
+
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
         }
@@ -83,6 +96,44 @@ const FormPage7 = ({ user }) => {
     };
     fetchDatosMaestros();
   }, []);
+
+  // Manejo de select con react-select
+  const handleCuentaGastoChange = (selectedOption) => {
+    if (selectedOption) {
+      setCuentaGasto(selectedOption.value);
+    } else {
+      setCuentaGasto('');
+    }
+  };
+
+  // Estilos personalizados para react-select
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      minHeight: '38px',
+      fontSize: '14px',
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 123, 255, 0.25)' : 'none',
+      borderColor: state.isFocused ? '#80bdff' : '#ccc'
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: '14px',
+      zIndex: 9999
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? '#e6f3ff' : 'white',
+      color: 'black',
+      fontSize: '14px',
+      cursor: 'pointer'
+    }),
+    singleValue: (base) => ({
+      ...base,
+      fontSize: '14px'
+    })
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -149,8 +200,8 @@ const FormPage7 = ({ user }) => {
     setImporte('');
     setArchivo(null);
     
-    if (cuentasGasto.length > 0) {
-      setCuentaGasto(cuentasGasto[0].id);
+    if (cuentasGastoOptions.length > 0) {
+      setCuentaGasto(cuentasGastoOptions[0].value);
     }
     
     const fetchNewContador = async () => {
@@ -241,18 +292,15 @@ const FormPage7 = ({ user }) => {
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
               <label>Cuenta de Gasto *</label>
-              <select
-                value={cuentaGasto}
-                onChange={(e) => setCuentaGasto(e.target.value)}
+              <Select
+                options={cuentasGastoOptions}
+                value={cuentasGastoOptions.find(option => option.value === cuentaGasto)}
+                onChange={handleCuentaGastoChange}
+                placeholder="Buscar cuenta de gasto..."
+                isSearchable
+                styles={customStyles}
                 required
-              >
-                <option value="">-- Seleccionar cuenta de gasto --</option>
-                {cuentasGasto.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.id} - {cuenta.nombre}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className={styles.fp7FormGroup}>
               <label>Importe *</label>

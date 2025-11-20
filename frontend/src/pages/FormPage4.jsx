@@ -1,7 +1,8 @@
-// pages/FormPage4.jsx - VERSIÓN CORREGIDA CON RESUMEN SEPARADO
+// pages/FormPage4.jsx - VERSIÓN CORREGIDA CON SELECTS CON BÚSQUEDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
+import Select from 'react-select';
 import styles from '../styles/FormPage4.module.css';
 import config from '../config/config';
 
@@ -14,11 +15,10 @@ const FormPage4 = ({ user }) => {
   
   // Nuevos estados para datos maestros
   const [cuentasGasto, setCuentasGasto] = useState([]);
-  const [cuentasProveedores, setCuentasProveedores] = useState([]);
   
   // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serie, setSerie] = useState('');
-  const [analitico, setAnalitico] = useState(''); // Ahora será igual a serie
+  const [analitico, setAnalitico] = useState('');
   const [cuentaCaja, setCuentaCaja] = useState('');
   const [datosAnaliticos, setDatosAnaliticos] = useState({
     codigoCanal: '',
@@ -66,6 +66,10 @@ const FormPage4 = ({ user }) => {
     }
   ]);
 
+  // Estados para react-select
+  const [proveedoresOptions, setProveedoresOptions] = useState([]);
+  const [cuentasGastoOptions, setCuentasGastoOptions] = useState([]);
+
   // Efectos para cargar datos maestros
   useEffect(() => {
     const fetchContador = async () => {
@@ -93,11 +97,9 @@ const FormPage4 = ({ user }) => {
           const userData = sessionRes.data.user;
           
           // DATOS ANALÍTICOS FIJOS desde tabla Clientes
-          // Serie = CodigoCanal
-          // Analítico = Serie (mismo valor que CodigoCanal)
           const serieValue = userData.codigoCanal || 'EM';
           setSerie(serieValue);
-          setAnalitico(serieValue); // Analítico igual a Serie
+          setAnalitico(serieValue);
           setCuentaCaja(userData.cuentaCaja || '570000000');
           
           setDatosAnaliticos({
@@ -106,16 +108,6 @@ const FormPage4 = ({ user }) => {
             codigoSeccion: userData.codigoSeccion || '',
             codigoDepartamento: userData.codigoDepartamento || '',
             idDelegacion: userData.idDelegacion || ''
-          });
-
-          console.log('✅ Datos analíticos cargados:', {
-            serie: serieValue,
-            analitico: serieValue, // Mismo valor que serie
-            cuentaCaja: userData.cuentaCaja,
-            proyecto: userData.codigoProyecto,
-            seccion: userData.codigoSeccion,
-            departamento: userData.codigoDepartamento,
-            delegacion: userData.idDelegacion
           });
         }
 
@@ -133,6 +125,32 @@ const FormPage4 = ({ user }) => {
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
+
+        // Preparar opciones para selects
+        const proveedoresOpts = [
+          { 
+            value: '4000', 
+            label: '➕ NUEVO PROVEEDOR (400000000)',
+            isNuevo: true 
+          },
+          ...proveedoresRes.data.map(prov => {
+            const cuentaProv = cuentasRes.data.find(p => p.codigo === prov.codigo);
+            return {
+              value: prov.codigo,
+              label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '400000000'}`,
+              proveedorData: prov,
+              cuentaData: cuentaProv
+            };
+          })
+        ];
+        setProveedoresOptions(proveedoresOpts);
+
+        const gastosOpts = gastosRes.data.map(cuenta => ({
+          value: cuenta.id,
+          label: `${cuenta.id} - ${cuenta.nombre}`,
+          cuentaData: cuenta
+        }));
+        setCuentasGastoOptions(gastosOpts);
 
         // Establecer primera cuenta de gasto por defecto si existe
         if (gastosRes.data && gastosRes.data.length > 0) {
@@ -177,7 +195,6 @@ const FormPage4 = ({ user }) => {
             cp: proveedor.cp || '',
             cuentaContable: cuentaProv?.cuenta || '400000000'
           });
-          console.log(`✅ Proveedor: ${proveedor.nombre}, Cuenta contable: ${cuentaProv?.cuenta}`);
         }
       }
     }
@@ -191,6 +208,74 @@ const FormPage4 = ({ user }) => {
         [field]: value
       }));
     }
+  };
+
+  // MANEJO DE SELECTS CON REACT-SELECT
+  const handleProveedorChange = (selectedOption) => {
+    if (selectedOption) {
+      setCuentaP(selectedOption.value);
+      
+      if (selectedOption.isNuevo) {
+        setDatosCuentaP({
+          cif: '',
+          nombre: '',
+          cp: '',
+          cuentaContable: '400000000'
+        });
+      } else {
+        const proveedor = selectedOption.proveedorData;
+        const cuentaProv = selectedOption.cuentaData;
+        
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '400000000'
+          });
+        }
+      }
+    } else {
+      setCuentaP('');
+      setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
+    }
+  };
+
+  const handleCuentaGastoChange = (selectedOption) => {
+    if (selectedOption) {
+      setCuentaGasto(selectedOption.value);
+    } else {
+      setCuentaGasto('');
+    }
+  };
+
+  // Estilos personalizados para react-select
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      minHeight: '38px',
+      fontSize: '14px',
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 123, 255, 0.25)' : 'none',
+      borderColor: state.isFocused ? '#80bdff' : '#ccc'
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: '14px',
+      zIndex: 9999
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? '#e6f3ff' : 'white',
+      color: 'black',
+      fontSize: '14px',
+      cursor: 'pointer'
+    }),
+    singleValue: (base) => ({
+      ...base,
+      fontSize: '14px'
+    })
   };
 
   // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN
@@ -342,7 +427,7 @@ const FormPage4 = ({ user }) => {
         
         // Datos específicos
         cuentaGasto,
-        analitico, // Ahora es igual a serie
+        analitico,
         
         // Detalles CON RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
@@ -397,8 +482,8 @@ const FormPage4 = ({ user }) => {
     setArchivo(null);
     
     // Restablecer cuenta de gasto
-    if (cuentasGasto.length > 0) {
-      setCuentaGasto(cuentasGasto[0].id);
+    if (cuentasGastoOptions.length > 0) {
+      setCuentaGasto(cuentasGastoOptions[0].value);
     }
     
     const fetchNewContador = async () => {
@@ -520,25 +605,21 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Datos del Proveedor - CON OPCIÓN NUEVO PROVEEDOR */}
+        {/* Sección de Datos del Proveedor - CON SELECT CON BÚSQUEDA */}
         <div className={styles.fp4Section}>
           <h3>Datos del Proveedor</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
               <label>Seleccionar Proveedor *</label>
-              <select
-                value={cuentaP}
-                onChange={(e) => setCuentaP(e.target.value)}
+              <Select
+                options={proveedoresOptions}
+                value={proveedoresOptions.find(option => option.value === cuentaP)}
+                onChange={handleProveedorChange}
+                placeholder="Buscar o seleccionar proveedor..."
+                isSearchable
+                styles={customStyles}
                 required
-              >
-                <option value="">-- Seleccionar proveedor --</option>
-                <option value="4000">➕ NUEVO PROVEEDOR (400000000)</option>
-                {proveedores.map(prov => (
-                  <option key={prov.codigo} value={prov.codigo}>
-                    {prov.codigo} - {prov.nombre} - Cuenta: {proveedoresCuentas.find(p => p.codigo === prov.codigo)?.cuenta || '400000000'}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
@@ -588,7 +669,7 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Detalles Económicos - CON RETENCIÓN AÑADIDA */}
+        {/* Sección de Detalles Económicos - CON SELECT CON BÚSQUEDA */}
         <div className={styles.fp4Section}>
           <h3>Detalles Económicos</h3>
           <div className={styles.fp4FormRow}>
@@ -604,18 +685,15 @@ const FormPage4 = ({ user }) => {
             </div>
             <div className={styles.fp4FormGroup}>
               <label>Cuenta de Gasto *</label>
-              <select
-                value={cuentaGasto}
-                onChange={(e) => setCuentaGasto(e.target.value)}
+              <Select
+                options={cuentasGastoOptions}
+                value={cuentasGastoOptions.find(option => option.value === cuentaGasto)}
+                onChange={handleCuentaGastoChange}
+                placeholder="Buscar cuenta de gasto..."
+                isSearchable
+                styles={customStyles}
                 required
-              >
-                <option value="">-- Seleccionar cuenta de gasto --</option>
-                {cuentasGasto.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.id} - {cuenta.nombre}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 

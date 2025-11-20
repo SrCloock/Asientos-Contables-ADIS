@@ -1,5 +1,5 @@
-// context/AuthContext.js
-import React, { createContext, useState, useContext } from 'react';
+// context/AuthContext.js - VERSIÓN MEJORADA
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import config from '../config/config';
 
@@ -15,24 +15,31 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Verificar sesión al cargar
+  useEffect(() => {
+    checkSession();
+  }, []);
+
   const login = async (username, password) => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log(`🔐 Intentando login desde: ${config.apiBaseUrl}`);
+      console.log('🔐 Intentando login en:', config.apiBaseUrl);
 
       const response = await axios.post(
         `${config.apiBaseUrl}/login`,
         { username, password },
         { 
           withCredentials: true,
-          timeout: 15000,
+          timeout: 30000,
           headers: {
             'Content-Type': 'application/json'
           }
         }
       );
+
+      console.log('📨 Respuesta del login:', response.data);
 
       if (response.data.success) {
         setUser(response.data.user);
@@ -41,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         console.log('✅ Login exitoso para usuario:', username);
         return true;
       } else {
-        setError(response.data.message || 'Credenciales incorrectas');
+        setError(response.data.message || 'Error en credenciales');
         return false;
       }
     } catch (error) {
@@ -50,13 +57,19 @@ export const AuthProvider = ({ children }) => {
       let errorMessage = 'Error de conexión con el servidor';
       
       if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Timeout: El servidor no respondió a tiempo';
-      } else if (error.response?.status === 401) {
-        errorMessage = 'Usuario o contraseña incorrectos';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = 'Timeout: El servidor no responde';
+      } else if (error.response) {
+        // El servidor respondió con un código de error
+        if (error.response.status === 401) {
+          errorMessage = 'Usuario o contraseña incorrectos';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Error interno del servidor';
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // La petición fue hecha pero no se recibió respuesta
+        errorMessage = 'No se pudo conectar con el servidor. Verifique la conexión.';
       }
 
       setError(errorMessage);
@@ -68,81 +81,46 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('🔒 Cerrando sesión...');
-      
       await axios.post(`${config.apiBaseUrl}/logout`, {}, { 
         withCredentials: true,
         timeout: 10000
       });
-      
-      console.log('✅ Sesión cerrada correctamente');
     } catch (error) {
-      console.error('❌ Error al cerrar sesión:', error);
-      // Continuamos con el logout local aunque falle el servidor
+      console.error('Error en logout:', error);
     } finally {
-      // Siempre limpiamos el estado local
       setUser(null);
       setIsLoggedIn(false);
       setError(null);
-      
-      // Limpiar cualquier dato almacenado localmente
       localStorage.removeItem('rememberedUsername');
-      sessionStorage.clear();
     }
   };
 
   const checkSession = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Verificando sesión activa...');
-
       const response = await axios.get(`${config.apiBaseUrl}/api/session`, {
         withCredentials: true,
-        timeout: 10000
+        timeout: 15000
       });
+      
+      console.log('🔍 Verificación de sesión:', response.data);
       
       if (response.data.authenticated) {
         setUser(response.data.user);
         setIsLoggedIn(true);
-        setError(null);
-        console.log('✅ Sesión activa encontrada para:', response.data.user?.usuario);
         return true;
-      } else {
-        console.log('ℹ️ No hay sesión activa');
-        setUser(null);
-        setIsLoggedIn(false);
-        return false;
       }
+      return false;
     } catch (error) {
       console.error('❌ Error verificando sesión:', error);
-      
-      // En producción, no mostramos errores de conexión al usuario
-      // Solo limpiamos el estado local
-      setUser(null);
-      setIsLoggedIn(false);
-      
-      // Si es un error de red, podríamos considerar mantener al usuario logueado
-      // pero por seguridad lo cerramos
-      if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED') {
-        console.warn('⚠️ Error de red al verificar sesión, limpiando estado local');
-      }
-      
+      setError('No se pudo verificar la sesión con el servidor');
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const clearError = () => {
-    setError(null);
-  };
-
-  const updateUser = (updatedUserData) => {
-    setUser(prevUser => ({
-      ...prevUser,
-      ...updatedUserData
-    }));
-  };
+  const clearError = () => setError(null);
 
   const value = {
     user,
@@ -152,8 +130,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     checkSession,
-    clearError,
-    updateUser
+    clearError
   };
 
   return (

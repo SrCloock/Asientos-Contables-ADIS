@@ -1,33 +1,38 @@
-// config/config.js
+// config/config.js - VERSIÓN DEFINITIVA
 const getConfig = () => {
-  const isProduction = window.location.hostname === '99.999.99.999';
+  const currentHost = window.location.hostname;
+  const currentPort = window.location.port;
   
+  console.log('🌍 Detección de entorno frontend:', {
+    host: currentHost,
+    port: currentPort,
+    href: window.location.href
+  });
+
+  // URL FIJA DEL BACKEND - USANDO LA IP PÚBLICA
+  const apiBaseUrl = 'http://84.120.61.159:5000';
+
   const config = {
-    // URL base de la API - usa la IP pública en producción
-    apiBaseUrl: isProduction 
-      ? 'http://99.999.99.999:5000'
-      : 'http://localhost:5000',
-    
-    // Modo de la aplicación
-    mode: isProduction ? 'production' : 'development',
-    
+    apiBaseUrl: apiBaseUrl,
+    mode: 'production',
     appName: 'Sage200 Contabilidad',
     version: '1.0.0',
     
-    // Configuración de la empresa
     empresa: {
       codigo: '9999',
       ejercicio: 2025
     },
     
     timeouts: {
-      api: 30000,
-      session: 24 * 60 * 60 * 1000
+      api: 30000, // Aumentar timeout
+      session: 15000,
+      login: 30000
     }
   };
 
-  console.log(`🔧 Configuración cargada: Modo ${config.mode}`);
-  console.log(`🔗 API Base URL: ${config.apiBaseUrl}`);
+  console.log('🔧 Configuración FINAL del frontend:');
+  console.log('   Backend URL:', config.apiBaseUrl);
+  console.log('   Frontend URL:', window.location.href);
   
   return config;
 };

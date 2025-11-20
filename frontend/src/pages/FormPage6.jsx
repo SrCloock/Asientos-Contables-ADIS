@@ -1,6 +1,8 @@
+// pages/FormPage6.jsx - VERSIÓN ACTUALIZADA CON SELECT CON BÚSQUEDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
+import Select from 'react-select';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
@@ -22,8 +24,12 @@ const FormPage6 = ({ user }) => {
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
-  const cuentaIngresoFija = '519000000';
+  const [cuentasIngreso, setCuentasIngreso] = useState([]);
+  const [cuentaIngreso, setCuentaIngreso] = useState('519000000');
   const [importe, setImporte] = useState('');
+
+  // Estado para react-select
+  const [cuentasIngresoOptions, setCuentasIngresoOptions] = useState([]);
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -65,6 +71,25 @@ const FormPage6 = ({ user }) => {
             idDelegacion: userData.idDelegacion || ''
           });
         }
+
+        // Cargar cuentas de ingreso
+        const ingresosRes = await axios.get(`${config.apiBaseUrl}/api/cuentas/ingresos`, { 
+          withCredentials: true 
+        });
+        setCuentasIngreso(ingresosRes.data || []);
+
+        // Preparar opciones para select
+        const ingresosOpts = ingresosRes.data.map(cuenta => ({
+          value: cuenta.id,
+          label: `${cuenta.id} - ${cuenta.nombre}`,
+          cuentaData: cuenta
+        }));
+        setCuentasIngresoOptions(ingresosOpts);
+
+        // Establecer cuenta por defecto si existe
+        if (ingresosRes.data && ingresosRes.data.length > 0) {
+          setCuentaIngreso(ingresosRes.data[0].id);
+        }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
@@ -76,6 +101,44 @@ const FormPage6 = ({ user }) => {
     };
     fetchDatosMaestros();
   }, []);
+
+  // Manejo de select con react-select
+  const handleCuentaIngresoChange = (selectedOption) => {
+    if (selectedOption) {
+      setCuentaIngreso(selectedOption.value);
+    } else {
+      setCuentaIngreso('519000000');
+    }
+  };
+
+  // Estilos personalizados para react-select
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      minHeight: '38px',
+      fontSize: '14px',
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 123, 255, 0.25)' : 'none',
+      borderColor: state.isFocused ? '#80bdff' : '#ccc'
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: '14px',
+      zIndex: 9999
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? '#e6f3ff' : 'white',
+      color: 'black',
+      fontSize: '14px',
+      cursor: 'pointer'
+    }),
+    singleValue: (base) => ({
+      ...base,
+      fontSize: '14px'
+    })
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -107,7 +170,7 @@ const FormPage6 = ({ user }) => {
         concepto,
         comentario: concepto.trim().substring(0, 40),
         analitico,
-        cuentaIngreso: cuentaIngresoFija,
+        cuentaIngreso,
         cuentaCaja,
         importe: parseFloat(importe),
         archivo
@@ -141,6 +204,11 @@ const FormPage6 = ({ user }) => {
     setImporte('');
     setArchivo(null);
     
+    // Restablecer cuenta de ingreso por defecto
+    if (cuentasIngresoOptions.length > 0) {
+      setCuentaIngreso(cuentasIngresoOptions[0].value);
+    }
+    
     const fetchNewContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
@@ -152,6 +220,12 @@ const FormPage6 = ({ user }) => {
       }
     };
     fetchNewContador();
+  };
+
+  // Obtener nombre de la cuenta seleccionada
+  const getNombreCuentaIngreso = () => {
+    const cuenta = cuentasIngreso.find(c => c.id === cuentaIngreso);
+    return cuenta ? cuenta.nombre : 'Ingresos Varios';
   };
 
   return (
@@ -233,12 +307,15 @@ const FormPage6 = ({ user }) => {
               <small>Valor fijo (igual a Serie)</small>
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Caja</label>
-              <input 
-                type="text" 
-                value={cuentaCaja}
-                readOnly
-                className={styles.fp6Readonly}
+              <label>Cuenta de Ingreso *</label>
+              <Select
+                options={cuentasIngresoOptions}
+                value={cuentasIngresoOptions.find(option => option.value === cuentaIngreso)}
+                onChange={handleCuentaIngresoChange}
+                placeholder="Buscar cuenta de ingreso..."
+                isSearchable
+                styles={customStyles}
+                required
               />
             </div>
             <div className={styles.fp6FormGroup}>
@@ -288,7 +365,7 @@ const FormPage6 = ({ user }) => {
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>HABER</span>
               <span className={styles.fp6CuentaInfo}>
-                {cuentaIngresoFija} - Ingresos Varios
+                {cuentaIngreso} - {getNombreCuentaIngreso()}
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}

@@ -7,178 +7,114 @@ import styles from '../styles/Login.module.css';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { login, isLoggedIn, checkSession } = useContext(AuthContext);
+
+  const { login, isLoggedIn, loading } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const verifySession = async () => {
-      const hasSession = await checkSession();
-      if (hasSession) {
-        navigate('/dashboard');
-      }
-    };
-
-    verifySession();
-  }, [checkSession, navigate]);
-
+  // 🔄 Redirige si ya está logueado
   useEffect(() => {
     if (isLoggedIn) {
       navigate('/dashboard');
     }
   }, [isLoggedIn, navigate]);
 
+  // 💾 Cargar usuario recordado
   useEffect(() => {
-    const savedUsername = localStorage.getItem('rememberedUsername');
-    if (savedUsername) {
-      setUsername(savedUsername);
+    const saved = localStorage.getItem('rememberedUsername');
+    if (saved) {
+      setUsername(saved);
       setRememberMe(true);
     }
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    if (!username || !password) {
-      setError('Por favor complete todos los campos');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const success = await login(username, password);
       if (success) {
-        if (rememberMe) {
-          localStorage.setItem('rememberedUsername', username);
-        } else {
-          localStorage.removeItem('rememberedUsername');
-        }
+        rememberMe
+          ? localStorage.setItem('rememberedUsername', username)
+          : localStorage.removeItem('rememberedUsername');
         navigate('/dashboard');
-      } else {
-        setError('Usuario o contraseña incorrectos');
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    } catch (_) {}
   };
 
   return (
     <div className={styles.lgContainer}>
       <div className={styles.lgContent}>
+
+        {/* PANEL IZQUIERDO - BRANDING */}
         <div className={styles.lgBranding}>
           <div className={styles.lgLogoContainer}>
-            <div className={styles.lgLogo}>
-              SC
-            </div>
+            <div className={styles.lgLogo}>SC</div>
           </div>
           <h1 className={styles.lgAppName}>Sage200 Contabilidad</h1>
           <p className={styles.lgIntegrationText}>Sistema integrado con Sage200</p>
         </div>
-        
-        <form className={styles.lgForm} onSubmit={handleSubmit}>
-          <div className={styles.lgFormHeader}>
-            <h2 className={styles.lgFormTitle}>Iniciar Sesión</h2>
-            <p className={styles.lgFormSubtitle}>Acceda a su cuenta para continuar</p>
-          </div>
-          
-          {error && (
-            <div className={styles.lgError}>
-              <div className={styles.lgErrorIcon}>!</div>
-              <p>{error}</p>
-            </div>
-          )}
 
+        {/* FORMULARIO */}
+        <form className={styles.lgForm} onSubmit={handleSubmit}>
+          <h2 className={styles.lgFormTitle}>Iniciar Sesión</h2>
+
+          {/* USUARIO */}
           <div className={styles.lgInputGroup}>
-            <label htmlFor="username" className={styles.lgLabel}>
-              <FaUser style={{ marginRight: '0.5rem' }} />
-              Usuario
-            </label>
+            <label><FaUser /> Usuario</label>
             <div className={styles.lgInputContainer}>
               <input
-                id="username"
                 type="text"
-                placeholder="Ingrese su usuario"
                 value={username}
+                disabled={loading}
                 onChange={(e) => setUsername(e.target.value)}
-                required
                 className={styles.lgInput}
-                disabled={isLoading}
+                placeholder="Ingrese su usuario"
               />
             </div>
           </div>
 
+          {/* CONTRASEÑA */}
           <div className={styles.lgInputGroup}>
-            <label htmlFor="password" className={styles.lgLabel}>
-              <FaLock style={{ marginRight: '0.5rem' }} />
-              Contraseña
-            </label>
+            <label><FaLock /> Contraseña</label>
             <div className={styles.lgInputContainer}>
               <input
-                id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Ingrese su contraseña"
                 value={password}
+                disabled={loading}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 className={styles.lgInput}
-                disabled={isLoading}
+                placeholder="Ingrese su contraseña"
               />
               <button
                 type="button"
-                onClick={togglePasswordVisibility}
+                onClick={() => setShowPassword(!showPassword)}
                 className={styles.lgPasswordToggle}
-                disabled={isLoading}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
 
-          <div className={styles.lgRememberForgot}>
-            <label className={styles.lgCheckboxLabel}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className={styles.lgCheckbox}
-                disabled={isLoading}
-              />
-              Recordar usuario
-            </label>
-          </div>
+          {/* RECORDAR USUARIO */}
+          <label className={styles.lgCheckboxLabel}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              disabled={loading}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Recordar usuario
+          </label>
 
-          <button 
-            type="submit" 
+          {/* BOTÓN ACCEDER */}
+          <button
+            type="submit"
+            disabled={loading}
             className={styles.lgButton}
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <FaSpinner className={styles.lgButtonSpinner} />
-                Iniciando sesión...
-              </>
-            ) : (
-              'Acceder al sistema'
-            )}
+            {loading ? <FaSpinner className={styles.lgButtonSpinner} /> : 'Acceder'}
           </button>
-
-          <div className={styles.lgFooter}>
-            <p className={styles.lgFooterText}>
-              Sistema integrado con Sage200 • Versión 1.0
-            </p>
-          </div>
         </form>
       </div>
     </div>
