@@ -16,7 +16,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #9f7aea; /* Púrpura para Ingresos */
+  border-left: 4px solid #3F9AAC;
 }
 
 .fp6Header h2 {
@@ -111,8 +111,8 @@
 .fp6FormGroup input:focus,
 .fp6FormGroup select:focus {
   outline: none;
-  border-color: #9f7aea;
-  box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.15);
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
   transform: translateY(-1px);
 }
 
@@ -132,10 +132,10 @@
 
 /* Resumen Section */
 .fp6Resumen {
-  background: #faf5ff;
+  background: #f0f9ff;
   padding: 1.5rem;
   border-radius: 8px;
-  border: 1px solid #e9d8fd;
+  border: 1px solid #bae6fd;
 }
 
 .fp6ResumenItem {
@@ -177,14 +177,14 @@
 }
 
 .fp6FileInput:hover {
-  border-color: #9f7aea;
-  background: #faf5ff;
+  border-color: #3F9AAC;
+  background: #f0f9ff;
 }
 
 .fp6FileName {
   display: block;
   margin-top: 0.5rem;
-  color: #9f7aea;
+  color: #3F9AAC;
   font-weight: 500;
   font-size: 0.9rem;
 }
@@ -232,15 +232,15 @@
 }
 
 .fp6SubmitBtn {
-  background: #9f7aea;
+  background: #3F9AAC;
   color: white;
-  box-shadow: 0 2px 4px rgba(159, 122, 234, 0.3);
+  box-shadow: 0 2px 4px rgba(63, 154, 172, 0.3);
 }
 
 .fp6SubmitBtn:hover:not(:disabled) {
-  background: #805ad5;
+  background: #2c7a8a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(159, 122, 234, 0.4);
+  box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
 .fp6SubmitBtn:disabled {

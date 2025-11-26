@@ -16,7 +16,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #ed8936; /* Naranja para Gastos */
+  border-left: 4px solid #3F9AAC;
 }
 
 .fp7Header h2 {
@@ -111,8 +111,8 @@
 .fp7FormGroup input:focus,
 .fp7FormGroup select:focus {
   outline: none;
-  border-color: #ed8936;
-  box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.15);
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
   transform: translateY(-1px);
 }
 
@@ -133,14 +133,14 @@
 }
 
 .fp7FileInput:hover {
-  border-color: #ed8936;
-  background: #fffaf0;
+  border-color: #3F9AAC;
+  background: #f0f9ff;
 }
 
 .fp7FileName {
   display: block;
   margin-top: 0.5rem;
-  color: #ed8936;
+  color: #3F9AAC;
   font-weight: 500;
   font-size: 0.9rem;
 }
@@ -188,15 +188,15 @@
 }
 
 .fp7SubmitBtn {
-  background: #ed8936;
+  background: #3F9AAC;
   color: white;
-  box-shadow: 0 2px 4px rgba(237, 137, 54, 0.3);
+  box-shadow: 0 2px 4px rgba(63, 154, 172, 0.3);
 }
 
 .fp7SubmitBtn:hover:not(:disabled) {
-  background: #dd6b20;
+  background: #2c7a8a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(237, 137, 54, 0.4);
+  box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
 .fp7SubmitBtn:disabled {

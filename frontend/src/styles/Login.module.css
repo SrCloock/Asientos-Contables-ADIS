@@ -4,7 +4,7 @@
 .lgContainer {
   width: 100%;
   height: 100vh;
-  background: linear-gradient(135deg, #003d7a 0%, #0077c8 100%);
+  background: linear-gradient(135deg, #3F9AAC 0%, #2c7a8a 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -56,7 +56,7 @@
   width: 90px;
   height: 90px;
   background: #ffffff;
-  color: #003d7a;
+  color: #3F9AAC;
   font-size: 2.8rem;
   font-weight: bold;
   border-radius: 50%;
@@ -140,7 +140,7 @@
 
 .lgInputContainer:hover,
 .lgInputContainer:focus-within {
-  border-color: #00c6ff;
+  border-color: #ffffff;
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -199,12 +199,12 @@
    🚀 BOTÓN DE ACCESO
    ===================================== */
 .lgButton {
-  background: linear-gradient(135deg, #009ad8, #00c6ff);
+  background: #ffffff;
   border: none;
   padding: 0.9rem;
   width: 100%;
   border-radius: 12px;
-  color: #ffffff;
+  color: #3F9AAC;
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
@@ -217,8 +217,9 @@
 }
 
 .lgButton:hover {
-  background: linear-gradient(135deg, #00b2f0, #00d8ff);
+  background: #f0f9ff;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .lgButton:active {
@@ -229,6 +230,8 @@
   background: #7ab5d4;
   cursor: not-allowed;
   opacity: 0.8;
+  transform: none;
+  box-shadow: none;
 }
 
 .lgButtonSpinner {
@@ -259,17 +262,112 @@
 }
 
 /* =====================================
-   📌 FOOTER
+   ❓ BOTÓN DE AYUDA
    ===================================== */
-.lgFooter {
-  margin-top: 2rem;
-  text-align: center;
+.lgHelpButton {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   color: #ffffff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.lgHelpButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #ffffff;
+}
+
+/* =====================================
+   🎥 MODAL DE AYUDA
+   ===================================== */
+.lgModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.lgModal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.lgModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: #3F9AAC;
+  color: white;
+}
+
+.lgModalHeader h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.lgModalClose {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.lgModalClose:hover {
   opacity: 0.8;
 }
 
-.lgFooterText {
-  font-size: 0.85rem;
+.lgModalContent {
+  padding: 0;
+}
+
+.lgVideoContainer {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+.lgVideoContainer iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.lgModalFooter {
+  padding: 1rem 2rem;
+  background: #f8fafc;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 /* =====================================
@@ -284,6 +382,8 @@
   .lgBranding {
     width: 100%;
     padding: 2rem 1rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .lgForm {
@@ -294,6 +394,10 @@
 }
 
 @media (max-width: 480px) {
+  .lgContainer {
+    padding: 1rem;
+  }
+
   .lgLogo {
     width: 75px;
     height: 75px;
@@ -306,6 +410,14 @@
 
   .lgButton {
     font-size: 1rem;
+  }
+
+  .lgModalHeader {
+    padding: 1rem 1.5rem;
+  }
+
+  .lgModalFooter {
+    padding: 1rem 1.5rem;
   }
 }
 

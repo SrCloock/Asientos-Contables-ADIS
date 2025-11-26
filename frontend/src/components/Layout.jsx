@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 import styles from '../styles/Layout.module.css';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.png';
 
 const Layout = () => {
   const location = useLocation();
@@ -36,34 +37,34 @@ const Layout = () => {
     <div className={styles.lyLayout}>
       <nav className={styles.lyNavbar}>
         <div className={styles.lyNavContent}>
-          <div className={styles.lyNavBrand}>
-            <h2>Sage200 Contabilidad</h2>
+          <div className={styles.lyNavHeader}>
+            <div className={styles.lyLogoSection}>
+              <img 
+                src={logo} 
+                alt="Logo Sage200" 
+                className={styles.lyLogo}
+              />
+              <div className={styles.lyBrandText}>
+                <h1>Sage200</h1>
+                <span>Contabilidad</span>
+              </div>
+            </div>
             <div className={styles.lyUserInfo}>
               <span>
-                <FaUser style={{ marginRight: '0.25rem' }} />
+                <FaUser />
                 Usuario: <strong>{user?.usuario}</strong>
               </span>
               <span>
-                <FaUser style={{ marginRight: '0.25rem' }} />
+                <FaUser />
                 Nombre: <strong>{user?.nombre}</strong>
               </span>
               <span>
-                <FaBuilding style={{ marginRight: '0.25rem' }} />
-                Empresa: <strong>9999</strong>
+                <FaBuilding />
+                Empresa: <strong>10000</strong>
               </span>
             </div>
           </div>
           <ul className={styles.lyNavMenu}>
-            <li>
-              <Link 
-                to="/dashboard" 
-                className={location.pathname === '/dashboard' ? styles.active : ''}
-              >
-                <FaChartLine />
-                Dashboard
-              </Link>
-            </li>
-            {/* NUEVOS FORMULARIOS */}
             <li>
               <Link 
                 to="/form4" 

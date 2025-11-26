@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaSpinner, FaQuestionCircle, FaTimes } from 'react-icons/fa';
 import styles from '../styles/Login.module.css';
 
 const Login = () => {
@@ -9,6 +9,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const { login, isLoggedIn, loading } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ const Login = () => {
   // 🔄 Redirige si ya está logueado
   useEffect(() => {
     if (isLoggedIn) {
-      navigate('/dashboard');
+      navigate('/form4');
     }
   }, [isLoggedIn, navigate]);
 
@@ -115,8 +116,50 @@ const Login = () => {
           >
             {loading ? <FaSpinner className={styles.lgButtonSpinner} /> : 'Acceder'}
           </button>
+
+          {/* BOTÓN DE AYUDA */}
+          <button
+            type="button"
+            onClick={() => setShowHelpModal(true)}
+            className={styles.lgHelpButton}
+          >
+            <FaQuestionCircle /> ¿Necesitas ayuda?
+          </button>
         </form>
       </div>
+
+      {/* MODAL DE AYUDA */}
+      {showHelpModal && (
+        <div className={styles.lgModalOverlay}>
+          <div className={styles.lgModal}>
+            <div className={styles.lgModalHeader}>
+              <h3>Videotutorial de Ayuda</h3>
+              <button 
+                onClick={() => setShowHelpModal(false)}
+                className={styles.lgModalClose}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className={styles.lgModalContent}>
+              <div className={styles.lgVideoContainer}>
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/x91MPoITQ3I"
+                  title="Tutorial de acceso al sistema"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <div className={styles.lgModalFooter}>
+                <p>Si necesitas más ayuda, contacta al administrador del sistema.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

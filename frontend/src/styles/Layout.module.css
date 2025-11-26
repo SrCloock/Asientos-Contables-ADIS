@@ -18,18 +18,42 @@
   padding: 0 2rem;
 }
 
-.lyNavBrand {
+.lyNavHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
 }
 
-.lyNavBrand h2 {
+.lyLogoSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lyLogo {
+  height: 60px; /* Logo más grande */
+  width: auto;
+  object-fit: contain;
+}
+
+.lyBrandText {
+  display: flex;
+  flex-direction: column;
+}
+
+.lyBrandText h1 {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #1e293b;
+  line-height: 1.2;
+}
+
+.lyBrandText span {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .lyUserInfo {
@@ -41,13 +65,15 @@
 
 .lyUserInfo span {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .lyUserInfo strong {
   color: #1e293b;
   font-weight: 500;
   font-size: 0.875rem;
+  margin-left: 0.25rem;
 }
 
 .lyNavMenu {
@@ -102,6 +128,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: inherit;
 }
 
 .lyLogoutBtn:hover {
@@ -116,6 +143,7 @@
   padding: 0;
 }
 
+/* Responsive */
 @media (max-width: 1024px) {
   .lyNavContent {
     padding: 0 1.5rem;
@@ -123,15 +151,21 @@
 }
 
 @media (max-width: 768px) {
-  .lyNavBrand {
+  .lyNavHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
   
+  .lyLogoSection {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
   .lyUserInfo {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
   
   .lyNavMenu {
@@ -141,7 +175,47 @@
   
   .lyNavMenu a,
   .lyLogoutBtn {
-    justify-content: center;
-    text-align: center;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .lyNavContent {
+    padding: 0 1rem;
+  }
+  
+  .lyLogoSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .lyLogo {
+    height: 50px; /* Un poco más pequeño en móviles */
+  }
+  
+  .lyUserInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .lyUserInfo span {
+    justify-content: flex-start;
+  }
+}
+
+/* Para pantallas muy grandes */
+@media (min-width: 1400px) {
+  .lyLogo {
+    height: 70px; /* Aún más grande en pantallas grandes */
+  }
+  
+  .lyBrandText h1 {
+    font-size: 1.75rem;
+  }
+  
+  .lyBrandText span {
+    font-size: 1rem;
   }
 }

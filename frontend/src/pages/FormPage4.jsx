@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN CORREGIDA CON SELECTS CON BÚSQUEDA
+// pages/FormPage4.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -54,13 +54,13 @@ const FormPage4 = ({ user }) => {
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Detalles adaptados para IVA no deducible CON RETENCIÓN
+  // Detalles adaptados para IVA no deducible CON RETENCIÓN (0% por defecto)
   const [detalles, setDetalles] = useState([
     { 
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
-      retencion: '15',
+      retencion: '0', // ✅ CORREGIDO: 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }
@@ -278,7 +278,7 @@ const FormPage4 = ({ user }) => {
     })
   };
 
-  // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN
+  // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN (0% por defecto)
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -302,12 +302,13 @@ const FormPage4 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
+  // ✅ CORREGIDO: Retención por defecto 0%
   const addDetalleLine = () => {
     setDetalles([...detalles, { 
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
-      retencion: '15',
+      retencion: '0', // ✅ 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
@@ -380,15 +381,30 @@ const FormPage4 = ({ user }) => {
     return errores;
   };
 
-  // Manejo de archivos
+  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setArchivo(`C:\\Users\\${user?.usuario || 'Usuario'}\\Desktop\\${file.name}`);
+      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
+      setArchivo(file.name);
+      console.log(`📄 Archivo seleccionado: ${file.name}`);
     }
   };
 
-  // Envío del formulario - ACTUALIZADO CON NUEVOS CAMPOS
+  // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
+  const formatFechaForBackend = (fechaString) => {
+    if (!fechaString) return '';
+    
+    // Asegurar que la fecha esté en formato YYYY-MM-DD
+    const fecha = new Date(fechaString);
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
+  // Envío del formulario - ACTUALIZADO CON FECHAS CORREGIDAS
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -401,18 +417,30 @@ const FormPage4 = ({ user }) => {
     setLoading(true);
 
     try {
+      // 📅 CORRECCIÓN: Asegurar que las fechas estén en formato correcto
+      const fechaRegFormatted = formatFechaForBackend(fechaReg);
+      const fechaFacturaFormatted = formatFechaForBackend(fechaFactura);
+      const fechaOperFormatted = formatFechaForBackend(fechaOper);
+      const vencimientoFormatted = formatFechaForBackend(vencimiento);
+
+      console.log('📅 FECHAS ENVIADAS AL BACKEND:');
+      console.log('- Fecha Registro:', fechaRegFormatted);
+      console.log('- Fecha Factura:', fechaFacturaFormatted);
+      console.log('- Fecha Operación:', fechaOperFormatted);
+      console.log('- Vencimiento:', vencimientoFormatted);
+
       // COMENTARIO COMBINADO: Nº FRA - Concepto (formato corregido)
       const comentarioCombinado = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
-        // Datos de documento
+        // Datos de documento CON FECHAS CORREGIDAS
         serie,
         numDocumento,
         numFRA,
-        fechaReg,
-        fechaFactura,
-        fechaOper,
-        vencimiento,
+        fechaReg: fechaRegFormatted,
+        fechaFactura: fechaFacturaFormatted,
+        fechaOper: fechaOperFormatted,
+        vencimiento: vencimientoFormatted,
         concepto,
         comentario: comentarioCombinado,
         
@@ -432,7 +460,7 @@ const FormPage4 = ({ user }) => {
         // Detalles CON RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // Archivo
+        // 🔥 CORREGIDO: Solo el nombre del archivo
         archivo: archivo,
         
         // Totales CON RETENCIÓN
@@ -450,7 +478,7 @@ const FormPage4 = ({ user }) => {
 
       if (response.data.success) {
         const lineasCreadas = response.data.detalles.lineas;
-        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA Incluido) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
+        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA No Deducible) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -475,7 +503,7 @@ const FormPage4 = ({ user }) => {
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0, 
-      retencion: '0',
+      retencion: '0', // ✅ 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0 
     }]);
@@ -508,7 +536,7 @@ const FormPage4 = ({ user }) => {
       <div className={styles.fp4Header}>
         <h2>
           <FaFileInvoiceDollar />
-          Factura de Proveedor
+          Factura de Proveedor (IVA No Deducible)
         </h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -601,6 +629,7 @@ const FormPage4 = ({ user }) => {
                 onChange={(e) => setVencimiento(e.target.value)}
                 required
               />
+              <small>📅 Esta fecha se guardará exactamente como la seleccione</small>
             </div>
           </div>
         </div>
@@ -826,7 +855,7 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
         <div className={styles.fp4Section}>
           <h3>Archivo</h3>
           <div className={styles.fp4FormRow}>
@@ -837,9 +866,19 @@ const FormPage4 = ({ user }) => {
                 onChange={handleFileChange}
                 className={styles.fp4FileInput}
               />
-              {archivo && (
-                <span className={styles.fp4FileName}>{archivo}</span>
-              )}
+              <div className={styles.fp4FileInfo}>
+                <small>
+                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
+                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                </small>
+                {archivo && (
+                  <div className={styles.fp4FileName}>
+                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
+                    <br />
+                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

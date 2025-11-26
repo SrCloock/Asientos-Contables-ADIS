@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
 import FormPage4 from './pages/FormPage4';
 import FormPage5 from './pages/FormPage5';
 import FormPage6 from './pages/FormPage6';
@@ -48,7 +47,6 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/dashboard" />} />
-            <Route path="dashboard" element={<Dashboard />} />
             <Route path="form4" element={<FormPage4 />} />
             <Route path="form5" element={<FormPage5 />} />
             <Route path="form6" element={<FormPage6 />} />

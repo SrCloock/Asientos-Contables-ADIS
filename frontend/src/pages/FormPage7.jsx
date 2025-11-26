@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx - VERSIÓN ACTUALIZADA CON SELECT CON BÚSQUEDA
+// pages/FormPage7.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt } from 'react-icons/fa';
@@ -135,11 +135,27 @@ const FormPage7 = ({ user }) => {
     })
   };
 
+  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setArchivo(`C:\\Users\\${user?.usuario || 'Usuario'}\\Desktop\\${file.name}`);
+      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
+      setArchivo(file.name);
+      console.log(`📄 Archivo seleccionado: ${file.name}`);
     }
+  };
+
+  // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
+  const formatFechaForBackend = (fechaString) => {
+    if (!fechaString) return '';
+    
+    // Asegurar que la fecha esté en formato YYYY-MM-DD
+    const fecha = new Date(fechaString);
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   };
 
   const handleSubmit = async (e) => {
@@ -159,17 +175,24 @@ const FormPage7 = ({ user }) => {
     setLoading(true);
 
     try {
+      // 📅 CORRECCIÓN: Asegurar que la fecha esté en formato correcto
+      const fechaRegFormatted = formatFechaForBackend(fechaReg);
+
+      console.log('📅 FECHA ENVIADA AL BACKEND:');
+      console.log('- Fecha Registro:', fechaRegFormatted);
+
       const datosEnvio = {
         serie,
         numDocumento,
-        fechaReg,
+        fechaReg: fechaRegFormatted,
         concepto,
         comentario: concepto,
         analitico,
         cuentaGasto,
         cuentaCaja,
         importe: parseFloat(importe),
-        archivo
+        // 🔥 CORREGIDO: Solo el nombre del archivo
+        archivo: archivo
       };
 
       console.log('📤 Enviando datos FormPage7:', datosEnvio);
@@ -317,6 +340,7 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
+        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
         <div className={styles.fp7Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp7FormRow}>
@@ -327,9 +351,19 @@ const FormPage7 = ({ user }) => {
                 onChange={handleFileChange}
                 className={styles.fp7FileInput}
               />
-              {archivo && (
-                <span className={styles.fp7FileName}>📄 {archivo.split('\\').pop()}</span>
-              )}
+              <div className={styles.fp7FileInfo}>
+                <small>
+                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
+                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                </small>
+                {archivo && (
+                  <div className={styles.fp7FileName}>
+                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
+                    <br />
+                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-// pages/FormPage5.jsx - VERSIÓN CORREGIDA CON SELECTS CON BÚSQUEDA
+// pages/FormPage5.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaCashRegister, FaPlus, FaTrash } from 'react-icons/fa';
@@ -51,13 +51,13 @@ const FormPage5 = ({ user }) => {
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Detalles igual que FormPage4 (con IVA y retención)
+  // Detalles igual que FormPage4 (con IVA y retención - 0% por defecto)
   const [detalles, setDetalles] = useState([
     { 
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
-      retencion: '0',
+      retencion: '0', // ✅ CORREGIDO: 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }
@@ -275,7 +275,7 @@ const FormPage5 = ({ user }) => {
     })
   };
 
-  // MANEJO DE DETALLES - IGUAL QUE FORMPAGE4
+  // MANEJO DE DETALLES - CON CÁLCULO CORRECTO DE IVA
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -299,12 +299,13 @@ const FormPage5 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
+  // ✅ CORREGIDO: Retención por defecto 0%
   const addDetalleLine = () => {
     setDetalles([...detalles, { 
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
-      retencion: '15',
+      retencion: '0', // ✅ 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
@@ -318,7 +319,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // Cálculo de totales - IGUAL QUE FORMPAGE4
+  // Cálculo de totales
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -374,15 +375,30 @@ const FormPage5 = ({ user }) => {
     return errores;
   };
 
-  // Manejo de archivos
+  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setArchivo(`C:\\Users\\${user?.usuario || 'Usuario'}\\Desktop\\${file.name}`);
+      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
+      setArchivo(file.name);
+      console.log(`📄 Archivo seleccionado: ${file.name}`);
     }
   };
 
-  // Envío del formulario - ACTUALIZADO PARA FACTURA CON PAGO EN CAJA
+  // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
+  const formatFechaForBackend = (fechaString) => {
+    if (!fechaString) return '';
+    
+    // Asegurar que la fecha esté en formato YYYY-MM-DD
+    const fecha = new Date(fechaString);
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
+  // Envío del formulario - ACTUALIZADO CON FECHAS CORREGIDAS
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -395,17 +411,27 @@ const FormPage5 = ({ user }) => {
     setLoading(true);
 
     try {
-      // COMENTARIO COMBINADO: Nº FRA - Concepto
+      // 📅 CORRECCIÓN: Asegurar que las fechas estén en formato correcto
+      const fechaRegFormatted = formatFechaForBackend(fechaReg);
+      const fechaFacturaFormatted = formatFechaForBackend(fechaFactura);
+      const fechaOperFormatted = formatFechaForBackend(fechaOper);
+
+      console.log('📅 FECHAS ENVIADAS AL BACKEND:');
+      console.log('- Fecha Registro:', fechaRegFormatted);
+      console.log('- Fecha Factura:', fechaFacturaFormatted);
+      console.log('- Fecha Operación:', fechaOperFormatted);
+
+      // COMENTARIO COMBINADO: Nº FRA - Concepto (formato corregido)
       const comentarioCombinado = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
-        // Datos de documento
+        // Datos de documento CON FECHAS CORREGIDAS
         serie,
         numDocumento,
         numFRA,
-        fechaReg,
-        fechaFactura,
-        fechaOper,
+        fechaReg: fechaRegFormatted,
+        fechaFactura: fechaFacturaFormatted,
+        fechaOper: fechaOperFormatted,
         concepto,
         comentario: comentarioCombinado,
         
@@ -425,7 +451,7 @@ const FormPage5 = ({ user }) => {
         // Detalles CON IVA Y RETENCIÓN
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // Archivo
+        // 🔥 CORREGIDO: Solo el nombre del archivo
         archivo: archivo,
         
         // Totales CON IVA Y RETENCIÓN
@@ -445,9 +471,11 @@ const FormPage5 = ({ user }) => {
       });
 
       if (response.data.success) {
-        const lineasCreadas = response.data.detalles?.lineas || 6;
+        const lineasCreadas = response.data.detalles?.lineas || 5;
         const cuentaUsada = response.data.detalles?.cuentaGasto || cuentaGasto;
-        alert(`✅ Asiento #${response.data.asiento} - Factura con Pago en Caja creado correctamente\nLíneas creadas: ${lineasCreadas}\nCuenta de gasto: ${cuentaUsada}`);
+        const partes = response.data.detalles?.partes;
+        
+        alert(`✅ Asiento #${response.data.asiento} - Factura con Pago en Caja creado correctamente\nLíneas creadas: ${lineasCreadas}\nCuenta de gasto: ${cuentaUsada}\nPartes: ${partes?.parte1} y ${partes?.parte2}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -471,7 +499,7 @@ const FormPage5 = ({ user }) => {
       base: '', 
       tipoIVA: '21', 
       cuotaIVA: 0,
-      retencion: '15',
+      retencion: '0', // ✅ 0% por defecto
       cuotaRetencion: 0,
       importeTotalLinea: 0 
     }]);
@@ -498,6 +526,10 @@ const FormPage5 = ({ user }) => {
     const cuenta = cuentasGasto.find(c => c.id === cuentaGasto);
     return cuenta ? cuenta.nombre : '';
   };
+
+  // Calcular totales para el resumen
+  const totalDebe = totales.base + totales.iva + totales.total;
+  const totalHaber = totales.total + totales.retencion + totales.total;
 
   return (
     <div className={styles.fp5Container}>
@@ -787,7 +819,7 @@ const FormPage5 = ({ user }) => {
             </button>
           </div>
 
-          {/* Resumen de Totales CON RETENCIÓN */}
+          {/* Resumen de Totales CON IVA Y RETENCIÓN */}
           <div className={styles.fp5Totales}>
             <h4>Resumen de Totales:</h4>
             <div className={styles.fp5TotalItem}>
@@ -804,7 +836,7 @@ const FormPage5 = ({ user }) => {
             </div>
             <div className={styles.fp5TotalItem + ' ' + styles.fp5TotalFinal}>
               <span>
-                <strong>TOTAL FACTURA:</strong>
+                <strong>TOTAL A PAGAR:</strong>
               </span>
               <span>
                 <strong>{totales.total.toFixed(2)} €</strong>
@@ -813,7 +845,7 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
         <div className={styles.fp5Section}>
           <h3>Archivo</h3>
           <div className={styles.fp5FormRow}>
@@ -824,68 +856,92 @@ const FormPage5 = ({ user }) => {
                 onChange={handleFileChange}
                 className={styles.fp5FileInput}
               />
-              {archivo && (
-                <span className={styles.fp5FileName}>{archivo}</span>
-              )}
+              <div className={styles.fp5FileInfo}>
+                <small>
+                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
+                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                </small>
+                {archivo && (
+                  <div className={styles.fp5FileName}>
+                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
+                    <br />
+                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Resumen del Asiento - CORREGIDO: IVA va a misma cuenta de gasto */}
+        {/* Resumen del Asiento - ACTUALIZADO: TODAS LAS LÍNEAS CON PARTE 1 Y PARTE 2 */}
         <div className={styles.fp5Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp5Resumen}>
-            {/* Línea 1: Base del gasto */}
-            <div className={styles.fp5ResumenItem}>
-              <span>DEBE:</span>
-              <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
-              <span>{totales.base.toFixed(2)} €</span>
-            </div>
-            
-            {/* Línea 2: IVA del gasto - MISMA CUENTA */}
-            {totales.iva > 0 && (
+            {/* PARTE 1: FACTURA */}
+            <div className={styles.fp5ResumenParte}>
+              <h5>Parte 1 - Factura</h5>
+              
+              {/* LÍNEA 1: BASE IMPONIBLE */}
               <div className={styles.fp5ResumenItem}>
                 <span>DEBE:</span>
-                <span>{cuentaGasto} - {getNombreCuentaGasto()} (IVA)</span>
-                <span>{totales.iva.toFixed(2)} €</span>
+                <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
+                <span>{totales.base.toFixed(2)} €</span>
+                <small>P1 | {concepto.substring(0, 20)}...</small>
               </div>
-            )}
-            
-            {/* Línea 3: Retención (si existe) */}
-            {totales.retencion > 0 && (
+              
+              {/* LÍNEA 2: IVA - MISMA CUENTA DE GASTO */}
+              {totales.iva > 0 && (
+                <div className={styles.fp5ResumenItem}>
+                  <span>DEBE:</span>
+                  <span>{cuentaGasto} - IVA Soportado</span>
+                  <span>{totales.iva.toFixed(2)} €</span>
+                  <small>P1 | {concepto.substring(0, 20)}...</small>
+                </div>
+              )}
+              
+              {/* LÍNEA 3: PROVEEDOR */}
+              <div className={styles.fp5ResumenItem}>
+                <span>HABER:</span>
+                <span>{datosCuentaP.cuentaContable} - Proveedores</span>
+                <span>{totales.total.toFixed(2)} €</span>
+                <small>P1 | {concepto.substring(0, 20)}...</small>
+              </div>
+            </div>
+
+            {/* PARTE 2: PAGO EN CAJA */}
+            <div className={styles.fp5ResumenParte}>
+              <h5>Parte 2 - Pago en Caja</h5>
+              
+              {/* LÍNEA 4: RETENCIÓN (si existe) */}
+              {totales.retencion > 0 && (
+                <div className={styles.fp5ResumenItem}>
+                  <span>HABER:</span>
+                  <span>475100000 - Retenciones Practicadas</span>
+                  <span>{totales.retencion.toFixed(2)} €</span>
+                  <small>P2 | {concepto.substring(0, 20)}...</small>
+                </div>
+              )}
+              
+              {/* LÍNEA 5: CAJA */}
               <div className={styles.fp5ResumenItem}>
                 <span>DEBE:</span>
-                <span>475100000 - Retenciones Practicadas</span>
-                <span>{totales.retencion.toFixed(2)} €</span>
+                <span>{cuentaCaja} - Caja</span>
+                <span>{totales.total.toFixed(2)} €</span>
+                <small>P2 | {concepto.substring(0, 20)}...</small>
               </div>
-            )}
-            
-            {/* Línea 4: Proveedor (HABER) - Factura */}
-            <div className={styles.fp5ResumenItem}>
-              <span>HABER:</span>
-              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
-              <span>{totales.total.toFixed(2)} €</span>
             </div>
-            
-            {/* Línea 5: Proveedor (DEBE) - Pago */}
-            <div className={styles.fp5ResumenItem}>
-              <span>DEBE:</span>
-              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
-              <span>{totales.total.toFixed(2)} €</span>
+
+            {/* RESUMEN FINAL */}
+            <div className={styles.fp5ResumenFinal}>
+              <div className={styles.fp5TotalItem}>
+                <span>Total DEBE:</span>
+                <span>{totalDebe.toFixed(2)} €</span>
+              </div>
+              <div className={styles.fp5TotalItem}>
+                <span>Total HABER:</span>
+                <span>{totalHaber.toFixed(2)} €</span>
+              </div>
             </div>
-            
-            {/* Línea 6: Caja (HABER) - Salida de dinero */}
-            <div className={styles.fp5ResumenItem}>
-              <span>HABER:</span>
-              <span>{cuentaCaja} - Caja</span>
-              <span>{totales.total.toFixed(2)} €</span>
-            </div>
-          </div>
-          
-          <div className={styles.fp5Nota}>
-            <small>
-              <strong>Nota:</strong> El IVA se contabiliza en la misma cuenta de gasto ({cuentaGasto}) ya que es IVA no deducible.
-            </small>
           </div>
         </div>
 
@@ -912,7 +968,7 @@ const FormPage5 = ({ user }) => {
             className={styles.fp5SubmitBtn} 
             disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}
           >
-            {loading ? 'Procesando...' : 'Crear Factura con Pago en Caja'}
+            {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
         </div>
       </form>

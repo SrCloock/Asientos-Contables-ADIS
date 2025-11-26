@@ -1,4 +1,4 @@
-/* styles/FormPage5.module.css - ESTILO UNIFICADO CON FORMPAGE4 */
+/* styles/FormPage5.module.css - ESTILO UNIFICADO CON FORMPAGE4 Y PARTES */
 .fp5Container {
   padding: 2rem;
   max-width: 1400px;
@@ -16,7 +16,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #48bb78; /* Verde para Pago */
+  border-left: 4px solid #3F9AAC;
 }
 
 .fp5Header h2 {
@@ -118,8 +118,8 @@
 .fp5FormGroup input:focus,
 .fp5FormGroup select:focus {
   outline: none;
-  border-color: #48bb78; /* Verde para Pago */
-  box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.15);
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
   transform: translateY(-1px);
 }
 
@@ -182,7 +182,7 @@
 }
 
 .fp5AddBtn {
-  background: #48bb78;
+  background: #3F9AAC;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -197,16 +197,16 @@
 }
 
 .fp5AddBtn:hover {
-  background: #38a169;
+  background: #2c7a8a;
   transform: translateY(-1px);
 }
 
 /* Totales Section */
 .fp5Totales {
-  background: #f0fff4;
+  background: #f0f9ff;
   padding: 1.5rem;
   border-radius: 8px;
-  border: 1px solid #c6f6d5;
+  border: 1px solid #bae6fd;
   margin-top: 2rem;
 }
 
@@ -223,18 +223,37 @@
 }
 
 .fp5TotalFinal {
-  border-top: 2px solid #48bb78;
+  border-top: 2px solid #3F9AAC;
   margin-top: 0.5rem;
   padding-top: 1rem;
   font-size: 1.1rem;
 }
 
-/* Resumen Section */
+/* Resumen Section con Partes */
 .fp5Resumen {
-  background: #ebf8ff;
+  background: #f0f9ff;
   padding: 1.5rem;
   border-radius: 8px;
-  border: 1px solid #bee3f8;
+  border: 1px solid #bae6fd;
+}
+
+.fp5ResumenParte {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 6px;
+  border-left: 4px solid #3F9AAC;
+}
+
+.fp5ResumenParte h5 {
+  margin: 0 0 0.75rem 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fp5ResumenParte:last-child {
+  border-left-color: #38a169;
 }
 
 .fp5ResumenItem {
@@ -243,6 +262,7 @@
   align-items: center;
   padding: 0.75rem 0;
   border-bottom: 1px solid #e2e8f0;
+  position: relative;
 }
 
 .fp5ResumenItem:last-child {
@@ -261,6 +281,42 @@
   color: #4a5568;
 }
 
+.fp5ResumenItem span:last-child {
+  font-weight: 600;
+  color: #2d3748;
+  min-width: 100px;
+  text-align: right;
+}
+
+.fp5ResumenItem small {
+  font-size: 0.7rem;
+  color: #718096;
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  font-style: italic;
+}
+
+.fp5ResumenFinal {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e2e8f0;
+}
+
+.fp5ResumenFinal .fp5TotalItem {
+  font-weight: 600;
+  color: #2d3748;
+  border-bottom: none;
+  background: #e6fffa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.fp5ResumenFinal .fp5TotalItem:last-child {
+  margin-bottom: 0;
+}
+
 /* File Input */
 .fp5FileInput {
   padding: 0.75rem;
@@ -271,14 +327,14 @@
 }
 
 .fp5FileInput:hover {
-  border-color: #48bb78;
-  background: #f0fff4;
+  border-color: #3F9AAC;
+  background: #f0f9ff;
 }
 
 .fp5FileName {
   display: block;
   margin-top: 0.5rem;
-  color: #48bb78;
+  color: #3F9AAC;
   font-weight: 500;
   font-size: 0.9rem;
 }
@@ -326,15 +382,15 @@
 }
 
 .fp5SubmitBtn {
-  background: #48bb78;
+  background: #3F9AAC;
   color: white;
-  box-shadow: 0 2px 4px rgba(72, 187, 120, 0.3);
+  box-shadow: 0 2px 4px rgba(63, 154, 172, 0.3);
 }
 
 .fp5SubmitBtn:hover:not(:disabled) {
-  background: #38a169;
+  background: #2c7a8a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
+  box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
 .fp5SubmitBtn:disabled {
@@ -342,6 +398,91 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Estilos para selects de react-select */
+.fp5FormGroup :global(.react-select__control) {
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  min-height: 38px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.fp5FormGroup :global(.react-select__control--is-focused) {
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
+  transform: translateY(-1px);
+}
+
+.fp5FormGroup :global(.react-select__menu) {
+  font-size: 0.9rem;
+  z-index: 9999;
+}
+
+.fp5FormGroup :global(.react-select__option) {
+  cursor: pointer;
+}
+
+.fp5FormGroup :global(.react-select__option--is-focused) {
+  background-color: #e6f3ff;
+}
+
+/* Estados de carga */
+.fp5Loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.fp5Loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3F9AAC;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Estados de validación */
+.fp5FormGroup input:invalid:not(:focus):not(:placeholder-shown) {
+  border-color: #fc8181;
+  background-color: #fff5f5;
+}
+
+.fp5FormGroup input:valid:not(:focus):not(:placeholder-shown) {
+  border-color: #68d391;
+  background-color: #f0fff4;
+}
+
+/* Tooltips para información adicional */
+.fp5Tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.fp5Tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d3748;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 1000;
 }
 
 /* Responsive Design */
@@ -358,6 +499,10 @@
   
   .fp5AsientoInfo {
     justify-content: flex-start;
+  }
+  
+  .fp5FormRow {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   }
 }
 
@@ -376,6 +521,36 @@
   
   .fp5DetalleLinea {
     padding: 1rem;
+  }
+  
+  .fp5ResumenItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp5ResumenItem span:first-child,
+  .fp5ResumenItem span:nth-child(2),
+  .fp5ResumenItem span:last-child {
+    min-width: auto;
+    margin: 0;
+    text-align: left;
+  }
+  
+  .fp5ResumenItem small {
+    position: static;
+    align-self: flex-end;
+    margin-top: 0.25rem;
+  }
+  
+  .fp5LineaHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp5RemoveBtn {
+    align-self: flex-end;
   }
 }
 
@@ -400,4 +575,149 @@
   .fp5ButtonGroup {
     padding: 1rem;
   }
+  
+  .fp5Detalles {
+    padding: 1rem;
+  }
+  
+  .fp5Totales {
+    padding: 1rem;
+  }
+  
+  .fp5Resumen {
+    padding: 1rem;
+  }
+  
+  .fp5ResumenParte {
+    padding: 0.75rem;
+  }
+  
+  .fp5CancelBtn,
+  .fp5ClearBtn,
+  .fp5SubmitBtn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Estilos para scroll suave */
+.fp5Container {
+  scroll-behavior: smooth;
+}
+
+/* Estilos para focús accesible */
+.fp5FormGroup input:focus-visible,
+.fp5FormGroup select:focus-visible,
+.fp5CancelBtn:focus-visible,
+.fp5ClearBtn:focus-visible,
+.fp5SubmitBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+/* Estilos para modo oscuro (opcional) */
+@media (prefers-color-scheme: dark) {
+  .fp5Container {
+    background: #1a202c;
+    color: #e2e8f0;
+  }
+  
+  .fp5Form,
+  .fp5Header {
+    background: #2d3748;
+    color: #e2e8f0;
+  }
+  
+  .fp5Section {
+    border-bottom-color: #4a5568;
+  }
+  
+  .fp5Section h3,
+  .fp5Section h4 {
+    color: #e2e8f0;
+  }
+  
+  .fp5FormGroup label {
+    color: #e2e8f0;
+  }
+  
+  .fp5FormGroup input,
+  .fp5FormGroup select {
+    background: #4a5568;
+    border-color: #718096;
+    color: #e2e8f0;
+  }
+  
+  .fp5Readonly {
+    background-color: #2d3748 !important;
+    color: #a0aec0 !important;
+  }
+  
+  .fp5Detalles {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .fp5DetalleLinea {
+    background: #4a5568;
+    border-color: #718096;
+  }
+  
+  .fp5Totales {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .fp5Resumen {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .fp5ResumenParte {
+    background: #4a5568;
+  }
+}
+
+/* Animaciones para transiciones suaves */
+.fp5DetalleLinea {
+  transition: all 0.3s ease;
+}
+
+.fp5DetalleLinea:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.fp5Section {
+  transition: all 0.3s ease;
+}
+
+/* Estilos para mensajes de error */
+.fp5Error {
+  color: #e53e3e;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.fp5Error::before {
+  content: '⚠';
+  font-size: 0.7rem;
+}
+
+/* Estilos para mensajes de éxito */
+.fp5Success {
+  color: #38a169;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.fp5Success::before {
+  content: '✓';
+  font-size: 0.7rem;
 }
