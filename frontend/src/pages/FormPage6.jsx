@@ -1,8 +1,7 @@
-// pages/FormPage6.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
+// pages/FormPage6.jsx - VERSIÓN SIMPLIFICADA CON CUENTA FIJA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
-import Select from 'react-select';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
@@ -24,12 +23,10 @@ const FormPage6 = ({ user }) => {
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
   const [archivo, setArchivo] = useState(null);
-  const [cuentasIngreso, setCuentasIngreso] = useState([]);
-  const [cuentaIngreso, setCuentaIngreso] = useState('519000000');
   const [importe, setImporte] = useState('');
 
-  // Estado para react-select
-  const [cuentasIngresoOptions, setCuentasIngresoOptions] = useState([]);
+  // CUENTA FIJA - Eliminamos el estado de selección de cuentas
+  const cuentaIngresoFija = '519000000';
 
   useEffect(() => {
     const fetchContador = async () => {
@@ -71,25 +68,6 @@ const FormPage6 = ({ user }) => {
             idDelegacion: userData.idDelegacion || ''
           });
         }
-
-        // Cargar cuentas de ingreso
-        const ingresosRes = await axios.get(`${config.apiBaseUrl}/api/cuentas/ingresos`, { 
-          withCredentials: true 
-        });
-        setCuentasIngreso(ingresosRes.data || []);
-
-        // Preparar opciones para select
-        const ingresosOpts = ingresosRes.data.map(cuenta => ({
-          value: cuenta.id,
-          label: `${cuenta.id} - ${cuenta.nombre}`,
-          cuentaData: cuenta
-        }));
-        setCuentasIngresoOptions(ingresosOpts);
-
-        // Establecer cuenta por defecto si existe
-        if (ingresosRes.data && ingresosRes.data.length > 0) {
-          setCuentaIngreso(ingresosRes.data[0].id);
-        }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
@@ -102,59 +80,18 @@ const FormPage6 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // Manejo de select con react-select
-  const handleCuentaIngresoChange = (selectedOption) => {
-    if (selectedOption) {
-      setCuentaIngreso(selectedOption.value);
-    } else {
-      setCuentaIngreso('519000000');
-    }
-  };
-
-  // Estilos personalizados para react-select
-  const customStyles = {
-    control: (base, state) => ({
-      ...base,
-      border: '1px solid #ccc',
-      borderRadius: '4px',
-      minHeight: '38px',
-      fontSize: '14px',
-      boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 123, 255, 0.25)' : 'none',
-      borderColor: state.isFocused ? '#80bdff' : '#ccc'
-    }),
-    menu: (base) => ({
-      ...base,
-      fontSize: '14px',
-      zIndex: 9999
-    }),
-    option: (base, state) => ({
-      ...base,
-      backgroundColor: state.isFocused ? '#e6f3ff' : 'white',
-      color: 'black',
-      fontSize: '14px',
-      cursor: 'pointer'
-    }),
-    singleValue: (base) => ({
-      ...base,
-      fontSize: '14px'
-    })
-  };
-
-  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
+  // Manejo de archivos
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
       setArchivo(file.name);
       console.log(`📄 Archivo seleccionado: ${file.name}`);
     }
   };
 
-  // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
     
-    // Asegurar que la fecha esté en formato YYYY-MM-DD
     const fecha = new Date(fechaString);
     const year = fecha.getFullYear();
     const month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -179,11 +116,9 @@ const FormPage6 = ({ user }) => {
     setLoading(true);
 
     try {
-      // 📅 CORRECCIÓN: Asegurar que la fecha esté en formato correcto
       const fechaRegFormatted = formatFechaForBackend(fechaReg);
 
-      console.log('📅 FECHA ENVIADA AL BACKEND:');
-      console.log('- Fecha Registro:', fechaRegFormatted);
+      console.log('📅 FECHA ENVIADA AL BACKEND:', fechaRegFormatted);
 
       const datosEnvio = {
         serie,
@@ -192,10 +127,9 @@ const FormPage6 = ({ user }) => {
         concepto,
         comentario: concepto.trim().substring(0, 40),
         analitico,
-        cuentaIngreso,
+        // ELIMINADO: cuentaIngreso, // Ya no enviamos este campo
         cuentaCaja,
         importe: parseFloat(importe),
-        // 🔥 CORREGIDO: Solo el nombre del archivo
         archivo: archivo
       };
 
@@ -227,11 +161,6 @@ const FormPage6 = ({ user }) => {
     setImporte('');
     setArchivo(null);
     
-    // Restablecer cuenta de ingreso por defecto
-    if (cuentasIngresoOptions.length > 0) {
-      setCuentaIngreso(cuentasIngresoOptions[0].value);
-    }
-    
     const fetchNewContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
@@ -243,12 +172,6 @@ const FormPage6 = ({ user }) => {
       }
     };
     fetchNewContador();
-  };
-
-  // Obtener nombre de la cuenta seleccionada
-  const getNombreCuentaIngreso = () => {
-    const cuenta = cuentasIngreso.find(c => c.id === cuentaIngreso);
-    return cuenta ? cuenta.nombre : 'Ingresos Varios';
   };
 
   return (
@@ -330,16 +253,14 @@ const FormPage6 = ({ user }) => {
               <small>Valor fijo (igual a Serie)</small>
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso *</label>
-              <Select
-                options={cuentasIngresoOptions}
-                value={cuentasIngresoOptions.find(option => option.value === cuentaIngreso)}
-                onChange={handleCuentaIngresoChange}
-                placeholder="Buscar cuenta de ingreso..."
-                isSearchable
-                styles={customStyles}
-                required
+              <label>Cuenta de Ingreso</label>
+              <input 
+                type="text" 
+                value="519000000 - Ingresos Varios"
+                readOnly
+                className={styles.fp6Readonly}
               />
+              <small>Cuenta fija para todos los ingresos</small>
             </div>
             <div className={styles.fp6FormGroup}>
               <label>Importe *</label>
@@ -356,7 +277,7 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
+        {/* Sección de Archivo */}
         <div className={styles.fp6Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
@@ -375,8 +296,6 @@ const FormPage6 = ({ user }) => {
                 {archivo && (
                   <div className={styles.fp6FileName}>
                     ✅ Archivo seleccionado: <strong>{archivo}</strong>
-                    <br />
-                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
                   </div>
                 )}
               </div>
@@ -399,7 +318,7 @@ const FormPage6 = ({ user }) => {
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>HABER</span>
               <span className={styles.fp6CuentaInfo}>
-                {cuentaIngreso} - {getNombreCuentaIngreso()}
+                519000000 - Ingresos Varios
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}

@@ -10,7 +10,7 @@ const getConfig = () => {
   });
 
   // URL FIJA DEL BACKEND - USANDO LA IP PÚBLICA
-  const apiBaseUrl = 'http://84.120.61.159:5000';
+  const apiBaseUrl = 'http://192.168.200.236:5000';
 
   const config = {
     apiBaseUrl: apiBaseUrl,
@@ -19,7 +19,7 @@ const getConfig = () => {
     version: '1.0.0',
     
     empresa: {
-      codigo: '9999',
+      codigo: '10000',
       ejercicio: 2025
     },
     
