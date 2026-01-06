@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
+// pages/FormPage7.jsx - VERSIÓN COMPLETA CON TODAS LAS CORRECCIONES
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt } from 'react-icons/fa';
@@ -7,8 +7,11 @@ import styles from '../styles/FormPage7.module.css';
 import config from '../config/config';
 
 const FormPage7 = ({ user }) => {
+  // ✅ CORREGIDO: CONTADOR + 1
   const [numAsiento, setNumAsiento] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // ✅ CORREGIDO: DATOS ANALÍTICOS SIN VALORES POR DEFECTO
   const [serieBase, setSerieBase] = useState('');
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
@@ -20,6 +23,7 @@ const FormPage7 = ({ user }) => {
     codigoDepartamento: '',
     idDelegacion: ''
   });
+  
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
@@ -31,13 +35,15 @@ const FormPage7 = ({ user }) => {
   // Estado para react-select
   const [cuentasGastoOptions, setCuentasGastoOptions] = useState([]);
 
+  // ✅ CORREGIDO: Efecto para cargar contador - CONTADOR + 1
   useEffect(() => {
     const fetchContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
-        setNumAsiento(response.data.contador);
+        // ✅ CONTADOR + 1
+        setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
       }
@@ -46,6 +52,7 @@ const FormPage7 = ({ user }) => {
     fetchContador();
   }, []);
 
+  // ✅ CORREGIDO: Efecto para cargar datos maestros - SIN VALORES POR DEFECTO
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
@@ -55,13 +62,14 @@ const FormPage7 = ({ user }) => {
 
         if (sessionRes.data.authenticated) {
           const userData = sessionRes.data.user;
-          const serieCliente = userData.codigoCanal || 'EM';
+          // ✅ CORREGIDO: SIN VALORES POR DEFECTO
+          const serieCliente = userData.codigoCanal || '';
           const serieConC = `C${serieCliente}`;
           
           setSerieBase(serieCliente);
           setSerie(serieConC);
           setAnalitico(serieConC);
-          setCuentaCaja(userData.cuentaCaja || '570000000');
+          setCuentaCaja(userData.cuentaCaja || '');
           
           setDatosAnaliticos({
             codigoCanal: userData.codigoCanal || '',
@@ -85,13 +93,16 @@ const FormPage7 = ({ user }) => {
 
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
+        } else {
+          setCuentaGasto('');
         }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        setSerie('CEM');
-        setAnalitico('CEM');
-        setCuentaCaja('570000000');
+        // ✅ CORREGIDO: Valores vacíos en caso de error - SIN VALORES POR DEFECTO
+        setSerie('');
+        setAnalitico('');
+        setCuentaCaja('');
       }
     };
     fetchDatosMaestros();
@@ -217,6 +228,7 @@ const FormPage7 = ({ user }) => {
     }
   };
 
+  // ✅ CORREGIDO: Reset form con contador + 1
   const resetForm = () => {
     setNumDocumento('');
     setConcepto('');
@@ -225,14 +237,18 @@ const FormPage7 = ({ user }) => {
     
     if (cuentasGastoOptions.length > 0) {
       setCuentaGasto(cuentasGastoOptions[0].value);
+    } else {
+      setCuentaGasto('');
     }
     
+    // ✅ CORREGIDO: Obtener nuevo contador y sumar 1
     const fetchNewContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
           withCredentials: true 
         });
-        setNumAsiento(response.data.contador);
+        // ✅ CONTADOR + 1
+        setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
       }
@@ -253,6 +269,7 @@ const FormPage7 = ({ user }) => {
           Gasto Directo en Caja
         </h2>
         <div className={styles.fp7AsientoInfo}>
+          {/* ✅ MUESTRA CONTADOR + 1 */}
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Serie: <strong>{serie}</strong> (base: {serieBase})</span>
           <span>Caja: <strong>{cuentaCaja}</strong></span>

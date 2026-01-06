@@ -1,4 +1,4 @@
-/* styles/FormPage4.module.css */
+/* styles/FormPage4.module.css - VERSIÓN COMPLETA Y OPTIMIZADA */
 .fp4Container {
   padding: 2rem;
   max-width: 1400px;
@@ -89,6 +89,7 @@
 .fp4FormGroup {
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .fp4FormGroup label {
@@ -116,6 +117,23 @@
   transform: translateY(-1px);
 }
 
+.fp4FormGroup input:focus-visible,
+.fp4FormGroup select:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp4FormGroup input:invalid:not(:placeholder-shown),
+.fp4FormGroup select:invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.fp4FormGroup input:valid:not(:placeholder-shown),
+.fp4FormGroup select:valid {
+  border-color: #16a34a;
+}
+
 .fp4Readonly {
   background-color: #f7fafc !important;
   color: #718096 !important;
@@ -123,13 +141,32 @@
   cursor: not-allowed;
 }
 
-/* Detalles Container */
+/* 🔥 NUEVO: Detalles Container mejorado */
 .fp4Detalles {
   margin: 2rem 0;
   padding: 1.5rem;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+}
+
+.fp4DetallesHeader {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.fp4DetallesHeader h4 {
+  margin: 0 0 0.5rem 0;
+  color: #2d3748;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.fp4DetallesHeader small {
+  color: #718096;
+  font-style: italic;
+  font-size: 0.85rem;
 }
 
 .fp4DetalleLinea {
@@ -139,6 +176,11 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.fp4DetalleLinea:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .fp4LineaHeader {
@@ -148,6 +190,14 @@
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.fp4LineaHeader span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #2d3748;
 }
 
 .fp4RemoveBtn {
@@ -169,6 +219,23 @@
   transform: translateY(-1px);
 }
 
+.fp4RemoveBtn:active {
+  transform: translateY(0);
+}
+
+.fp4RemoveBtn:focus-visible {
+  outline: 2px solid #c53030;
+  outline-offset: 2px;
+}
+
+/* 🔥 NUEVO: Acciones de detalles */
+.fp4DetallesActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
 .fp4AddBtn {
   background: #3F9AAC;
   color: white;
@@ -181,12 +248,88 @@
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
-  margin-top: 1rem;
 }
 
 .fp4AddBtn:hover {
   background: #2c7a8a;
   transform: translateY(-1px);
+}
+
+.fp4AddBtn:active {
+  transform: translateY(0);
+}
+
+.fp4AddBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp4CleanBtn {
+  background: #fbd38d;
+  color: #744210;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.fp4CleanBtn:hover {
+  background: #f6ad55;
+  transform: translateY(-1px);
+}
+
+.fp4CleanBtn:active {
+  transform: translateY(0);
+}
+
+.fp4CleanBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
+}
+
+/* 🔥 NUEVO: Desglose de líneas */
+.fp4DesgloseLineas {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #0ea5e9;
+  border: 1px solid #bae6fd;
+}
+
+.fp4DesgloseLineas h4 {
+  margin: 0 0 1rem 0;
+  color: #0369a1;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fp4LineaResumen {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.fp4LineaResumen:last-child {
+  border-bottom: none;
+}
+
+.fp4LineaResumen span:first-child {
+  font-weight: 600;
+  color: #475569;
+}
+
+.fp4LineaResumen span:last-child {
+  color: #64748b;
+  text-align: right;
 }
 
 /* Totales Section */
@@ -196,6 +339,13 @@
   border-radius: 8px;
   border: 1px solid #bae6fd;
   margin-top: 2rem;
+}
+
+.fp4Totales h4 {
+  margin: 0 0 1rem 0;
+  color: #0369a1;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .fp4TotalItem {
@@ -215,6 +365,11 @@
   margin-top: 0.5rem;
   padding-top: 1rem;
   font-size: 1.1rem;
+  background: linear-gradient(135deg, #3F9AAC, #2c7a8a);
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
 }
 
 /* Resumen Section */
@@ -223,18 +378,62 @@
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #bae6fd;
+  margin-bottom: 1rem;
 }
 
 .fp4ResumenItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.fp4ResumenItem:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.fp4ResumenItem:nth-child(even) {
+  background: white;
 }
 
 .fp4ResumenItem:last-child {
   border-bottom: none;
+}
+
+.fp4ResumenItem span:first-child {
+  font-weight: 600;
+  color: #475569;
+  min-width: 80px;
+}
+
+.fp4ResumenItem span:nth-child(2) {
+  flex: 1;
+  margin: 0 1rem;
+  color: #64748b;
+}
+
+.fp4ResumenItem span:last-child {
+  font-weight: 600;
+  color: #3F9AAC;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* 🔥 NUEVO: Información adicional */
+.fp4InfoAdicional {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.fp4InfoAdicional small {
+  color: #0056b3;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 /* File Input */
@@ -244,6 +443,7 @@
   border-radius: 8px;
   background: #fafbfc;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .fp4FileInput:hover {
@@ -251,12 +451,44 @@
   background: #f0f9ff;
 }
 
+.fp4FileInput:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp4FileInfo {
+  margin-top: 0.75rem;
+}
+
+.fp4FileInfo small {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.fp4FileInfo code {
+  background: #f1f5f9;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
 .fp4FileName {
   display: block;
-  margin-top: 0.5rem;
-  color: #3F9AAC;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  color: #166534;
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.fp4FileName small {
+  color: #059669;
+  font-size: 0.8rem;
 }
 
 /* Button Group */
@@ -279,6 +511,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9rem;
+  min-width: 120px;
 }
 
 .fp4CancelBtn {
@@ -291,6 +524,15 @@
   transform: translateY(-1px);
 }
 
+.fp4CancelBtn:active {
+  transform: translateY(0);
+}
+
+.fp4CancelBtn:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
 .fp4ClearBtn {
   background: #fbd38d;
   color: #744210;
@@ -299,6 +541,15 @@
 .fp4ClearBtn:hover:not(:disabled) {
   background: #f6ad55;
   transform: translateY(-1px);
+}
+
+.fp4ClearBtn:active {
+  transform: translateY(0);
+}
+
+.fp4ClearBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
 }
 
 .fp4SubmitBtn {
@@ -313,6 +564,15 @@
   box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
+.fp4SubmitBtn:active {
+  transform: translateY(0);
+}
+
+.fp4SubmitBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
 .fp4SubmitBtn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
@@ -320,9 +580,112 @@
   box-shadow: none;
 }
 
+/* Loading States */
+.fp4LoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 100;
+}
+
+.fp4LoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3F9AAC;
+  border-radius: 50%;
+  animation: fp4Spin 1s linear infinite;
+}
+
+@keyframes fp4Spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.fp4ErrorMessage {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* Success States */
+.fp4SuccessMessage {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* 🔥 NUEVO: Estilos para selects de react-select */
+.fp4FormGroup :global(.css-13cymwt-control),
+.fp4FormGroup :global(.css-t3ipsp-control) {
+  min-height: 48px;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.fp4FormGroup :global(.css-t3ipsp-control) {
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
+}
+
+.fp4FormGroup :global(.css-1u9des2-indicatorSeparator) {
+  background-color: #cbd5e0;
+}
+
+.fp4FormGroup :global(.css-1xc3v61-indicatorContainer),
+.fp4FormGroup :global(.css-15lsz6c-indicatorContainer) {
+  color: #718096;
+}
+
+.fp4FormGroup :global(.css-1fdsijx-ValueContainer) {
+  padding: 0 12px;
+}
+
+/* 🔥 NUEVO: Estilos para tooltips e información contextual */
+.fp4FormGroup small {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+/* 🔥 NUEVO: Estados de validación visual mejorados */
+.fp4FormGroup:has(input:invalid:not(:placeholder-shown))::after {
+  content: "⚠️ Campo requerido";
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.fp4FormGroup:has(input:valid:not(:placeholder-shown))::after {
+  content: "✅ Válido";
+  color: #16a34a;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Responsive Design */
 @media (max-width: 1024px) {
   .fp4Container {
-    padding: 1rem;
+    padding: 1.5rem;
   }
   
   .fp4Header {
@@ -334,9 +697,17 @@
   .fp4AsientoInfo {
     justify-content: flex-start;
   }
+  
+  .fp4FormRow {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
+  .fp4Container {
+    padding: 1rem;
+  }
+  
   .fp4FormRow {
     grid-template-columns: 1fr;
   }
@@ -352,4 +723,106 @@
   .fp4DetalleLinea {
     padding: 1rem;
   }
+  
+  .fp4DetallesActions {
+    flex-direction: column;
+  }
+  
+  .fp4LineaResumen {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp4ResumenItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp4ResumenItem span:nth-child(2) {
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .fp4Container {
+    padding: 0.5rem;
+  }
+  
+  .fp4Section {
+    padding: 1rem;
+  }
+  
+  .fp4Header {
+    padding: 1rem;
+  }
+  
+  .fp4AsientoInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fp4ButtonGroup {
+    padding: 1rem;
+  }
+  
+  .fp4DetalleLinea .fp4FormRow {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .fp4LineaHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+/* 🔥 NUEVO: Animaciones suaves para transiciones */
+.fp4DetalleLinea {
+  animation: fp4SlideIn 0.3s ease-out;
+}
+
+@keyframes fp4SlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 🔥 NUEVO: Estados de hover mejorados */
+.fp4Section:hover .fp4Section h3 {
+  color: #3F9AAC;
+  border-bottom-color: #3F9AAC;
+}
+
+/* 🔥 NUEVO: Scroll suave para áreas con mucho contenido */
+.fp4Detalles {
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f1f5f9;
+}
+
+.fp4Detalles::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fp4Detalles::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.fp4Detalles::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.fp4Detalles::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

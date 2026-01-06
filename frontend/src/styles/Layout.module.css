@@ -1,4 +1,4 @@
-/* ===== Layout.module.css ===== */
+/* ===== Layout.module.css - VERSIÓN OPTIMIZADA ===== */
 .lyLayout {
   min-height: 100vh;
   display: flex;
@@ -32,9 +32,14 @@
 }
 
 .lyLogo {
-  height: 60px; /* Logo más grande */
+  height: 60px;
   width: auto;
   object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.lyLogo:hover {
+  transform: scale(1.05);
 }
 
 .lyBrandText {
@@ -67,6 +72,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.lyUserInfo span:hover {
+  color: #3F9AAC;
 }
 
 .lyUserInfo strong {
@@ -102,17 +112,42 @@
   align-items: center;
   gap: 0.5rem;
   border: 1px solid transparent;
+  position: relative;
 }
 
 .lyNavMenu a:hover {
   background: #f1f5f9;
   color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.lyNavMenu a:active {
+  transform: translateY(0);
+}
+
+.lyNavMenu a:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
 }
 
 .lyNavMenu a.active {
   background: #2563eb;
   color: #ffffff;
   border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+  position: relative;
+}
+
+.lyNavMenu a.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 2px;
 }
 
 .lyLogoutBtn {
@@ -135,12 +170,55 @@
   background: #fef2f2;
   color: #dc2626;
   border-color: #fecaca;
+  transform: translateY(-1px);
+}
+
+.lyLogoutBtn:active {
+  transform: translateY(0);
+}
+
+.lyLogoutBtn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .lyMainContent {
   flex: 1;
   background: #f8fafc;
   padding: 0;
+}
+
+/* Loading State para Layout */
+.lyLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.lyLoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #3F9AAC;
+  border-radius: 50%;
+  animation: lySpin 1s linear infinite;
+}
+
+@keyframes lySpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error State para Layout */
+.lyError {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  margin: 1rem 2rem;
+  border-radius: 8px;
+  text-align: center;
 }
 
 /* Responsive */
@@ -177,6 +255,11 @@
   .lyLogoutBtn {
     justify-content: flex-start;
   }
+  
+  .lyNavMenu a.active::after {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -191,7 +274,7 @@
   }
   
   .lyLogo {
-    height: 50px; /* Un poco más pequeño en móviles */
+    height: 50px;
   }
   
   .lyUserInfo {
@@ -208,7 +291,7 @@
 /* Para pantallas muy grandes */
 @media (min-width: 1400px) {
   .lyLogo {
-    height: 70px; /* Aún más grande en pantallas grandes */
+    height: 70px;
   }
   
   .lyBrandText h1 {

@@ -1,4 +1,4 @@
-/* styles/FormPage6.module.css - ESTILO UNIFICADO */
+/* styles/FormPage6.module.css - ESTILO UNIFICADO OPTIMIZADO */
 .fp6Container {
   padding: 2rem;
   max-width: 1400px;
@@ -89,6 +89,12 @@
 .fp6FormGroup {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.fp6FormGroup:focus-within label {
+  color: #3F9AAC;
+  font-weight: 700;
 }
 
 .fp6FormGroup label {
@@ -96,6 +102,7 @@
   font-weight: 600;
   color: #4a5568;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .fp6FormGroup input,
@@ -114,6 +121,23 @@
   border-color: #3F9AAC;
   box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
   transform: translateY(-1px);
+}
+
+.fp6FormGroup input:focus-visible,
+.fp6FormGroup select:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp6FormGroup input:invalid:not(:placeholder-shown),
+.fp6FormGroup select:invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.fp6FormGroup input:valid:not(:placeholder-shown),
+.fp6FormGroup select:valid {
+  border-color: #16a34a;
 }
 
 .fp6Readonly {
@@ -144,10 +168,24 @@
   align-items: center;
   padding: 1rem 0;
   border-bottom: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.fp6ResumenItem:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.fp6ResumenItem:nth-child(even) {
+  background: white;
 }
 
 .fp6ResumenItem:last-child {
   border-bottom: none;
+}
+
+.fp6ResumenItem:hover {
+  background: #e6f3ff;
+  transform: translateX(4px);
 }
 
 .fp6DebeHaber {
@@ -179,6 +217,21 @@
 .fp6FileInput:hover {
   border-color: #3F9AAC;
   background: #f0f9ff;
+}
+
+.fp6FileInput:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp6FileInput:valid {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.fp6FileInput:invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
 }
 
 .fp6FileName {
@@ -221,6 +274,15 @@
   transform: translateY(-1px);
 }
 
+.fp6CancelBtn:active {
+  transform: translateY(0);
+}
+
+.fp6CancelBtn:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
 .fp6ClearBtn {
   background: #fbd38d;
   color: #744210;
@@ -229,6 +291,15 @@
 .fp6ClearBtn:hover:not(:disabled) {
   background: #f6ad55;
   transform: translateY(-1px);
+}
+
+.fp6ClearBtn:active {
+  transform: translateY(0);
+}
+
+.fp6ClearBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
 }
 
 .fp6SubmitBtn {
@@ -243,6 +314,15 @@
   box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
+.fp6SubmitBtn:active {
+  transform: translateY(0);
+}
+
+.fp6SubmitBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
 .fp6SubmitBtn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
@@ -250,10 +330,61 @@
   box-shadow: none;
 }
 
+/* Loading States */
+.fp6LoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 100;
+}
+
+.fp6LoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3F9AAC;
+  border-radius: 50%;
+  animation: fp6Spin 1s linear infinite;
+}
+
+@keyframes fp6Spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.fp6ErrorMessage {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* Success States */
+.fp6SuccessMessage {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .fp6Container {
-    padding: 1rem;
+    padding: 1.5rem;
   }
   
   .fp6Header {
@@ -268,6 +399,10 @@
 }
 
 @media (max-width: 768px) {
+  .fp6Container {
+    padding: 1rem;
+  }
+  
   .fp6FormRow {
     grid-template-columns: 1fr;
   }
@@ -278,6 +413,18 @@
   
   .fp6Section {
     padding: 1.5rem;
+  }
+  
+  .fp6ResumenItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .fp6DebeHaber,
+  .fp6CuentaInfo,
+  .fp6Importe {
+    margin: 0;
   }
 }
 

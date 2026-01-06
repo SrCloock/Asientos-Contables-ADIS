@@ -1,4 +1,4 @@
-/* styles/FormPage7.module.css - ESTILO UNIFICADO */
+/* styles/FormPage7.module.css - ESTILO UNIFICADO OPTIMIZADO */
 .fp7Container {
   padding: 2rem;
   max-width: 1400px;
@@ -59,11 +59,13 @@
 .fp7Section {
   padding: 2rem;
   border-bottom: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fp7Section:hover {
   background: #fafbfc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .fp7Section:last-child {
@@ -89,6 +91,12 @@
 .fp7FormGroup {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.fp7FormGroup:focus-within label {
+  color: #3F9AAC;
+  font-weight: 700;
 }
 
 .fp7FormGroup label {
@@ -96,6 +104,7 @@
   font-weight: 600;
   color: #4a5568;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .fp7FormGroup input,
@@ -116,11 +125,79 @@
   transform: translateY(-1px);
 }
 
+.fp7FormGroup input:focus-visible,
+.fp7FormGroup select:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp7FormGroup input:invalid:not(:placeholder-shown),
+.fp7FormGroup select:invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.fp7FormGroup input:valid:not(:placeholder-shown),
+.fp7FormGroup select:valid {
+  border-color: #16a34a;
+}
+
 .fp7Readonly {
   background-color: #f7fafc !important;
   color: #718096 !important;
   border-color: #e2e8f0 !important;
   cursor: not-allowed;
+}
+
+/* Resumen Section */
+.fp7Resumen {
+  background: #f0f9ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+
+.fp7ResumenItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.fp7ResumenItem:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.fp7ResumenItem:nth-child(even) {
+  background: white;
+}
+
+.fp7ResumenItem:last-child {
+  border-bottom: none;
+}
+
+.fp7ResumenItem:hover {
+  background: #e6f3ff;
+  transform: translateX(4px);
+}
+
+.fp7DebeHaber {
+  font-weight: 600;
+  color: #2d3748;
+  min-width: 80px;
+}
+
+.fp7CuentaInfo {
+  flex: 1;
+  margin: 0 1rem;
+  color: #4a5568;
+}
+
+.fp7Importe {
+  font-weight: 600;
+  color: #2d3748;
 }
 
 /* File Input */
@@ -135,6 +212,21 @@
 .fp7FileInput:hover {
   border-color: #3F9AAC;
   background: #f0f9ff;
+}
+
+.fp7FileInput:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp7FileInput:valid {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.fp7FileInput:invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
 }
 
 .fp7FileName {
@@ -177,6 +269,15 @@
   transform: translateY(-1px);
 }
 
+.fp7CancelBtn:active {
+  transform: translateY(0);
+}
+
+.fp7CancelBtn:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
 .fp7ClearBtn {
   background: #fbd38d;
   color: #744210;
@@ -185,6 +286,15 @@
 .fp7ClearBtn:hover:not(:disabled) {
   background: #f6ad55;
   transform: translateY(-1px);
+}
+
+.fp7ClearBtn:active {
+  transform: translateY(0);
+}
+
+.fp7ClearBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
 }
 
 .fp7SubmitBtn {
@@ -199,6 +309,15 @@
   box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
 }
 
+.fp7SubmitBtn:active {
+  transform: translateY(0);
+}
+
+.fp7SubmitBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
 .fp7SubmitBtn:disabled {
   background: #a0aec0;
   cursor: not-allowed;
@@ -206,10 +325,94 @@
   box-shadow: none;
 }
 
+/* Estilos para selects de react-select */
+.fp7FormGroup :global(.react-select__control) {
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  min-height: 38px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.fp7FormGroup :global(.react-select__control--is-focused) {
+  border-color: #3F9AAC;
+  box-shadow: 0 0 0 3px rgba(63, 154, 172, 0.15);
+  transform: translateY(-1px);
+}
+
+.fp7FormGroup :global(.react-select__control--is-disabled) {
+  background-color: #f7fafc;
+  border-color: #e2e8f0;
+}
+
+.fp7FormGroup :global(.react-select__menu) {
+  font-size: 0.9rem;
+  z-index: 9999;
+}
+
+.fp7FormGroup :global(.react-select__option) {
+  cursor: pointer;
+}
+
+.fp7FormGroup :global(.react-select__option--is-focused) {
+  background-color: #e6f3ff;
+}
+
+/* Loading States */
+.fp7LoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 100;
+}
+
+.fp7LoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3F9AAC;
+  border-radius: 50%;
+  animation: fp7Spin 1s linear infinite;
+}
+
+@keyframes fp7Spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.fp7ErrorMessage {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* Success States */
+.fp7SuccessMessage {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .fp7Container {
-    padding: 1rem;
+    padding: 1.5rem;
   }
   
   .fp7Header {
@@ -224,6 +427,10 @@
 }
 
 @media (max-width: 768px) {
+  .fp7Container {
+    padding: 1rem;
+  }
+  
   .fp7FormRow {
     grid-template-columns: 1fr;
   }

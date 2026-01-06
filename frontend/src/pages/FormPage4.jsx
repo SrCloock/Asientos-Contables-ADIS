@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN COMPLETA CON GESTIÓN DE DOCUMENTOS CORREGIDA
+// pages/FormPage4.jsx - VERSIÓN COMPLETA CON TIPOS DESDE BASE DE DATOS Y NUEVO ACREEDOR
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -13,8 +13,14 @@ const FormPage4 = ({ user }) => {
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Nuevos estados para datos maestros
+  // Nuevos estados para tipos desde BD
+  const [tiposIVA, setTiposIVA] = useState([]);
+  const [tiposRetencion, setTiposRetencion] = useState([]);
   const [cuentasGasto, setCuentasGasto] = useState([]);
+  
+  // Estados para valores por defecto
+  const [ivaDefault, setIvaDefault] = useState('21');
+  const [retencionDefault, setRetencionDefault] = useState('0');
   
   // DATOS ANALÍTICOS FIJOS desde tabla Clientes (sesión)
   const [serie, setSerie] = useState('');
@@ -39,7 +45,7 @@ const FormPage4 = ({ user }) => {
   // NUEVO CAMPO: Concepto obligatorio
   const [concepto, setConcepto] = useState('');
   
-  // Campos de proveedor
+  // Campos de proveedor/acreedor
   const [cuentaP, setCuentaP] = useState('');
   const [datosCuentaP, setDatosCuentaP] = useState({ 
     cif: '', 
@@ -48,27 +54,23 @@ const FormPage4 = ({ user }) => {
     cuentaContable: ''
   });
   
+  // Estados para determinar tipo de cuenta
   const isNuevoProveedor = cuentaP === '4000';
+  const isNuevoAcreedor = cuentaP === '4100';
+  const isNuevo = isNuevoProveedor || isNuevoAcreedor;
   
   // Campos específicos
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [archivo, setArchivo] = useState(null);
   
-  // Detalles adaptados para IVA no deducible CON RETENCIÓN (0% por defecto)
-  const [detalles, setDetalles] = useState([
-    { 
-      base: '', 
-      tipoIVA: '21', 
-      cuotaIVA: 0,
-      retencion: '0', // ✅ CORREGIDO: 0% por defecto
-      cuotaRetencion: 0,
-      importeTotalLinea: 0
-    }
-  ]);
-
+  // Detalles con valores iniciales basados en defaults
+  const [detalles, setDetalles] = useState([]);
+  
   // Estados para react-select
   const [proveedoresOptions, setProveedoresOptions] = useState([]);
   const [cuentasGastoOptions, setCuentasGastoOptions] = useState([]);
+  const [tiposIVALoaded, setTiposIVALoaded] = useState(false);
+  const [tiposRetencionLoaded, setTiposRetencionLoaded] = useState(false);
 
   // Efectos para cargar datos maestros
   useEffect(() => {
@@ -88,7 +90,7 @@ const FormPage4 = ({ user }) => {
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
-        // Obtener datos de la sesión que ahora incluye todos los campos analíticos
+        // Obtener datos de la sesión
         const sessionRes = await axios.get(`${config.apiBaseUrl}/api/session`, { 
           withCredentials: true 
         });
@@ -111,27 +113,70 @@ const FormPage4 = ({ user }) => {
           });
         }
 
-        // Cargar el resto de datos maestros
+        // Cargar todos los datos maestros en paralelo
         const [
           proveedoresRes, 
           cuentasRes, 
-          gastosRes
+          gastosRes,
+          ivaRes,
+          retencionRes
         ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/tipos-iva`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/tipos-retencion`, { withCredentials: true })
         ]);
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
+        
+        // Procesar tipos de IVA
+        const tiposIVAFormateados = ivaRes.data.map(tipo => ({
+          ...tipo,
+          PorcentajeIva: parseFloat(tipo.PorcentajeIva).toString()
+        }));
+        setTiposIVA(tiposIVAFormateados);
+        setTiposIVALoaded(true);
+        
+        // Buscar IVA 21% por defecto
+        const iva21 = tiposIVAFormateados.find(t => t.PorcentajeIva === '21');
+        if (iva21) {
+          setIvaDefault('21');
+        } else if (tiposIVAFormateados.length > 0) {
+          setIvaDefault(tiposIVAFormateados[0].PorcentajeIva);
+        }
+        
+        // Procesar tipos de retención
+        const tiposRetencionFormateados = retencionRes.data.map(tipo => ({
+          ...tipo,
+          PorcentajeRetencion: parseFloat(tipo.PorcentajeRetencion).toString()
+        }));
+        setTiposRetencion(tiposRetencionFormateados);
+        setTiposRetencionLoaded(true);
+        
+        // Buscar retención 0% por defecto
+        const retencion0 = tiposRetencionFormateados.find(t => t.PorcentajeRetencion === '0');
+        if (retencion0) {
+          setRetencionDefault('0');
+        } else if (tiposRetencionFormateados.length > 0) {
+          setRetencionDefault(tiposRetencionFormateados[0].PorcentajeRetencion);
+        }
 
-        // Preparar opciones para selects
+        // Preparar opciones para selects - CON NUEVO ACREEDOR
         const proveedoresOpts = [
           { 
             value: '4000', 
             label: '➕ NUEVO PROVEEDOR (400000000)',
-            isNuevo: true 
+            isNuevo: true,
+            tipoCuenta: 'proveedor'
+          },
+          { 
+            value: '4100', 
+            label: '➕ NUEVO ACREEDOR (410000000)',
+            isNuevo: true,
+            tipoCuenta: 'acreedor'
           },
           ...proveedoresRes.data.map(prov => {
             const cuentaProv = cuentasRes.data.find(p => p.codigo === prov.codigo);
@@ -139,7 +184,8 @@ const FormPage4 = ({ user }) => {
               value: prov.codigo,
               label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '400000000'}`,
               proveedorData: prov,
-              cuentaData: cuentaProv
+              cuentaData: cuentaProv,
+              tipoCuenta: 'existente'
             };
           })
         ];
@@ -172,7 +218,21 @@ const FormPage4 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // CORREGIDO: Actualizar datos proveedor - CON OPCIÓN NUEVO PROVEEDOR
+  // Inicializar detalles una vez cargados los tipos
+  useEffect(() => {
+    if (tiposIVALoaded && tiposRetencionLoaded && detalles.length === 0) {
+      setDetalles([{ 
+        base: '', 
+        tipoIVA: ivaDefault, 
+        cuotaIVA: 0,
+        retencion: retencionDefault,
+        cuotaRetencion: 0,
+        importeTotalLinea: 0
+      }]);
+    }
+  }, [tiposIVALoaded, tiposRetencionLoaded, ivaDefault, retencionDefault]);
+
+  // CORREGIDO: Actualizar datos proveedor/acreedor - CON OPCIÓN NUEVO PROVEEDOR Y NUEVO ACREEDOR
   useEffect(() => {
     if (cuentaP) {
       if (cuentaP === '4000') {
@@ -182,6 +242,14 @@ const FormPage4 = ({ user }) => {
           nombre: '',
           cp: '',
           cuentaContable: '400000000'
+        });
+      } else if (cuentaP === '4100') {
+        // NUEVO ACREEDOR - Campos editables
+        setDatosCuentaP({
+          cif: '',
+          nombre: '',
+          cp: '',
+          cuentaContable: '410000000'
         });
       } else {
         // Proveedor existente
@@ -200,9 +268,9 @@ const FormPage4 = ({ user }) => {
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR
+  // MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR/ACREEDOR
   const handleDatosProveedorChange = (field, value) => {
-    if (isNuevoProveedor) {
+    if (isNuevo) {
       setDatosCuentaP(prev => ({
         ...prev,
         [field]: value
@@ -216,12 +284,21 @@ const FormPage4 = ({ user }) => {
       setCuentaP(selectedOption.value);
       
       if (selectedOption.isNuevo) {
-        setDatosCuentaP({
-          cif: '',
-          nombre: '',
-          cp: '',
-          cuentaContable: '400000000'
-        });
+        if (selectedOption.tipoCuenta === 'proveedor') {
+          setDatosCuentaP({
+            cif: '',
+            nombre: '',
+            cp: '',
+            cuentaContable: '400000000'
+          });
+        } else if (selectedOption.tipoCuenta === 'acreedor') {
+          setDatosCuentaP({
+            cif: '',
+            nombre: '',
+            cp: '',
+            cuentaContable: '410000000'
+          });
+        }
       } else {
         const proveedor = selectedOption.proveedorData;
         const cuentaProv = selectedOption.cuentaData;
@@ -278,7 +355,7 @@ const FormPage4 = ({ user }) => {
     })
   };
 
-  // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN (0% por defecto)
+  // MODIFICADO: Manejo de detalles - IVA NO DEDUCIBLE CON RETENCIÓN desde BD
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
@@ -302,13 +379,13 @@ const FormPage4 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
-  // ✅ CORREGIDO: Retención por defecto 0%
+  // ✅ CORREGIDO: Retención por defecto desde BD
   const addDetalleLine = () => {
     setDetalles([...detalles, { 
       base: '', 
-      tipoIVA: '21', 
+      tipoIVA: ivaDefault, 
       cuotaIVA: 0,
-      retencion: '0', // ✅ 0% por defecto
+      retencion: retencionDefault,
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
@@ -357,19 +434,19 @@ const FormPage4 = ({ user }) => {
       errores.push('El concepto es obligatorio');
     }
     if (!cuentaP) {
-      errores.push('Debe seleccionar un proveedor');
+      errores.push('Debe seleccionar un proveedor/acreedor');
     }
     if (!cuentaGasto) {
       errores.push('Debe seleccionar una cuenta de gasto');
     }
     
-    // Validar campos de nuevo proveedor si es necesario
-    if (isNuevoProveedor) {
+    // Validar campos de nuevo proveedor/acreedor si es necesario
+    if (isNuevo) {
       if (!datosCuentaP.cif.trim()) {
-        errores.push('El CIF/NIF es obligatorio para nuevo proveedor');
+        errores.push('El CIF/NIF es obligatorio para nuevo proveedor/acreedor');
       }
       if (!datosCuentaP.nombre.trim()) {
-        errores.push('La razón social es obligatoria para nuevo proveedor');
+        errores.push('La razón social es obligatoria para nuevo proveedor/acreedor');
       }
     }
     
@@ -430,7 +507,7 @@ const FormPage4 = ({ user }) => {
       console.log('- Vencimiento:', vencimientoFormatted);
 
       // COMENTARIO COMBINADO: Nº FRA - Concepto (formato corregido)
-      const comentarioCombinado = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
+      const comentarioCombinado = `${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
         // Datos de documento CON FECHAS CORREGIDAS
@@ -444,13 +521,15 @@ const FormPage4 = ({ user }) => {
         concepto,
         comentario: comentarioCombinado,
         
-        // Datos de proveedor - USAR CUENTA CONTABLE REAL
+        // Datos de proveedor/acreedor - USAR CUENTA CONTABLE REAL
         proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable || '400000000',
+          cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '410000000' : '400000000'),
           codigoProveedor: cuentaP,
           cif: datosCuentaP.cif,
           nombre: datosCuentaP.nombre,
-          cp: datosCuentaP.cp
+          cp: datosCuentaP.cp,
+          // Añadir campo para identificar si es acreedor
+          esAcreedor: isNuevoAcreedor
         },
         
         // Datos específicos
@@ -478,7 +557,8 @@ const FormPage4 = ({ user }) => {
 
       if (response.data.success) {
         const lineasCreadas = response.data.detalles.lineas;
-        alert(`✅ Asiento #${response.data.asiento} - Factura Proveedor (IVA No Deducible) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
+        const tipo = isNuevoAcreedor ? 'Acreedor' : 'Proveedor';
+        alert(`✅ Asiento #${response.data.asiento} - Factura ${tipo} (IVA No Deducible) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -501,9 +581,9 @@ const FormPage4 = ({ user }) => {
     setVencimiento('');
     setDetalles([{ 
       base: '', 
-      tipoIVA: '21', 
+      tipoIVA: ivaDefault, 
       cuotaIVA: 0, 
-      retencion: '0', // ✅ 0% por defecto
+      retencion: retencionDefault,
       cuotaRetencion: 0,
       importeTotalLinea: 0 
     }]);
@@ -531,12 +611,24 @@ const FormPage4 = ({ user }) => {
     return cuenta ? cuenta.nombre : '';
   };
 
+  // Obtener nombre de la cuenta de proveedor/acreedor
+  const getNombreCuentaProveedor = () => {
+    if (isNuevoProveedor) {
+      return 'Proveedores (Nuevo)';
+    } else if (isNuevoAcreedor) {
+      return 'Acreedores (Nuevo)';
+    } else {
+      const proveedor = proveedores.find(p => p.codigo === cuentaP);
+      return proveedor ? proveedor.nombre : 'Proveedores';
+    }
+  };
+
   return (
     <div className={styles.fp4Container}>
       <div className={styles.fp4Header}>
         <h2>
           <FaFileInvoiceDollar />
-          Factura de Proveedor (IVA No Deducible)
+          Factura de Proveedor/Acreedor (IVA No Deducible)
         </h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -570,12 +662,12 @@ const FormPage4 = ({ user }) => {
               />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Nº Factura Proveedor</label>
+              <label>Nº Factura Proveedor/Acreedor</label>
               <input 
                 type="text" 
                 value={numFRA}
                 onChange={(e) => setNumFRA(e.target.value)}
-                placeholder="Número de factura del proveedor"
+                placeholder="Número de factura"
               />
             </div>
           </div>
@@ -588,7 +680,7 @@ const FormPage4 = ({ user }) => {
                 type="text" 
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del gasto/proveedor"
+                placeholder="Descripción del gasto/proveedor/acreedor"
                 required
               />
             </div>
@@ -634,46 +726,49 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Datos del Proveedor - CON SELECT CON BÚSQUEDA */}
+        {/* Sección de Datos del Proveedor/Acreedor - CON SELECT CON BÚSQUEDA */}
         <div className={styles.fp4Section}>
-          <h3>Datos del Proveedor</h3>
+          <h3>Datos del Proveedor/Acreedor</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Seleccionar Proveedor *</label>
+              <label>Seleccionar Proveedor/Acreedor *</label>
               <Select
                 options={proveedoresOptions}
                 value={proveedoresOptions.find(option => option.value === cuentaP)}
                 onChange={handleProveedorChange}
-                placeholder="Buscar o seleccionar proveedor..."
+                placeholder="Buscar o seleccionar proveedor/acreedor..."
                 isSearchable
                 styles={customStyles}
                 required
               />
+              <small>
+                Seleccione "Nuevo Proveedor" para cuenta 400000000 o "Nuevo Acreedor" para cuenta 410000000
+              </small>
             </div>
           </div>
 
-          {/* CAMPOS DE PROVEEDOR - EDITABLES SI ES NUEVO */}
+          {/* CAMPOS DE PROVEEDOR/ACREEDOR - EDITABLES SI ES NUEVO */}
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>CIF/NIF {isNuevoProveedor && '*'}</label>
+              <label>CIF/NIF {isNuevo && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.cif}
                 onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp4Readonly : ''}
-                required={isNuevoProveedor}
+                readOnly={!isNuevo}
+                className={!isNuevo ? styles.fp4Readonly : ''}
+                required={isNuevo}
               />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Razón Social {isNuevoProveedor && '*'}</label>
+              <label>Razón Social {isNuevo && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.nombre}
                 onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp4Readonly : ''}
-                required={isNuevoProveedor}
+                readOnly={!isNuevo}
+                className={!isNuevo ? styles.fp4Readonly : ''}
+                required={isNuevo}
               />
             </div>
             <div className={styles.fp4FormGroup}>
@@ -682,8 +777,8 @@ const FormPage4 = ({ user }) => {
                 type="text" 
                 value={datosCuentaP.cp}
                 onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
-                readOnly={!isNuevoProveedor}
-                className={!isNuevoProveedor ? styles.fp4Readonly : ''}
+                readOnly={!isNuevo}
+                className={!isNuevo ? styles.fp4Readonly : ''}
               />
             </div>
             <div className={styles.fp4FormGroup}>
@@ -694,6 +789,11 @@ const FormPage4 = ({ user }) => {
                 readOnly
                 className={styles.fp4Readonly}
               />
+              <small>
+                {isNuevoProveedor ? 'Cuenta Proveedores (400000000)' : 
+                 isNuevoAcreedor ? 'Cuenta Acreedores (410000000)' : 
+                 'Cuenta del proveedor existente'}
+              </small>
             </div>
           </div>
         </div>
@@ -765,10 +865,11 @@ const FormPage4 = ({ user }) => {
                       value={line.tipoIVA}
                       onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
                     >
-                      <option value="21">21% General</option>
-                      <option value="10">10% Reducido</option>
-                      <option value="4">4% Superreducido</option>
-                      <option value="0">0% Exento</option>
+                      {tiposIVA.map(tipo => (
+                        <option key={tipo.CodigoIva} value={tipo.PorcentajeIva}>
+                          {tipo.PorcentajeIva}% - {tipo.Iva}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   
@@ -783,18 +884,18 @@ const FormPage4 = ({ user }) => {
                     />
                   </div>
                   
-                  {/* Campos de Retención */}
+                  {/* Campos de Retención DESDE BASE DE DATOS */}
                   <div className={styles.fp4FormGroup}>
                     <label>% Retención</label>
                     <select
                       value={line.retencion}
                       onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
                     >
-                      <option value="19">19% Alquileres</option>
-                      <option value="15">15% Profesional</option>
-                      <option value="7">7% Reducido</option>
-                      <option value="1">1% Especial</option>
-                      <option value="0">0% Sin retención</option>
+                      {tiposRetencion.map(tipo => (
+                        <option key={tipo.CodigoRetencion} value={tipo.PorcentajeRetencion}>
+                          {tipo.PorcentajeRetencion}% - {tipo.Retencion}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   
@@ -903,10 +1004,10 @@ const FormPage4 = ({ user }) => {
               </div>
             )}
             
-            {/* LÍNEA 3: PROVEEDOR */}
+            {/* LÍNEA 3: PROVEEDOR/ACREEDOR */}
             <div className={styles.fp4ResumenItem}>
               <span>HABER:</span>
-              <span>{datosCuentaP.cuentaContable} - Proveedores</span>
+              <span>{datosCuentaP.cuentaContable} - {getNombreCuentaProveedor()}</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
             

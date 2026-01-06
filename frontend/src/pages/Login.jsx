@@ -123,7 +123,7 @@ const Login = () => {
             onClick={() => setShowHelpModal(true)}
             className={styles.lgHelpButton}
           >
-            <FaQuestionCircle /> ¿Necesitas ayuda?
+            <FaQuestionCircle /> Videotutorial
           </button>
         </form>
       </div>

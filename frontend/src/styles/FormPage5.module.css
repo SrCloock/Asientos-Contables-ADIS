@@ -1,4 +1,4 @@
-/* styles/FormPage5.module.css - ESTILO UNIFICADO CON FORMPAGE4 Y PARTES */
+/* styles/FormPage5.module.css - VERSIÓN COMPLETA Y OPTIMIZADA */
 .fp5Container {
   padding: 2rem;
   max-width: 1400px;
@@ -59,11 +59,13 @@
 .fp5Section {
   padding: 2rem;
   border-bottom: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fp5Section:hover {
   background: #fafbfc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .fp5Section:last-child {
@@ -96,6 +98,12 @@
 .fp5FormGroup {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.fp5FormGroup:focus-within label {
+  color: #3F9AAC;
+  font-weight: 700;
 }
 
 .fp5FormGroup label {
@@ -103,6 +111,7 @@
   font-weight: 600;
   color: #4a5568;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .fp5FormGroup input,
@@ -123,6 +132,23 @@
   transform: translateY(-1px);
 }
 
+.fp5FormGroup input:focus-visible,
+.fp5FormGroup select:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp5FormGroup input:invalid:not(:placeholder-shown),
+.fp5FormGroup select:invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.fp5FormGroup input:valid:not(:placeholder-shown),
+.fp5FormGroup select:valid {
+  border-color: #16a34a;
+}
+
 .fp5Readonly {
   background-color: #f7fafc !important;
   color: #718096 !important;
@@ -130,13 +156,32 @@
   cursor: not-allowed;
 }
 
-/* Detalles Container */
+/* 🔥 NUEVO: Detalles Container mejorado */
 .fp5Detalles {
   margin: 2rem 0;
   padding: 1.5rem;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+}
+
+.fp5DetallesHeader {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.fp5DetallesHeader h4 {
+  margin: 0 0 0.5rem 0;
+  color: #2d3748;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.fp5DetallesHeader small {
+  color: #718096;
+  font-style: italic;
+  font-size: 0.85rem;
 }
 
 .fp5DetalleLinea {
@@ -146,6 +191,11 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.fp5DetalleLinea:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .fp5LineaHeader {
@@ -157,9 +207,12 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.fp5LineaHeader span {
+.fp5LineaHeader span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
-  color: #4a5568;
+  color: #2d3748;
 }
 
 .fp5RemoveBtn {
@@ -181,6 +234,23 @@
   transform: translateY(-1px);
 }
 
+.fp5RemoveBtn:active {
+  transform: translateY(0);
+}
+
+.fp5RemoveBtn:focus-visible {
+  outline: 2px solid #c53030;
+  outline-offset: 2px;
+}
+
+/* 🔥 NUEVO: Acciones de detalles */
+.fp5DetallesActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
 .fp5AddBtn {
   background: #3F9AAC;
   color: white;
@@ -193,12 +263,88 @@
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
-  margin-top: 1rem;
 }
 
 .fp5AddBtn:hover {
   background: #2c7a8a;
   transform: translateY(-1px);
+}
+
+.fp5AddBtn:active {
+  transform: translateY(0);
+}
+
+.fp5AddBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp5CleanBtn {
+  background: #fbd38d;
+  color: #744210;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.fp5CleanBtn:hover {
+  background: #f6ad55;
+  transform: translateY(-1px);
+}
+
+.fp5CleanBtn:active {
+  transform: translateY(0);
+}
+
+.fp5CleanBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
+}
+
+/* 🔥 NUEVO: Desglose de líneas */
+.fp5DesgloseLineas {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #0ea5e9;
+  border: 1px solid #bae6fd;
+}
+
+.fp5DesgloseLineas h4 {
+  margin: 0 0 1rem 0;
+  color: #0369a1;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fp5LineaResumen {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.fp5LineaResumen:last-child {
+  border-bottom: none;
+}
+
+.fp5LineaResumen span:first-child {
+  font-weight: 600;
+  color: #475569;
+}
+
+.fp5LineaResumen span:last-child {
+  color: #64748b;
+  text-align: right;
 }
 
 /* Totales Section */
@@ -227,6 +373,11 @@
   margin-top: 0.5rem;
   padding-top: 1rem;
   font-size: 1.1rem;
+  background: linear-gradient(135deg, #3F9AAC, #2c7a8a);
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
 }
 
 /* Resumen Section con Partes */
@@ -243,6 +394,19 @@
   background: #f7fafc;
   border-radius: 6px;
   border-left: 4px solid #3F9AAC;
+  transition: all 0.2s ease;
+}
+
+.fp5ResumenParte:hover {
+  transform: translateX(4px);
+}
+
+.fp5ResumenParte:nth-child(odd) {
+  border-left-color: #3F9AAC;
+}
+
+.fp5ResumenParte:nth-child(even) {
+  border-left-color: #38a169;
 }
 
 .fp5ResumenParte h5 {
@@ -250,10 +414,6 @@
   color: #2d3748;
   font-size: 1rem;
   font-weight: 600;
-}
-
-.fp5ResumenParte:last-child {
-  border-left-color: #38a169;
 }
 
 .fp5ResumenItem {
@@ -317,6 +477,28 @@
   margin-bottom: 0;
 }
 
+.fp5Cuadrado {
+  background: #d1fae5 !important;
+  border-radius: 6px;
+  padding: 0.5rem 1rem !important;
+  margin-top: 0.5rem;
+}
+
+/* 🔥 NUEVO: Información adicional */
+.fp5InfoAdicional {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.fp5InfoAdicional small {
+  color: #0056b3;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 /* File Input */
 .fp5FileInput {
   padding: 0.75rem;
@@ -331,12 +513,45 @@
   background: #f0f9ff;
 }
 
+.fp5FileInput:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
+}
+
+.fp5FileInput:valid {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.fp5FileInput:invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
 .fp5FileName {
   display: block;
   margin-top: 0.5rem;
   color: #3F9AAC;
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.fp5FileInfo {
+  margin-top: 0.75rem;
+}
+
+.fp5FileInfo small {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.fp5FileInfo code {
+  background: #f1f5f9;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #475569;
 }
 
 /* Button Group */
@@ -359,6 +574,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9rem;
+  min-width: 120px;
 }
 
 .fp5CancelBtn {
@@ -371,6 +587,15 @@
   transform: translateY(-1px);
 }
 
+.fp5CancelBtn:active {
+  transform: translateY(0);
+}
+
+.fp5CancelBtn:focus-visible {
+  outline: 2px solid #4a5568;
+  outline-offset: 2px;
+}
+
 .fp5ClearBtn {
   background: #fbd38d;
   color: #744210;
@@ -379,6 +604,15 @@
 .fp5ClearBtn:hover:not(:disabled) {
   background: #f6ad55;
   transform: translateY(-1px);
+}
+
+.fp5ClearBtn:active {
+  transform: translateY(0);
+}
+
+.fp5ClearBtn:focus-visible {
+  outline: 2px solid #744210;
+  outline-offset: 2px;
 }
 
 .fp5SubmitBtn {
@@ -391,6 +625,15 @@
   background: #2c7a8a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(63, 154, 172, 0.4);
+}
+
+.fp5SubmitBtn:active {
+  transform: translateY(0);
+}
+
+.fp5SubmitBtn:focus-visible {
+  outline: 2px solid #3F9AAC;
+  outline-offset: 2px;
 }
 
 .fp5SubmitBtn:disabled {
@@ -415,6 +658,11 @@
   transform: translateY(-1px);
 }
 
+.fp5FormGroup :global(.react-select__control--is-disabled) {
+  background-color: #f7fafc;
+  border-color: #e2e8f0;
+}
+
 .fp5FormGroup :global(.react-select__menu) {
   font-size: 0.9rem;
   z-index: 9999;
@@ -428,67 +676,141 @@
   background-color: #e6f3ff;
 }
 
-/* Estados de carga */
-.fp5Loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.fp5Loading::after {
-  content: '';
+/* Loading States */
+.fp5LoadingOverlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3F9AAC;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 100;
+}
+
+.fp5LoadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3F9AAC;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: fp5Spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+@keyframes fp5Spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-/* Estados de validación */
-.fp5FormGroup input:invalid:not(:focus):not(:placeholder-shown) {
-  border-color: #fc8181;
-  background-color: #fff5f5;
+/* Error States */
+.fp5ErrorMessage {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
 }
 
-.fp5FormGroup input:valid:not(:focus):not(:placeholder-shown) {
-  border-color: #68d391;
-  background-color: #f0fff4;
+/* Success States */
+.fp5SuccessMessage {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
 }
 
-/* Tooltips para información adicional */
-.fp5Tooltip {
-  position: relative;
-  cursor: help;
-}
-
-.fp5Tooltip:hover::after {
+/* Tooltip para campos */
+.fp5FormGroup[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: #2d3748;
+  background: #1e293b;
   color: white;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   font-size: 0.8rem;
   white-space: nowrap;
   z-index: 1000;
+  margin-bottom: 0.5rem;
+}
+
+/* 🔥 NUEVO: Estados de validación visual mejorados */
+.fp5FormGroup:has(input:invalid:not(:placeholder-shown))::after {
+  content: "⚠️ Campo requerido";
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.fp5FormGroup:has(input:valid:not(:placeholder-shown))::after {
+  content: "✅ Válido";
+  color: #16a34a;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* 🔥 NUEVO: Animaciones suaves para transiciones */
+.fp5DetalleLinea {
+  animation: fp5SlideIn 0.3s ease-out;
+}
+
+@keyframes fp5SlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 🔥 NUEVO: Estados de hover mejorados */
+.fp5Section:hover .fp5Section h3 {
+  color: #3F9AAC;
+  border-bottom-color: #3F9AAC;
+}
+
+/* 🔥 NUEVO: Scroll suave para áreas con mucho contenido */
+.fp5Detalles {
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f1f5f9;
+}
+
+.fp5Detalles::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fp5Detalles::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.fp5Detalles::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.fp5Detalles::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
   .fp5Container {
-    padding: 1rem;
+    padding: 1.5rem;
   }
   
   .fp5Header {
@@ -507,6 +829,10 @@
 }
 
 @media (max-width: 768px) {
+  .fp5Container {
+    padding: 1rem;
+  }
+  
   .fp5FormRow {
     grid-template-columns: 1fr;
   }
@@ -523,34 +849,29 @@
     padding: 1rem;
   }
   
+  .fp5DetallesActions {
+    flex-direction: column;
+  }
+  
+  .fp5LineaResumen {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
   .fp5ResumenItem {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
   
-  .fp5ResumenItem span:first-child,
-  .fp5ResumenItem span:nth-child(2),
-  .fp5ResumenItem span:last-child {
-    min-width: auto;
+  .fp5ResumenItem span:nth-child(2) {
     margin: 0;
-    text-align: left;
   }
   
   .fp5ResumenItem small {
     position: static;
-    align-self: flex-end;
     margin-top: 0.25rem;
-  }
-  
-  .fp5LineaHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .fp5RemoveBtn {
-    align-self: flex-end;
   }
 }
 
@@ -576,148 +897,14 @@
     padding: 1rem;
   }
   
-  .fp5Detalles {
-    padding: 1rem;
+  .fp5DetalleLinea .fp5FormRow {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
   
-  .fp5Totales {
-    padding: 1rem;
+  .fp5LineaHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
-  
-  .fp5Resumen {
-    padding: 1rem;
-  }
-  
-  .fp5ResumenParte {
-    padding: 0.75rem;
-  }
-  
-  .fp5CancelBtn,
-  .fp5ClearBtn,
-  .fp5SubmitBtn {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.85rem;
-  }
-}
-
-/* Estilos para scroll suave */
-.fp5Container {
-  scroll-behavior: smooth;
-}
-
-/* Estilos para focús accesible */
-.fp5FormGroup input:focus-visible,
-.fp5FormGroup select:focus-visible,
-.fp5CancelBtn:focus-visible,
-.fp5ClearBtn:focus-visible,
-.fp5SubmitBtn:focus-visible {
-  outline: 2px solid #3F9AAC;
-  outline-offset: 2px;
-}
-
-/* Estilos para modo oscuro (opcional) */
-@media (prefers-color-scheme: dark) {
-  .fp5Container {
-    background: #1a202c;
-    color: #e2e8f0;
-  }
-  
-  .fp5Form,
-  .fp5Header {
-    background: #2d3748;
-    color: #e2e8f0;
-  }
-  
-  .fp5Section {
-    border-bottom-color: #4a5568;
-  }
-  
-  .fp5Section h3,
-  .fp5Section h4 {
-    color: #e2e8f0;
-  }
-  
-  .fp5FormGroup label {
-    color: #e2e8f0;
-  }
-  
-  .fp5FormGroup input,
-  .fp5FormGroup select {
-    background: #4a5568;
-    border-color: #718096;
-    color: #e2e8f0;
-  }
-  
-  .fp5Readonly {
-    background-color: #2d3748 !important;
-    color: #a0aec0 !important;
-  }
-  
-  .fp5Detalles {
-    background: #2d3748;
-    border-color: #4a5568;
-  }
-  
-  .fp5DetalleLinea {
-    background: #4a5568;
-    border-color: #718096;
-  }
-  
-  .fp5Totales {
-    background: #2d3748;
-    border-color: #4a5568;
-  }
-  
-  .fp5Resumen {
-    background: #2d3748;
-    border-color: #4a5568;
-  }
-  
-  .fp5ResumenParte {
-    background: #4a5568;
-  }
-}
-
-/* Animaciones para transiciones suaves */
-.fp5DetalleLinea {
-  transition: all 0.3s ease;
-}
-
-.fp5DetalleLinea:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.fp5Section {
-  transition: all 0.3s ease;
-}
-
-/* Estilos para mensajes de error */
-.fp5Error {
-  color: #e53e3e;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.fp5Error::before {
-  content: '⚠';
-  font-size: 0.7rem;
-}
-
-/* Estilos para mensajes de éxito */
-.fp5Success {
-  color: #38a169;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.fp5Success::before {
-  content: '✓';
-  font-size: 0.7rem;
 }
