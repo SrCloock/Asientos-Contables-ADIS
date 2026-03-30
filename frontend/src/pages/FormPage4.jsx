@@ -1,4 +1,4 @@
-// pages/FormPage4.jsx - VERSIÓN COMPLETA CON TIPOS DESDE BASE DE DATOS Y NUEVO ACREEDOR
+// pages/FormPage4.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
@@ -61,7 +61,7 @@ const FormPage4 = ({ user }) => {
   
   // Campos específicos
   const [cuentaGasto, setCuentaGasto] = useState('');
-  const [archivo, setArchivo] = useState(null);
+  const [archivo, setArchivo] = useState(''); // Cambiado de null a string vacío
   
   // Detalles con valores iniciales basados en defaults
   const [detalles, setDetalles] = useState([]);
@@ -72,14 +72,15 @@ const FormPage4 = ({ user }) => {
   const [tiposIVALoaded, setTiposIVALoaded] = useState(false);
   const [tiposRetencionLoaded, setTiposRetencionLoaded] = useState(false);
 
-  // Efectos para cargar datos maestros
+  // ✅ CORREGIDO: Contador +1 en useEffect inicial
   useEffect(() => {
     const fetchContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
-        setNumAsiento(response.data.contador);
+        // ✅ CONTADOR + 1
+        setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
       }
@@ -148,10 +149,11 @@ const FormPage4 = ({ user }) => {
           setIvaDefault(tiposIVAFormateados[0].PorcentajeIva);
         }
         
-        // Procesar tipos de retención
+        // Procesar tipos de retención - AHORA INCLUYENDO CUENTAABONO
         const tiposRetencionFormateados = retencionRes.data.map(tipo => ({
           ...tipo,
-          PorcentajeRetencion: parseFloat(tipo.PorcentajeRetencion).toString()
+          PorcentajeRetencion: parseFloat(tipo.PorcentajeRetencion).toString(),
+          CuentaAbono: tipo.CuentaAbono || '475100000'
         }));
         setTiposRetencion(tiposRetencionFormateados);
         setTiposRetencionLoaded(true);
@@ -168,13 +170,13 @@ const FormPage4 = ({ user }) => {
         const proveedoresOpts = [
           { 
             value: '4000', 
-            label: '➕ NUEVO PROVEEDOR (400000000)',
+            label: '➕ NUEVO PROVEEDOR (40000000)',
             isNuevo: true,
             tipoCuenta: 'proveedor'
           },
           { 
             value: '4100', 
-            label: '➕ NUEVO ACREEDOR (410000000)',
+            label: '➕ NUEVO ACREEDOR (41000000)',
             isNuevo: true,
             tipoCuenta: 'acreedor'
           },
@@ -182,7 +184,7 @@ const FormPage4 = ({ user }) => {
             const cuentaProv = cuentasRes.data.find(p => p.codigo === prov.codigo);
             return {
               value: prov.codigo,
-              label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '400000000'}`,
+              label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '40000000'}`,
               proveedorData: prov,
               cuentaData: cuentaProv,
               tipoCuenta: 'existente'
@@ -221,11 +223,15 @@ const FormPage4 = ({ user }) => {
   // Inicializar detalles una vez cargados los tipos
   useEffect(() => {
     if (tiposIVALoaded && tiposRetencionLoaded && detalles.length === 0) {
+      const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
+      
       setDetalles([{ 
         base: '', 
         tipoIVA: ivaDefault, 
         cuotaIVA: 0,
         retencion: retencionDefault,
+        codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+        cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
         cuotaRetencion: 0,
         importeTotalLinea: 0
       }]);
@@ -241,7 +247,7 @@ const FormPage4 = ({ user }) => {
           cif: '',
           nombre: '',
           cp: '',
-          cuentaContable: '400000000'
+          cuentaContable: '40000000'
         });
       } else if (cuentaP === '4100') {
         // NUEVO ACREEDOR - Campos editables
@@ -249,7 +255,7 @@ const FormPage4 = ({ user }) => {
           cif: '',
           nombre: '',
           cp: '',
-          cuentaContable: '410000000'
+          cuentaContable: '41000000'
         });
       } else {
         // Proveedor existente
@@ -261,7 +267,7 @@ const FormPage4 = ({ user }) => {
             cif: proveedor.cif || '',
             nombre: proveedor.nombre || '',
             cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
+            cuentaContable: cuentaProv?.cuenta || '40000000'
           });
         }
       }
@@ -289,14 +295,14 @@ const FormPage4 = ({ user }) => {
             cif: '',
             nombre: '',
             cp: '',
-            cuentaContable: '400000000'
+            cuentaContable: '40000000'
           });
         } else if (selectedOption.tipoCuenta === 'acreedor') {
           setDatosCuentaP({
             cif: '',
             nombre: '',
             cp: '',
-            cuentaContable: '410000000'
+            cuentaContable: '41000000'
           });
         }
       } else {
@@ -308,7 +314,7 @@ const FormPage4 = ({ user }) => {
             cif: proveedor.cif || '',
             nombre: proveedor.nombre || '',
             cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
+            cuentaContable: cuentaProv?.cuenta || '40000000'
           });
         }
       }
@@ -360,6 +366,15 @@ const FormPage4 = ({ user }) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
 
+    // Si cambia el porcentaje de retención, actualizar la cuenta de abono
+    if (field === 'retencion') {
+      const tipoRetencion = tiposRetencion.find(t => t.PorcentajeRetencion === value);
+      if (tipoRetencion) {
+        newDetalles[index].codigoRetencion = tipoRetencion.CodigoRetencion;
+        newDetalles[index].cuentaAbonoRetencion = tipoRetencion.CuentaAbono;
+      }
+    }
+
     const baseNum = parseFloat(newDetalles[index].base) || 0;
     const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
     const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
@@ -379,13 +394,17 @@ const FormPage4 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
-  // ✅ CORREGIDO: Retención por defecto desde BD
+  // ✅ CORREGIDO: Retención por defecto desde BD con cuenta de abono
   const addDetalleLine = () => {
+    const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
+    
     setDetalles([...detalles, { 
       base: '', 
       tipoIVA: ivaDefault, 
       cuotaIVA: 0,
       retencion: retencionDefault,
+      codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+      cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
@@ -458,16 +477,6 @@ const FormPage4 = ({ user }) => {
     return errores;
   };
 
-  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
-      setArchivo(file.name);
-      console.log(`📄 Archivo seleccionado: ${file.name}`);
-    }
-  };
-
   // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
@@ -506,8 +515,8 @@ const FormPage4 = ({ user }) => {
       console.log('- Fecha Operación:', fechaOperFormatted);
       console.log('- Vencimiento:', vencimientoFormatted);
 
-      // COMENTARIO COMBINADO: Nº FRA - Concepto (formato corregido)
-      const comentarioCombinado = `${concepto}`.trim().substring(0, 40);
+      // ✅ CORRECCIÓN: Comentario usando solo concepto
+      const comentarioCorto = `${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
         // Datos de documento CON FECHAS CORREGIDAS
@@ -519,11 +528,11 @@ const FormPage4 = ({ user }) => {
         fechaOper: fechaOperFormatted,
         vencimiento: vencimientoFormatted,
         concepto,
-        comentario: comentarioCombinado,
+        comentario: comentarioCorto, // ✅ CORREGIDO: Solo concepto
         
         // Datos de proveedor/acreedor - USAR CUENTA CONTABLE REAL
         proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '410000000' : '400000000'),
+          cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '41000000' : '40000000'),
           codigoProveedor: cuentaP,
           cif: datosCuentaP.cif,
           nombre: datosCuentaP.nombre,
@@ -536,10 +545,10 @@ const FormPage4 = ({ user }) => {
         cuentaGasto,
         analitico,
         
-        // Detalles CON RETENCIÓN
+        // Detalles CON RETENCIÓN Y CUENTA DE ABONO
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // 🔥 CORREGIDO: Solo el nombre del archivo
+        // ✅ CORREGIDO: Ruta completa del archivo (input text)
         archivo: archivo,
         
         // Totales CON RETENCIÓN
@@ -558,7 +567,8 @@ const FormPage4 = ({ user }) => {
       if (response.data.success) {
         const lineasCreadas = response.data.detalles.lineas;
         const tipo = isNuevoAcreedor ? 'Acreedor' : 'Proveedor';
-        alert(`✅ Asiento #${response.data.asiento} - Factura ${tipo} (IVA No Deducible) creado correctamente\nLíneas creadas: ${lineasCreadas}`);
+        const cuentaRetencion = response.data.detalles.cuentaRetencion || '475100000';
+        alert(`✅ Asiento #${response.data.asiento} - Factura ${tipo} (IVA No Deducible) creado correctamente\nLíneas creadas: ${lineasCreadas}\nCuenta Retención: ${cuentaRetencion}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
@@ -579,25 +589,34 @@ const FormPage4 = ({ user }) => {
     setConcepto('');
     setFechaOper('');
     setVencimiento('');
+    
+    // Reiniciar detalles con valores por defecto
+    const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
     setDetalles([{ 
       base: '', 
       tipoIVA: ivaDefault, 
       cuotaIVA: 0, 
       retencion: retencionDefault,
+      codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+      cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
       cuotaRetencion: 0,
       importeTotalLinea: 0 
     }]);
-    setArchivo(null);
+    
+    setArchivo('');
     
     // Restablecer cuenta de gasto
     if (cuentasGastoOptions.length > 0) {
       setCuentaGasto(cuentasGastoOptions[0].value);
     }
     
+    // ✅ CORREGIDO: Contador + 1
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { withCredentials: true });
-        setNumAsiento(response.data.contador);
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
+          withCredentials: true 
+        });
+        setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
       }
@@ -623,6 +642,14 @@ const FormPage4 = ({ user }) => {
     }
   };
 
+  // Obtener cuenta de retención para la línea seleccionada
+  const getCuentaRetencion = () => {
+    if (detalles.length > 0 && detalles[0].cuentaAbonoRetencion) {
+      return detalles[0].cuentaAbonoRetencion;
+    }
+    return '475100000';
+  };
+
   return (
     <div className={styles.fp4Container}>
       <div className={styles.fp4Header}>
@@ -631,6 +658,7 @@ const FormPage4 = ({ user }) => {
           Factura de Proveedor/Acreedor (IVA No Deducible)
         </h2>
         <div className={styles.fp4AsientoInfo}>
+          {/* ✅ MUESTRA CONTADOR + 1 */}
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Serie: <strong>{serie}</strong></span>
           <span>Caja: <strong>{cuentaCaja}</strong></span>
@@ -742,7 +770,7 @@ const FormPage4 = ({ user }) => {
                 required
               />
               <small>
-                Seleccione "Nuevo Proveedor" para cuenta 400000000 o "Nuevo Acreedor" para cuenta 410000000
+                Seleccione "Nuevo Proveedor" para cuenta 40000000 o "Nuevo Acreedor" para cuenta 41000000
               </small>
             </div>
           </div>
@@ -790,8 +818,8 @@ const FormPage4 = ({ user }) => {
                 className={styles.fp4Readonly}
               />
               <small>
-                {isNuevoProveedor ? 'Cuenta Proveedores (400000000)' : 
-                 isNuevoAcreedor ? 'Cuenta Acreedores (410000000)' : 
+                {isNuevoProveedor ? 'Cuenta Proveedores (40000000)' : 
+                 isNuevoAcreedor ? 'Cuenta Acreedores (041000000)' : 
                  'Cuenta del proveedor existente'}
               </small>
             </div>
@@ -884,7 +912,7 @@ const FormPage4 = ({ user }) => {
                     />
                   </div>
                   
-                  {/* Campos de Retención DESDE BASE DE DATOS */}
+                  {/* Campos de Retención DESDE BASE DE DATOS CON CUENTA ABONO */}
                   <div className={styles.fp4FormGroup}>
                     <label>% Retención</label>
                     <select
@@ -893,7 +921,7 @@ const FormPage4 = ({ user }) => {
                     >
                       {tiposRetencion.map(tipo => (
                         <option key={tipo.CodigoRetencion} value={tipo.PorcentajeRetencion}>
-                          {tipo.PorcentajeRetencion}% - {tipo.Retencion}
+                          {tipo.PorcentajeRetencion}% - {tipo.Retencion} (Cuenta: {tipo.CuentaAbono})
                         </option>
                       ))}
                     </select>
@@ -921,6 +949,15 @@ const FormPage4 = ({ user }) => {
                     />
                   </div>
                 </div>
+                
+                {/* Información adicional de retención */}
+                {line.retencion !== '0' && line.cuentaAbonoRetencion && (
+                  <div className={styles.fp4RetencionInfo}>
+                    <small>
+                      📝 Retención {line.retencion}% - Cuenta de abono: <strong>{line.cuentaAbonoRetencion}</strong>
+                    </small>
+                  </div>
+                )}
               </div>
             ))}
             
@@ -956,27 +993,27 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
+        {/* ✅ CORREGIDO: Sección de Archivo - INPUT TEXT PARA RUTA COMPLETA */}
         <div className={styles.fp4Section}>
-          <h3>Archivo</h3>
+          <h3>Archivo Adjunto</h3>
           <div className={styles.fp4FormRow}>
             <div className={styles.fp4FormGroup}>
-              <label>Adjuntar Archivo</label>
-              <input 
-                type="file" 
-                onChange={handleFileChange}
+              <label>Ruta Completa del Archivo</label>
+              <input
+                type="text"
+                value={archivo}
+                onChange={(e) => setArchivo(e.target.value)}
+                placeholder="Ej: C:\Carpeta\Subcarpeta\archivo.pdf"
                 className={styles.fp4FileInput}
               />
               <div className={styles.fp4FileInfo}>
                 <small>
-                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
-                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                  📁 <strong>INGRESE LA RUTA COMPLETA</strong> donde se encuentra el archivo PDF.<br />
+                  <em>Ejemplo: C:\Documentos\Facturas\factura123.pdf</em>
                 </small>
                 {archivo && (
                   <div className={styles.fp4FileName}>
-                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
-                    <br />
-                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                    ✅ Ruta ingresada: <strong>{archivo}</strong>
                   </div>
                 )}
               </div>
@@ -984,7 +1021,7 @@ const FormPage4 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento - CORREGIDO: DOS LÍNEAS SEPARADAS */}
+        {/* Resumen del Asiento - CORREGIDO: CON CUENTA DE RETENCIÓN CORRECTA */}
         <div className={styles.fp4Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp4Resumen}>
@@ -1011,11 +1048,11 @@ const FormPage4 = ({ user }) => {
               <span>{totales.total.toFixed(2)} €</span>
             </div>
             
-            {/* LÍNEA 4: RETENCIÓN */}
+            {/* LÍNEA 4: RETENCIÓN CON CUENTA CORRECTA */}
             {totales.retencion > 0 && (
               <div className={styles.fp4ResumenItem}>
                 <span>HABER:</span>
-                <span>475100000 - Retenciones Practicadas</span>
+                <span>{getCuentaRetencion()} - Retenciones Practicadas</span>
                 <span>{totales.retencion.toFixed(2)} €</span>
               </div>
             )}

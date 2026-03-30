@@ -58,10 +58,6 @@ const Layout = () => {
                 <FaUser />
                 Nombre: <strong>{user?.nombre}</strong>
               </span>
-              <span>
-                <FaBuilding />
-                Empresa: <strong>10000</strong>
-              </span>
             </div>
           </div>
           <ul className={styles.lyNavMenu}>

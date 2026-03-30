@@ -1,4 +1,4 @@
-// pages/FormPage5.jsx - VERSIÓN COMPLETA CON TODAS LAS CORRECCIONES APLICADAS
+// pages/FormPage5.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaCashRegister, FaPlus, FaTrash } from 'react-icons/fa';
@@ -7,14 +7,26 @@ import styles from '../styles/FormPage5.module.css';
 import config from '../config/config';
 
 const FormPage5 = ({ user }) => {
-  // ✅ ESTADOS CORREGIDOS
+  // Estados base
   const [numAsiento, setNumAsiento] = useState('');
   const [proveedores, setProveedores] = useState([]);
   const [proveedoresCuentas, setProveedoresCuentas] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // ✅ DATOS ANALÍTICOS SIN VALORES POR DEFECTO
+  // NUEVO: Estados para tipos desde BD
+  const [tiposIVA, setTiposIVA] = useState([]);
+  const [tiposRetencion, setTiposRetencion] = useState([]);
   const [cuentasGasto, setCuentasGasto] = useState([]);
+  
+  // Estados para valores por defecto
+  const [ivaDefault, setIvaDefault] = useState('21');
+  const [retencionDefault, setRetencionDefault] = useState('0');
+  
+  // Estados de carga
+  const [tiposIVALoaded, setTiposIVALoaded] = useState(false);
+  const [tiposRetencionLoaded, setTiposRetencionLoaded] = useState(false);
+  
+  // Datos analíticos
   const [serie, setSerie] = useState('');
   const [analitico, setAnalitico] = useState('');
   const [cuentaCaja, setCuentaCaja] = useState('');
@@ -48,32 +60,23 @@ const FormPage5 = ({ user }) => {
   
   // Campos específicos
   const [cuentaGasto, setCuentaGasto] = useState('');
-  const [archivo, setArchivo] = useState(null);
+  const [archivo, setArchivo] = useState(''); // Cambiado de null a string vacío
   
-  // Detalles igual que FormPage4 (con IVA y retención - 0% por defecto)
-  const [detalles, setDetalles] = useState([
-    { 
-      base: '', 
-      tipoIVA: '21', 
-      cuotaIVA: 0,
-      retencion: '0',
-      cuotaRetencion: 0,
-      importeTotalLinea: 0
-    }
-  ]);
+  // Detalles con valores desde BD
+  const [detalles, setDetalles] = useState([]);
 
   // Estados para react-select
   const [proveedoresOptions, setProveedoresOptions] = useState([]);
   const [cuentasGastoOptions, setCuentasGastoOptions] = useState([]);
 
-  // ✅ EFECTO CONTADOR CORREGIDO: MUESTRA CONTADOR + 1
+  // ✅ CORREGIDO: Contador +1 en useEffect
   useEffect(() => {
     const fetchContador = async () => {
       try {
         const response = await axios.get(`${config.apiBaseUrl}/api/contador`, {
           withCredentials: true
         });
-        // ✅ CORREGIDO: Mostrar contador + 1
+        // ✅ CONTADOR + 1
         setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -82,7 +85,7 @@ const FormPage5 = ({ user }) => {
     fetchContador();
   }, []);
 
-  // ✅ EFECTO DATOS MAESTROS SIN VALORES POR DEFECTO
+  // ✅ Efecto para cargar TODOS los datos maestros
   useEffect(() => {
     const fetchDatosMaestros = async () => {
       try {
@@ -93,8 +96,6 @@ const FormPage5 = ({ user }) => {
 
         if (sessionRes.data.authenticated) {
           const userData = sessionRes.data.user;
-          
-          // ✅ CORREGIDO: SIN VALORES POR DEFECTO
           const serieBase = userData.codigoCanal || '';
           const serieValue = 'C' + serieBase;
           setSerie(serieValue);
@@ -110,32 +111,69 @@ const FormPage5 = ({ user }) => {
           });
         }
 
-        // Cargar el resto de datos maestros
+        // Cargar TODOS los datos maestros en paralelo
         const [
           proveedoresRes, 
           cuentasRes, 
-          gastosRes
+          gastosRes,
+          ivaRes,
+          retencionRes
         ] = await Promise.all([
           axios.get(`${config.apiBaseUrl}/api/proveedores`, { withCredentials: true }),
           axios.get(`${config.apiBaseUrl}/api/proveedores/cuentas`, { withCredentials: true }),
-          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true })
+          axios.get(`${config.apiBaseUrl}/api/cuentas/gastos`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/tipos-iva`, { withCredentials: true }),
+          axios.get(`${config.apiBaseUrl}/api/tipos-retencion`, { withCredentials: true })
         ]);
         
         setProveedores(proveedoresRes.data || []);
         setProveedoresCuentas(cuentasRes.data || []);
         setCuentasGasto(gastosRes.data || []);
+        
+        // ✅ Procesar tipos de IVA desde BD
+        const tiposIVAFormateados = ivaRes.data.map(tipo => ({
+          ...tipo,
+          PorcentajeIva: parseFloat(tipo.PorcentajeIva).toString()
+        }));
+        setTiposIVA(tiposIVAFormateados);
+        setTiposIVALoaded(true);
+        
+        // Buscar IVA 21% por defecto
+        const iva21 = tiposIVAFormateados.find(t => t.PorcentajeIva === '21');
+        if (iva21) {
+          setIvaDefault('21');
+        } else if (tiposIVAFormateados.length > 0) {
+          setIvaDefault(tiposIVAFormateados[0].PorcentajeIva);
+        }
+        
+        // ✅ Procesar tipos de retención desde BD CON CUENTAABONO
+        const tiposRetencionFormateados = retencionRes.data.map(tipo => ({
+          ...tipo,
+          PorcentajeRetencion: parseFloat(tipo.PorcentajeRetencion).toString(),
+          CuentaAbono: tipo.CuentaAbono || '475100000'
+        }));
+        setTiposRetencion(tiposRetencionFormateados);
+        setTiposRetencionLoaded(true);
+        
+        // Buscar retención 0% por defecto
+        const retencion0 = tiposRetencionFormateados.find(t => t.PorcentajeRetencion === '0');
+        if (retencion0) {
+          setRetencionDefault('0');
+        } else if (tiposRetencionFormateados.length > 0) {
+          setRetencionDefault(tiposRetencionFormateados[0].PorcentajeRetencion);
+        }
 
-        // ✅ CORREGIDO: AÑADIR OPCIÓN NUEVO ACREEDOR
+        // Preparar opciones para selects
         const proveedoresOpts = [
           { 
             value: '4000', 
-            label: '➕ NUEVO PROVEEDOR (400000000)',
+            label: '➕ NUEVO PROVEEDOR (40000000)',
             isNuevo: true,
             tipo: 'proveedor'
           },
           { 
             value: '4100', 
-            label: '➕ NUEVO ACREEDOR (410000000)',
+            label: '➕ NUEVO ACREEDOR (41000000)',
             isNuevo: true,
             tipo: 'acreedor'
           },
@@ -143,7 +181,7 @@ const FormPage5 = ({ user }) => {
             const cuentaProv = cuentasRes.data.find(p => p.codigo === prov.codigo);
             return {
               value: prov.codigo,
-              label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '400000000'}`,
+              label: `${prov.codigo} - ${prov.nombre} - Cuenta: ${cuentaProv?.cuenta || '40000000'}`,
               proveedorData: prov,
               cuentaData: cuentaProv,
               isNuevo: false
@@ -159,16 +197,12 @@ const FormPage5 = ({ user }) => {
         }));
         setCuentasGastoOptions(gastosOpts);
 
-        // ✅ CORREGIDO: Sin valor por defecto, si no hay cuentas queda vacío
         if (gastosRes.data && gastosRes.data.length > 0) {
           setCuentaGasto(gastosRes.data[0].id);
-        } else {
-          setCuentaGasto('');
         }
         
       } catch (error) {
         console.error('Error cargando datos maestros:', error);
-        // ✅ CORREGIDO: Sin valores por defecto
         setSerie('');
         setAnalitico('');
         setCuentaCaja('');
@@ -178,27 +212,42 @@ const FormPage5 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // ✅ CORREGIDO: Actualizar datos proveedor/acreedor - CON AMBAS OPCIONES NUEVAS
+  // ✅ Inicializar detalles una vez cargados los tipos
+  useEffect(() => {
+    if (tiposIVALoaded && tiposRetencionLoaded && detalles.length === 0) {
+      const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
+      
+      setDetalles([{ 
+        base: '', 
+        tipoIVA: ivaDefault, 
+        cuotaIVA: 0,
+        retencion: retencionDefault,
+        codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+        cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
+        cuotaRetencion: 0,
+        importeTotalLinea: 0
+      }]);
+    }
+  }, [tiposIVALoaded, tiposRetencionLoaded, ivaDefault, retencionDefault, detalles.length]);
+
+  // ✅ Actualizar datos proveedor/acreedor
   useEffect(() => {
     if (cuentaP) {
       if (cuentaP === '4000') {
-        // NUEVO PROVEEDOR - Campos editables
         setDatosCuentaP({
           cif: '',
           nombre: '',
           cp: '',
-          cuentaContable: '400000000'
+          cuentaContable: '40000000'
         });
       } else if (cuentaP === '4100') {
-        // NUEVO ACREEDOR - Campos editables
         setDatosCuentaP({
           cif: '',
           nombre: '',
           cp: '',
-          cuentaContable: '410000000'
+          cuentaContable: '40000000'
         });
       } else {
-        // Proveedor existente
         const proveedor = proveedores.find(p => p.codigo === cuentaP);
         const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
         
@@ -207,14 +256,14 @@ const FormPage5 = ({ user }) => {
             cif: proveedor.cif || '',
             nombre: proveedor.nombre || '',
             cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
+            cuentaContable: cuentaProv?.cuenta || '40000000'
           });
         }
       }
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
 
-  // ✅ MANEJO DE CAMPOS EDITABLES PARA NUEVO PROVEEDOR/ACREEDOR
+  // ✅ Manejo de campos editables
   const handleDatosProveedorChange = (field, value) => {
     if (isNuevoProveedor || isNuevoAcreedor) {
       setDatosCuentaP(prev => ({
@@ -224,7 +273,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // ✅ MANEJO DE SELECTS CON REACT-SELECT
+  // ✅ Manejo de selects
   const handleProveedorChange = (selectedOption) => {
     if (selectedOption) {
       setCuentaP(selectedOption.value);
@@ -235,14 +284,14 @@ const FormPage5 = ({ user }) => {
             cif: '',
             nombre: '',
             cp: '',
-            cuentaContable: '400000000'
+            cuentaContable: '40000000'
           });
         } else if (selectedOption.value === '4100') {
           setDatosCuentaP({
             cif: '',
             nombre: '',
             cp: '',
-            cuentaContable: '410000000'
+            cuentaContable: '40000000'
           });
         }
       } else {
@@ -254,7 +303,7 @@ const FormPage5 = ({ user }) => {
             cif: proveedor.cif || '',
             nombre: proveedor.nombre || '',
             cp: proveedor.cp || '',
-            cuentaContable: cuentaProv?.cuenta || '400000000'
+            cuentaContable: cuentaProv?.cuenta || '40000000'
           });
         }
       }
@@ -301,10 +350,19 @@ const FormPage5 = ({ user }) => {
     })
   };
 
-  // ✅ MANEJO DE DETALLES - CON CÁLCULO CORRECTO DE IVA
+  // MODIFICADO: Manejo de detalles - CON CUENTA DE ABONO DE RETENCIÓN
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...detalles];
     newDetalles[index][field] = value;
+
+    // Si cambia el porcentaje de retención, actualizar la cuenta de abono
+    if (field === 'retencion') {
+      const tipoRetencion = tiposRetencion.find(t => t.PorcentajeRetencion === value);
+      if (tipoRetencion) {
+        newDetalles[index].codigoRetencion = tipoRetencion.CodigoRetencion;
+        newDetalles[index].cuentaAbonoRetencion = tipoRetencion.CuentaAbono;
+      }
+    }
 
     const baseNum = parseFloat(newDetalles[index].base) || 0;
     const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
@@ -325,13 +383,17 @@ const FormPage5 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
-  // ✅ CORREGIDO: Retención por defecto 0%
+  // ✅ CORREGIDO: Añadir línea con cuenta de abono correcta
   const addDetalleLine = () => {
+    const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
+    
     setDetalles([...detalles, { 
       base: '', 
-      tipoIVA: '21', 
+      tipoIVA: ivaDefault, 
       cuotaIVA: 0,
-      retencion: '0',
+      retencion: retencionDefault,
+      codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+      cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
       cuotaRetencion: 0,
       importeTotalLinea: 0
     }]);
@@ -345,7 +407,7 @@ const FormPage5 = ({ user }) => {
     }
   };
 
-  // ✅ Cálculo de totales
+  // Cálculo de totales
   const calcularTotales = () => {
     return detalles.reduce((acc, detalle) => {
       const base = parseFloat(detalle.base) || 0;
@@ -366,7 +428,7 @@ const FormPage5 = ({ user }) => {
 
   const totales = calcularTotales();
 
-  // ✅ Validación del formulario - SIN VENCIMIENTO
+  // Validación del formulario
   const validarFormulario = () => {
     const errores = [];
     
@@ -401,20 +463,10 @@ const FormPage5 = ({ user }) => {
     return errores;
   };
 
-  // ✅ Manejo de archivos - Solo enviar el nombre del archivo
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setArchivo(file.name);
-      console.log(`📄 Archivo seleccionado: ${file.name}`);
-    }
-  };
-
-  // ✅ Función para formatear fechas en el frontend
+  // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
     
-    // Asegurar que la fecha esté en formato YYYY-MM-DD
     const fecha = new Date(fechaString);
     const year = fecha.getFullYear();
     const month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -423,7 +475,7 @@ const FormPage5 = ({ user }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // ✅ Envío del formulario
+  // Envío del formulario - ACTUALIZADO
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -436,7 +488,7 @@ const FormPage5 = ({ user }) => {
     setLoading(true);
 
     try {
-      // ✅ Formatear fechas correctamente
+      // 📅 CORRECCIÓN: Asegurar que las fechas estén en formato correcto
       const fechaRegFormatted = formatFechaForBackend(fechaReg);
       const fechaFacturaFormatted = formatFechaForBackend(fechaFactura);
       const fechaOperFormatted = formatFechaForBackend(fechaOper);
@@ -446,11 +498,11 @@ const FormPage5 = ({ user }) => {
       console.log('- Fecha Factura:', fechaFacturaFormatted);
       console.log('- Fecha Operación:', fechaOperFormatted);
 
-      // COMENTARIO COMBINADO: Nº FRA - Concepto
-      const comentarioCombinado = `${numFRA || ''} - ${concepto}`.trim().substring(0, 40);
+      // ✅ CORRECCIÓN: Comentario usando solo concepto
+      const comentarioCorto = `${concepto}`.trim().substring(0, 40);
 
       const datosEnvio = {
-        // ✅ Datos de documento
+        // Datos de documento CON FECHAS CORREGIDAS
         serie,
         numDocumento,
         numFRA,
@@ -458,62 +510,59 @@ const FormPage5 = ({ user }) => {
         fechaFactura: fechaFacturaFormatted,
         fechaOper: fechaOperFormatted,
         concepto,
-        comentario: comentarioCombinado,
+        comentario: comentarioCorto, // ✅ CORREGIDO: Solo concepto
         
-        // ✅ Datos de proveedor/acreedor
+        // Datos de proveedor/acreedor
         proveedor: {
-          cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '410000000' : '400000000'),
+          cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '40000000' : '40000000'),
           codigoProveedor: cuentaP,
           cif: datosCuentaP.cif,
           nombre: datosCuentaP.nombre,
-          cp: datosCuentaP.cp
+          cp: datosCuentaP.cp,
+          esAcreedor: isNuevoAcreedor
         },
         
         // Datos específicos
         cuentaGasto,
         analitico,
+        cuentaCaja,
         
-        // Detalles CON IVA Y RETENCIÓN
+        // Detalles CON RETENCIÓN Y CUENTA DE ABONO
         detalles: detalles.filter(d => d.base && parseFloat(d.base) > 0),
         
-        // ✅ Solo el nombre del archivo
+        // ✅ CORREGIDO: Ruta completa del archivo
         archivo: archivo,
         
-        // Totales CON IVA Y RETENCIÓN
+        // Totales
         totalBase: totales.base,
         totalIVA: totales.iva,
         totalRetencion: totales.retencion,
-        totalFactura: totales.total,
-
-        // Datos analíticos para el backend
-        datosAnaliticos: datosAnaliticos
+        totalFactura: totales.total
       };
 
-      console.log('📤 Enviando datos FormPage5 (Factura Caja):', datosEnvio);
+      console.log('📤 Enviando datos FormPage5:', datosEnvio);
 
       const response = await axios.post(`${config.apiBaseUrl}/api/asiento/pago-proveedor`, datosEnvio, {
         withCredentials: true
       });
 
       if (response.data.success) {
-        const lineasCreadas = response.data.detalles?.lineas || 5;
-        const cuentaUsada = response.data.detalles?.cuentaGasto || cuentaGasto;
-        const partes = response.data.detalles?.partes;
-        
-        alert(`✅ Asiento #${response.data.asiento} - Factura con Pago en Caja creado correctamente\nLíneas creadas: ${lineasCreadas}\nCuenta de gasto: ${cuentaUsada}\nPartes: ${partes?.parte1} y ${partes?.parte2}`);
+        const lineasCreadas = response.data.detalles.lineas;
+        const tipo = isNuevoAcreedor ? 'Acreedor' : 'Proveedor';
+        const cuentaRetencion = response.data.detalles.cuentaRetencion || '475100000';
+        alert(`✅ Asiento #${response.data.asiento} - Pago ${tipo} creado correctamente\nLíneas creadas: ${lineasCreadas}\nCuenta Retención: ${cuentaRetencion}`);
         resetForm();
       } else {
         alert('❌ Error al crear el asiento: ' + response.data.message);
       }
     } catch (error) {
-      console.error('Error creando asiento de factura caja:', error);
+      console.error('Error creando asiento:', error);
       alert('❌ Error al crear el asiento: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ RESET FORM CORREGIDO: Obtiene contador y suma 1
   const resetForm = () => {
     setCuentaP('');
     setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '' });
@@ -521,27 +570,32 @@ const FormPage5 = ({ user }) => {
     setNumFRA('');
     setConcepto('');
     setFechaOper('');
+    setArchivo('');
+    
+    // Reiniciar detalles con valores por defecto
+    const retencionDefaultTipo = tiposRetencion.find(t => t.PorcentajeRetencion === retencionDefault);
     setDetalles([{ 
       base: '', 
-      tipoIVA: '21', 
+      tipoIVA: ivaDefault, 
       cuotaIVA: 0,
-      retencion: '0',
+      retencion: retencionDefault,
+      codigoRetencion: retencionDefaultTipo?.CodigoRetencion || '0',
+      cuentaAbonoRetencion: retencionDefaultTipo?.CuentaAbono || '475100000',
       cuotaRetencion: 0,
-      importeTotalLinea: 0 
+      importeTotalLinea: 0
     }]);
-    setArchivo(null);
     
-    // ✅ Restablecer cuenta de gasto
+    // Restablecer cuenta de gasto
     if (cuentasGastoOptions.length > 0) {
       setCuentaGasto(cuentasGastoOptions[0].value);
-    } else {
-      setCuentaGasto('');
     }
     
-    // ✅ Obtener nuevo contador y sumar 1
+    // ✅ CORREGIDO: Obtener nuevo contador y sumar 1
     const fetchNewContador = async () => {
       try {
-        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { withCredentials: true });
+        const response = await axios.get(`${config.apiBaseUrl}/api/contador`, { 
+          withCredentials: true 
+        });
         setNumAsiento(response.data.contador + 1);
       } catch (error) {
         console.error('Error obteniendo contador:', error);
@@ -556,15 +610,32 @@ const FormPage5 = ({ user }) => {
     return cuenta ? cuenta.nombre : '';
   };
 
-  // Determinar si es nuevo proveedor o acreedor
-  const isNuevo = isNuevoProveedor || isNuevoAcreedor;
+  // Obtener nombre de la cuenta de proveedor/acreedor
+  const getNombreCuentaProveedor = () => {
+    if (isNuevoProveedor) {
+      return 'Proveedores (Nuevo)';
+    } else if (isNuevoAcreedor) {
+      return 'Acreedores (Nuevo)';
+    } else {
+      const proveedor = proveedores.find(p => p.codigo === cuentaP);
+      return proveedor ? proveedor.nombre : 'Proveedores';
+    }
+  };
+
+  // Obtener cuenta de retención
+  const getCuentaRetencion = () => {
+    if (detalles.length > 0 && detalles[0].cuentaAbonoRetencion) {
+      return detalles[0].cuentaAbonoRetencion;
+    }
+    return '475100000';
+  };
 
   return (
     <div className={styles.fp5Container}>
       <div className={styles.fp5Header}>
         <h2>
           <FaCashRegister />
-          Facturas de Caja - Pago Inmediato
+          Pago Proveedor/Acreedor
         </h2>
         <div className={styles.fp5AsientoInfo}>
           {/* ✅ MUESTRA CONTADOR + 1 */}
@@ -587,7 +658,6 @@ const FormPage5 = ({ user }) => {
                 readOnly
                 className={styles.fp5Readonly}
               />
-              <small>Serie para facturas de caja (C + Canal)</small>
             </div>
             <div className={styles.fp5FormGroup}>
               <label>Nº Documento *</label>
@@ -605,12 +675,11 @@ const FormPage5 = ({ user }) => {
                 type="text" 
                 value={numFRA}
                 onChange={(e) => setNumFRA(e.target.value)}
-                placeholder="Número de factura del proveedor/acreedor"
+                placeholder="Número de factura"
               />
             </div>
           </div>
           
-          {/* CAMPO: Concepto */}
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
               <label>Concepto *</label>
@@ -618,7 +687,7 @@ const FormPage5 = ({ user }) => {
                 type="text" 
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripción del gasto/proveedor/acreedor"
+                placeholder="Descripción del pago"
                 required
               />
             </div>
@@ -654,7 +723,7 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Datos del Proveedor/Acreedor - CON SELECT CON BÚSQUEDA */}
+        {/* Sección de Datos del Proveedor/Acreedor */}
         <div className={styles.fp5Section}>
           <h3>Datos del Proveedor/Acreedor</h3>
           <div className={styles.fp5FormRow}>
@@ -669,31 +738,33 @@ const FormPage5 = ({ user }) => {
                 styles={customStyles}
                 required
               />
+              <small>
+                Seleccione "Nuevo Proveedor" para cuenta 40000000 o "Nuevo Acreedor" para cuenta 40000000
+              </small>
             </div>
           </div>
 
-          {/* CAMPOS DE PROVEEDOR/ACREEDOR - EDITABLES SI ES NUEVO */}
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>CIF/NIF {isNuevo && '*'}</label>
+              <label>CIF/NIF {(isNuevoProveedor || isNuevoAcreedor) && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.cif}
                 onChange={(e) => handleDatosProveedorChange('cif', e.target.value)}
-                readOnly={!isNuevo}
-                className={!isNuevo ? styles.fp5Readonly : ''}
-                required={isNuevo}
+                readOnly={!(isNuevoProveedor || isNuevoAcreedor)}
+                className={!(isNuevoProveedor || isNuevoAcreedor) ? styles.fp5Readonly : ''}
+                required={isNuevoProveedor || isNuevoAcreedor}
               />
             </div>
             <div className={styles.fp5FormGroup}>
-              <label>Razón Social {isNuevo && '*'}</label>
+              <label>Razón Social {(isNuevoProveedor || isNuevoAcreedor) && '*'}</label>
               <input 
                 type="text" 
                 value={datosCuentaP.nombre}
                 onChange={(e) => handleDatosProveedorChange('nombre', e.target.value)}
-                readOnly={!isNuevo}
-                className={!isNuevo ? styles.fp5Readonly : ''}
-                required={isNuevo}
+                readOnly={!(isNuevoProveedor || isNuevoAcreedor)}
+                className={!(isNuevoProveedor || isNuevoAcreedor) ? styles.fp5Readonly : ''}
+                required={isNuevoProveedor || isNuevoAcreedor}
               />
             </div>
             <div className={styles.fp5FormGroup}>
@@ -702,8 +773,8 @@ const FormPage5 = ({ user }) => {
                 type="text" 
                 value={datosCuentaP.cp}
                 onChange={(e) => handleDatosProveedorChange('cp', e.target.value)}
-                readOnly={!isNuevo}
-                className={!isNuevo ? styles.fp5Readonly : ''}
+                readOnly={!(isNuevoProveedor || isNuevoAcreedor)}
+                className={!(isNuevoProveedor || isNuevoAcreedor) ? styles.fp5Readonly : ''}
               />
             </div>
             <div className={styles.fp5FormGroup}>
@@ -715,14 +786,15 @@ const FormPage5 = ({ user }) => {
                 className={styles.fp5Readonly}
               />
               <small>
-                {isNuevoProveedor && 'Nuevo Proveedor: 400000000'}
-                {isNuevoAcreedor && 'Nuevo Acreedor: 410000000'}
+                {isNuevoProveedor ? 'Cuenta Proveedores (40000000)' : 
+                 isNuevoAcreedor ? 'Cuenta Acreedores (40000000)' : 
+                 'Cuenta del proveedor existente'}
               </small>
             </div>
           </div>
         </div>
 
-        {/* Sección de Detalles Económicos - CON SELECT CON BÚSQUEDA */}
+        {/* Sección de Detalles Económicos */}
         <div className={styles.fp5Section}>
           <h3>Detalles Económicos</h3>
           <div className={styles.fp5FormRow}>
@@ -789,10 +861,11 @@ const FormPage5 = ({ user }) => {
                       value={line.tipoIVA}
                       onChange={(e) => handleDetalleChange(i, 'tipoIVA', e.target.value)}
                     >
-                      <option value="21">21% General</option>
-                      <option value="10">10% Reducido</option>
-                      <option value="4">4% Superreducido</option>
-                      <option value="0">0% Exento</option>
+                      {tiposIVA.map(tipo => (
+                        <option key={tipo.CodigoIva} value={tipo.PorcentajeIva}>
+                          {tipo.PorcentajeIva}% - {tipo.Iva}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   
@@ -807,18 +880,18 @@ const FormPage5 = ({ user }) => {
                     />
                   </div>
                   
-                  {/* Campos de Retención */}
+                  {/* Campos de Retención CON CUENTA ABONO */}
                   <div className={styles.fp5FormGroup}>
                     <label>% Retención</label>
                     <select
                       value={line.retencion}
                       onChange={(e) => handleDetalleChange(i, 'retencion', e.target.value)}
                     >
-                      <option value="19">19% Alquileres</option>
-                      <option value="15">15% Profesional</option>
-                      <option value="7">7% Reducido</option>
-                      <option value="1">1% Especial</option>
-                      <option value="0">0% Sin retención</option>
+                      {tiposRetencion.map(tipo => (
+                        <option key={tipo.CodigoRetencion} value={tipo.PorcentajeRetencion}>
+                          {tipo.PorcentajeRetencion}% - {tipo.Retencion} (Cuenta: {tipo.CuentaAbono})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   
@@ -844,6 +917,15 @@ const FormPage5 = ({ user }) => {
                     />
                   </div>
                 </div>
+                
+                {/* Información adicional de retención */}
+                {line.retencion !== '0' && line.cuentaAbonoRetencion && (
+                  <div className={styles.fp5RetencionInfo}>
+                    <small>
+                      📝 Retención {line.retencion}% - Cuenta de abono: <strong>{line.cuentaAbonoRetencion}</strong>
+                    </small>
+                  </div>
+                )}
               </div>
             ))}
             
@@ -853,7 +935,7 @@ const FormPage5 = ({ user }) => {
             </button>
           </div>
 
-          {/* Resumen de Totales CON IVA Y RETENCIÓN */}
+          {/* Resumen de Totales */}
           <div className={styles.fp5Totales}>
             <h4>Resumen de Totales:</h4>
             <div className={styles.fp5TotalItem}>
@@ -861,7 +943,7 @@ const FormPage5 = ({ user }) => {
               <span>{totales.base.toFixed(2)} €</span>
             </div>
             <div className={styles.fp5TotalItem}>
-              <span>IVA (No Deducible):</span>
+              <span>IVA:</span>
               <span>+ {totales.iva.toFixed(2)} €</span>
             </div>
             <div className={styles.fp5TotalItem}>
@@ -879,27 +961,27 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* ✅ Sección de Archivo */}
         <div className={styles.fp5Section}>
-          <h3>Archivo</h3>
+          <h3>Archivo Adjunto</h3>
           <div className={styles.fp5FormRow}>
             <div className={styles.fp5FormGroup}>
-              <label>Adjuntar Archivo</label>
-              <input 
-                type="file" 
-                onChange={handleFileChange}
+              <label>Ruta Completa del Archivo</label>
+              <input
+                type="text"
+                value={archivo}
+                onChange={(e) => setArchivo(e.target.value)}
+                placeholder="Ej: C:\Carpeta\Subcarpeta\archivo.pdf"
                 className={styles.fp5FileInput}
               />
               <div className={styles.fp5FileInfo}>
                 <small>
-                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
-                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                  📁 <strong>INGRESE LA RUTA COMPLETA</strong> donde se encuentra el archivo PDF.<br />
+                  <em>Ejemplo: C:\Documentos\Facturas\factura123.pdf</em>
                 </small>
                 {archivo && (
                   <div className={styles.fp5FileName}>
-                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
-                    <br />
-                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                    ✅ Ruta ingresada: <strong>{archivo}</strong>
                   </div>
                 )}
               </div>
@@ -907,58 +989,55 @@ const FormPage5 = ({ user }) => {
           </div>
         </div>
 
-        {/* Resumen del Asiento - PAGO INMEDIATO EN CAJA */}
+        {/* Resumen del Asiento - CORREGIDO CON CUENTA DE RETENCIÓN CORRECTA */}
         <div className={styles.fp5Section}>
           <h3>Resumen del Asiento</h3>
           <div className={styles.fp5Resumen}>
-            {/* LÍNEA 1: GASTO (BASE) */}
+            {/* LÍNEA 1: PROVEEDOR HABER (FACTURA) */}
+            <div className={styles.fp5ResumenItem}>
+              <span>HABER:</span>
+              <span>{datosCuentaP.cuentaContable} - {getNombreCuentaProveedor()}</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            
+            {/* LÍNEA 2: GASTO DEBE (BASE) */}
             <div className={styles.fp5ResumenItem}>
               <span>DEBE:</span>
-              <span>{cuentaGasto} - {getNombreCuentaGasto()} (Base)</span>
+              <span>{cuentaGasto} - {getNombreCuentaGasto()}</span>
               <span>{totales.base.toFixed(2)} €</span>
             </div>
             
-            {/* LÍNEA 2: GASTO (IVA) - MISMA CUENTA */}
+            {/* LÍNEA 3: GASTO DEBE (IVA) */}
             {totales.iva > 0 && (
               <div className={styles.fp5ResumenItem}>
                 <span>DEBE:</span>
-                <span>{cuentaGasto} - IVA No Deducible</span>
+                <span>{cuentaGasto} - IVA</span>
                 <span>{totales.iva.toFixed(2)} €</span>
               </div>
             )}
             
-            {/* LÍNEA 3: PROVEEDOR/ACREEDOR (FACTURA) */}
-            <div className={styles.fp5ResumenItem}>
-              <span>HABER:</span>
-              <span>{datosCuentaP.cuentaContable} - {isNuevoAcreedor ? 'Acreedores' : 'Proveedores'}</span>
-              <span>{totales.total.toFixed(2)} €</span>
-            </div>
-            
-            {/* LÍNEA 4: PROVEEDOR/ACREEDOR (PAGO) */}
-            <div className={styles.fp5ResumenItem}>
-              <span>DEBE:</span>
-              <span>{datosCuentaP.cuentaContable} - {isNuevoAcreedor ? 'Acreedores' : 'Proveedores'} (Pago)</span>
-              <span>{totales.total.toFixed(2)} €</span>
-            </div>
-            
-            {/* LÍNEA 5: CAJA (PAGO) */}
+            {/* LÍNEA 4: CAJA HABER (PAGO) */}
             <div className={styles.fp5ResumenItem}>
               <span>HABER:</span>
               <span>{cuentaCaja} - Caja</span>
               <span>{totales.total.toFixed(2)} €</span>
             </div>
             
-            {/* LÍNEA 6: RETENCIÓN - SI APLICA */}
+            {/* LÍNEA 5: PROVEEDOR DEBE (PAGO) */}
+            <div className={styles.fp5ResumenItem}>
+              <span>DEBE:</span>
+              <span>{datosCuentaP.cuentaContable} - {getNombreCuentaProveedor()}</span>
+              <span>{totales.total.toFixed(2)} €</span>
+            </div>
+            
+            {/* LÍNEA 6: RETENCIÓN HABER CON CUENTA CORRECTA */}
             {totales.retencion > 0 && (
               <div className={styles.fp5ResumenItem}>
                 <span>HABER:</span>
-                <span>475100000 - Retenciones Practicadas</span>
+                <span>{getCuentaRetencion()} - Retenciones Practicadas</span>
                 <span>{totales.retencion.toFixed(2)} €</span>
               </div>
             )}
-          </div>
-          <div className={styles.fp5NotaResumen}>
-            <small>📝 <strong>Nota:</strong> Este asiento incluye tanto la factura como el pago inmediato en caja</small>
           </div>
         </div>
 
@@ -985,7 +1064,7 @@ const FormPage5 = ({ user }) => {
             className={styles.fp5SubmitBtn} 
             disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento'}
+            {loading ? 'Procesando...' : 'Crear Asiento de Pago'}
           </button>
         </div>
       </form>

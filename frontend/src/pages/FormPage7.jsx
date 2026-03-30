@@ -1,4 +1,4 @@
-// pages/FormPage7.jsx - VERSIÓN COMPLETA CON TODAS LAS CORRECCIONES
+// pages/FormPage7.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaReceipt } from 'react-icons/fa';
@@ -27,7 +27,7 @@ const FormPage7 = ({ user }) => {
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
-  const [archivo, setArchivo] = useState(null);
+  const [archivo, setArchivo] = useState(''); // Cambiado de null a string vacío
   const [cuentasGasto, setCuentasGasto] = useState([]);
   const [cuentaGasto, setCuentaGasto] = useState('');
   const [importe, setImporte] = useState('');
@@ -146,16 +146,6 @@ const FormPage7 = ({ user }) => {
     })
   };
 
-  // 🔥 CORREGIDO: Manejo de archivos - Solo enviar el nombre del archivo
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // 🔥 SOLO enviar el nombre del archivo, NO la ruta completa
-      setArchivo(file.name);
-      console.log(`📄 Archivo seleccionado: ${file.name}`);
-    }
-  };
-
   // 📅 CORRECCIÓN: Función para formatear fechas en el frontend
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
@@ -202,7 +192,7 @@ const FormPage7 = ({ user }) => {
         cuentaGasto,
         cuentaCaja,
         importe: parseFloat(importe),
-        // 🔥 CORREGIDO: Solo el nombre del archivo
+        // ✅ CORREGIDO: Ruta completa del archivo (input text)
         archivo: archivo
       };
 
@@ -233,7 +223,7 @@ const FormPage7 = ({ user }) => {
     setNumDocumento('');
     setConcepto('');
     setImporte('');
-    setArchivo(null);
+    setArchivo('');
     
     if (cuentasGastoOptions.length > 0) {
       setCuentaGasto(cuentasGastoOptions[0].value);
@@ -357,27 +347,27 @@ const FormPage7 = ({ user }) => {
           </div>
         </div>
 
-        {/* 🔥 CORREGIDO: Sección de Archivo - CON INSTRUCCIONES CLARAS */}
+        {/* ✅ CORREGIDO: Sección de Archivo - INPUT TEXT PARA RUTA COMPLETA */}
         <div className={styles.fp7Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp7FormRow}>
             <div className={styles.fp7FormGroup}>
-              <label>Justificante</label>
-              <input 
-                type="file" 
-                onChange={handleFileChange}
+              <label>Ruta Completa del Justificante</label>
+              <input
+                type="text"
+                value={archivo}
+                onChange={(e) => setArchivo(e.target.value)}
+                placeholder="Ej: C:\Carpeta\Subcarpeta\ticket.pdf"
                 className={styles.fp7FileInput}
               />
               <div className={styles.fp7FileInfo}>
                 <small>
-                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
-                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                  📁 <strong>INGRESE LA RUTA COMPLETA</strong> donde se encuentra el archivo PDF.<br />
+                  <em>Ejemplo: C:\Documentos\Gastos\ticket456.pdf</em>
                 </small>
                 {archivo && (
                   <div className={styles.fp7FileName}>
-                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
-                    <br />
-                    <small>Ruta completa: C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\{archivo}</small>
+                    ✅ Ruta ingresada: <strong>{archivo}</strong>
                   </div>
                 )}
               </div>

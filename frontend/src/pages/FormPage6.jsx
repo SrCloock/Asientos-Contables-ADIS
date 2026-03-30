@@ -1,4 +1,4 @@
-// pages/FormPage6.jsx - VERSIÓN COMPLETA CON TODAS LAS CORRECCIONES
+// pages/FormPage6.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaMoneyBillWave } from 'react-icons/fa';
@@ -26,11 +26,11 @@ const FormPage6 = ({ user }) => {
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
-  const [archivo, setArchivo] = useState(null);
+  const [archivo, setArchivo] = useState(''); // Cambiado de null a string vacío
   const [importe, setImporte] = useState('');
 
   // CUENTA FIJA - Eliminamos el estado de selección de cuentas
-  const cuentaIngresoFija = '519000000';
+  const cuentaIngresoFija = '51900000';
 
   // ✅ CORREGIDO: Efecto para cargar contador - CONTADOR + 1
   useEffect(() => {
@@ -88,15 +88,6 @@ const FormPage6 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
-  // Manejo de archivos
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setArchivo(file.name);
-      console.log(`📄 Archivo seleccionado: ${file.name}`);
-    }
-  };
-
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
     
@@ -133,11 +124,12 @@ const FormPage6 = ({ user }) => {
         numDocumento,
         fechaReg: fechaRegFormatted,
         concepto,
-        comentario: concepto.trim().substring(0, 40),
+        comentario: concepto,
         analitico,
         // ELIMINADO: cuentaIngreso, // Ya no enviamos este campo
         cuentaCaja,
         importe: parseFloat(importe),
+        // ✅ CORREGIDO: Ruta completa del archivo (input text)
         archivo: archivo
       };
 
@@ -168,7 +160,7 @@ const FormPage6 = ({ user }) => {
     setNumDocumento('');
     setConcepto('');
     setImporte('');
-    setArchivo(null);
+    setArchivo('');
     
     // ✅ CORREGIDO: Obtener nuevo contador y sumar 1
     const fetchNewContador = async () => {
@@ -268,7 +260,7 @@ const FormPage6 = ({ user }) => {
               <label>Cuenta de Ingreso</label>
               <input 
                 type="text" 
-                value="519000000 - Ingresos Varios"
+                value="51900000 - Ingresos Varios"
                 readOnly
                 className={styles.fp6Readonly}
               />
@@ -289,25 +281,27 @@ const FormPage6 = ({ user }) => {
           </div>
         </div>
 
-        {/* Sección de Archivo */}
+        {/* ✅ CORREGIDO: Sección de Archivo - INPUT TEXT PARA RUTA COMPLETA */}
         <div className={styles.fp6Section}>
           <h3>📎 Archivo Adjunto</h3>
           <div className={styles.fp6FormRow}>
             <div className={styles.fp6FormGroup}>
-              <label>Justificante</label>
-              <input 
-                type="file" 
-                onChange={handleFileChange}
+              <label>Ruta Completa del Justificante</label>
+              <input
+                type="text"
+                value={archivo}
+                onChange={(e) => setArchivo(e.target.value)}
+                placeholder="Ej: C:\Carpeta\Subcarpeta\justificante.pdf"
                 className={styles.fp6FileInput}
               />
               <div className={styles.fp6FileInfo}>
                 <small>
-                  📁 <strong>IMPORTANTE:</strong> El archivo debe estar guardado en:<br />
-                  <code>C:\Users\sageinstall.MERIDIANOS-SSCC\Desktop\DocumentosSage\</code>
+                  📁 <strong>INGRESE LA RUTA COMPLETA</strong> donde se encuentra el archivo PDF.<br />
+                  <em>Ejemplo: C:\Documentos\Ingresos\recibo123.pdf</em>
                 </small>
                 {archivo && (
                   <div className={styles.fp6FileName}>
-                    ✅ Archivo seleccionado: <strong>{archivo}</strong>
+                    ✅ Ruta ingresada: <strong>{archivo}</strong>
                   </div>
                 )}
               </div>
@@ -330,7 +324,7 @@ const FormPage6 = ({ user }) => {
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>HABER</span>
               <span className={styles.fp6CuentaInfo}>
-                519000000 - Ingresos Varios
+                51900000 - Ingresos Varios
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
