@@ -1,7 +1,6 @@
 // pages/FormPage4.jsx - Cuota IVA editable (override manual)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
 import Select from 'react-select';
 import styles from '../styles/FormPage4.module.css';
 import config from '../config/config';
@@ -443,7 +442,7 @@ const FormPage4 = ({ user }) => {
   return (
     <div className={styles.fp4Container}>
       <div className={styles.fp4Header}>
-        <h2><FaFileInvoiceDollar /> Factura de Proveedor/Acreedor (IVA No Deducible)</h2>
+        <h2>Factura de Proveedor/Acreedor (IVA No Deducible)</h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Serie: <strong>{serie}</strong></span>
@@ -563,7 +562,7 @@ const FormPage4 = ({ user }) => {
                   <span>Línea {i + 1}</span>
                   {detalles.length > 1 && (
                     <button type="button" className={styles.fp4RemoveBtn} onClick={() => removeDetalleLine(i)}>
-                      <FaTrash /> Eliminar
+                      Eliminar
                     </button>
                   )}
                 </div>
@@ -618,7 +617,7 @@ const FormPage4 = ({ user }) => {
               </div>
             ))}
             <button type="button" className={styles.fp4AddBtn} onClick={addDetalleLine}>
-              <FaPlus /> Añadir línea
+              Añadir línea
             </button>
           </div>
 

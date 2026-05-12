@@ -859,7 +859,7 @@ app.get('/api/contador', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// 🧾 ENDPOINT FORMPAGE4 - FACTURA IVA NO DEDUCIBLE (COMPLETO CON CAMPOS FIJOS)
+// 🧾 ENDPOINT FORMPAGE4 - FACTURA IVA NO DEDUCIBLE
 // ============================================
 
 app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) => {
@@ -911,16 +911,15 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       archivo
     } = req.body;
 
-    // Validaciones
+    // Validaciones (vencimiento ya NO es obligatorio)
     if (!detalles || !Array.isArray(detalles) || detalles.length === 0) throw new Error('No hay detalles de factura');
     if (!numDocumento) throw new Error('Número de documento requerido');
     if (!proveedor) throw new Error('Datos del proveedor requeridos');
-    if (!vencimiento) throw new Error('Fecha de vencimiento requerida');
 
     const fechaAsientoStr = formatDateWithoutTimezone(fechaReg) || new Date().toISOString().split('T')[0];
     const fechaFacturaStr = formatDateWithoutTimezone(fechaFactura);
     const fechaOperStr = formatDateWithoutTimezone(fechaOper);
-    const fechaVencimientoStr = formatDateWithoutTimezone(vencimiento);
+    const fechaVencimientoStr = vencimiento ? formatDateWithoutTimezone(vencimiento) : null;
     const fechaGrabacion = new Date();
 
     // Cuenta proveedor/acreedor
@@ -1007,6 +1006,8 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
     const comentarioCorto = (concepto || '').trim().substring(0, 40);
     const movPosicionProveedor = uuidv4();
     const movimientosAnalitica = [];
+    // ✅ NUEVO: Array para almacenar todos los UUID de movimientos creados
+    const todosLosMovimientos = [movPosicionProveedor]; // El primero es el proveedor HABER
 
     // ============================================
     // FUNCIÓN AUXILIAR insertarMovimiento (con campos fijos)
@@ -1089,13 +1090,19 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       }
     };
 
-    // 1) Proveedor HABER
-    await insertarMovimiento({ movPosicion: movPosicionProveedor, cargoAbono: 'H', codigoCuenta: cuentaProveedorReal, importe: totalFactura, esVencimiento: true });
+    // 1) Proveedor HABER (con vencimiento solo si se proporcionó fecha)
+    await insertarMovimiento({ 
+      movPosicion: movPosicionProveedor, 
+      cargoAbono: 'H', 
+      codigoCuenta: cuentaProveedorReal, 
+      importe: totalFactura, 
+      esVencimiento: !!vencimiento 
+    });
 
     // ============================================
-    // GESTIÓN DE EFECTOS (CORREGIDO: CodigoTipoEfecto nunca NULL)
+    // GESTIÓN DE EFECTOS: SOLO SI HAY FECHA DE VENCIMIENTO
     // ============================================
-    if (vencimiento) {
+    if (vencimiento && fechaVencimientoStr) {
       let datosBancarios = { codigoBanco: '', codigoAgencia: '', dc: '', ccc: '', iban: '' };
       let remesaHabitual = '';
       let codigoTipoEfecto = null;
@@ -1179,21 +1186,24 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       await gestionarEfecto(transaction, datosEfecto);
     }
 
-    // 2) IVA DEBE (misma cuenta gasto)
+    // 2) IVA DEBE (misma cuenta gasto) - solo si hay IVA > 0
     let movPosicionIVA = null;
     if (totalIVA > 0) {
       movPosicionIVA = uuidv4();
+      todosLosMovimientos.push(movPosicionIVA);
       await insertarMovimiento({ movPosicion: movPosicionIVA, cargoAbono: 'D', codigoCuenta: cuentaGasto, importe: totalIVA });
     }
 
     // 3) Gasto base DEBE
     const movPosicionGasto = uuidv4();
+    todosLosMovimientos.push(movPosicionGasto);
     await insertarMovimiento({ movPosicion: movPosicionGasto, cargoAbono: 'D', codigoCuenta: cuentaGasto, importe: totalBase });
 
-    // 4) Retención HABER
+    // 4) Retención HABER - solo si hay retención > 0
     let movPosicionRetencion = null;
     if (totalRetencion > 0) {
       movPosicionRetencion = uuidv4();
+      todosLosMovimientos.push(movPosicionRetencion);
       await insertarMovimiento({ movPosicion: movPosicionRetencion, cargoAbono: 'H', codigoCuenta: cuentaRetencionForm4, importe: totalRetencion });
     }
 
@@ -1286,23 +1296,29 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       }
     }
 
-    // Documento asociado
-    if (archivo) {
-      try {
-        await transaction.request()
-          .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedor)
-          .input('PathUbicacion', sql.VarChar(500), archivo)
-          .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
-          .query(`
-            INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
-            VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
-          `);
-      } catch (error) {
-        console.error('Error al guardar documento asociado:', error);
+    // ============================================
+    // DOCUMENTO ASOCIADO: SE INSERTA PARA CADA MOVIMIENTO
+    // ============================================
+    if (archivo && archivo.trim() !== '') {
+      for (const movPos of todosLosMovimientos) {
+        try {
+          await transaction.request()
+            .input('MovPosicion', sql.UniqueIdentifier, movPos)
+            .input('PathUbicacion', sql.VarChar(500), archivo)
+            .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
+            .query(`
+              INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
+              VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
+            `);
+        } catch (error) {
+          console.error(`Error al guardar documento asociado para movimiento ${movPos}:`, error);
+        }
       }
     }
 
-    // AnaMovimientos (analítica)
+    // ============================================
+    // AnaMovimientos (analítica) - CORREGIDO: Incluye NumeroPeriodo
+    // ============================================
     if (movimientosAnalitica.length > 0) {
       const contadorAnaResult = await transaction.request()
         .input('ejercicio', sql.Int, ejercicio)
@@ -1342,17 +1358,20 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
           .input('IdDelegacion', sql.VarChar(10), idDelegacion)
           .input('CodigoCuenta', sql.VarChar(15), mov.codigoCuenta)
           .input('Serie', sql.VarChar(10), serie || '')
+          .input('NumeroPeriodo', sql.TinyInt, new Date(fechaAsientoStr).getMonth() + 1)
           .query(`
             INSERT INTO AnaMovimientos (
                 CabPosicion, Asiento, CodigoEmpresa, Ejercicio, CargoAbono, AnaCodigoCuenta,
                 Comentario, TipoDocumento, DocumentoConta, FechaAsiento, FechaGrabacion, ImporteAsiento,
                 EnEuros_, StatusAcumulado, StatusGenerado, DesgloseAna, CodigoDepartamento, CodigoSeccion,
-                CodigoProyecto, CodigoCanal, IdDelegacion, CodigoCuenta, Serie
+                CodigoProyecto, CodigoCanal, IdDelegacion, CodigoCuenta, Serie,
+                NumeroPeriodo
             ) VALUES (
                 @CabPosicion, @Asiento, @CodigoEmpresa, @Ejercicio, @CargoAbono, @AnaCodigoCuenta,
                 @Comentario, @TipoDocumento, @DocumentoConta, CONVERT(DATE, @FechaAsiento), @FechaGrabacion, @ImporteAsiento,
                 @EnEuros_, @StatusAcumulado, @StatusGenerado, @DesgloseAna, @CodigoDepartamento, @CodigoSeccion,
-                @CodigoProyecto, @CodigoCanal, @IdDelegacion, @CodigoCuenta, @Serie
+                @CodigoProyecto, @CodigoCanal, @IdDelegacion, @CodigoCuenta, @Serie,
+                @NumeroPeriodo
             )
           `);
       }
@@ -1365,7 +1384,7 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
       success: true,
       asiento: siguienteAsiento,
       ejercicio: ejercicio,
-      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) creado correctamente. Analítica generada para ${movimientosAnalitica.length} movimientos.`,
+      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) creado correctamente. Documento asociado a ${todosLosMovimientos.length} movimientos. Analítica generada para ${movimientosAnalitica.length} movimientos.${!vencimiento ? ' (Sin efecto asociado)' : ''}`,
       detalles: {
         lineas: totalRetencion > 0 ? 4 : 3,
         base: totalBase,
@@ -1382,7 +1401,9 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
         retencionInfo: {
           codigoRetencion: codigoRetencionFinal,
           porcentajeRetencion: porcentajeRetencionFinal
-        }
+        },
+        efectoGenerado: !!vencimiento,
+        documentosAsociados: todosLosMovimientos.length
       }
     });
 
@@ -1398,9 +1419,8 @@ app.post('/api/asiento/factura-iva-no-deducible', requireAuth, async (req, res) 
     });
   }
 });
-
 // ============================================
-// 💰 ENDPOINT FORMPAGE5 - PAGO PROVEEDOR (COMPLETO CON CAMPOS FIJOS)
+// 💰 ENDPOINT FORMPAGE5 - PAGO PROVEEDOR 
 // ============================================
 
 app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
@@ -1621,6 +1641,12 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
     // PRIMERA PARTE: ASIENTO DE FACTURA
     // ============================================
     const movPosicionProveedorHaber = uuidv4();
+    const movPosicionGastoBase = uuidv4();
+    let movPosicionGastoIVA = null;
+
+    // Array para almacenar todos los UUID de movimientos creados
+    const todosLosMovimientos = [movPosicionProveedorHaber, movPosicionGastoBase];
+
     await insertarMovimiento({
       movPosicion: movPosicionProveedorHaber,
       cargoAbono: 'H',
@@ -1630,7 +1656,6 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       contrapartida: cuentaCaja
     });
 
-    const movPosicionGastoBase = uuidv4();
     await insertarMovimiento({
       movPosicion: movPosicionGastoBase,
       cargoAbono: 'D',
@@ -1639,9 +1664,9 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       comentario: comentarioFactura
     });
 
-    let movPosicionGastoIVA = null;
     if (totalIVA > 0) {
       movPosicionGastoIVA = uuidv4();
+      todosLosMovimientos.push(movPosicionGastoIVA);
       await insertarMovimiento({
         movPosicion: movPosicionGastoIVA,
         cargoAbono: 'D',
@@ -1655,6 +1680,11 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
     // SEGUNDA PARTE: ASIENTO DE PAGO
     // ============================================
     const movPosicionCaja = uuidv4();
+    const movPosicionProveedorDebe = uuidv4();
+    let movPosicionRetencion = null;
+
+    todosLosMovimientos.push(movPosicionCaja, movPosicionProveedorDebe);
+
     await insertarMovimiento({
       movPosicion: movPosicionCaja,
       cargoAbono: 'H',
@@ -1664,7 +1694,6 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       contrapartida: cuentaProveedorReal
     });
 
-    const movPosicionProveedorDebe = uuidv4();
     await insertarMovimiento({
       movPosicion: movPosicionProveedorDebe,
       cargoAbono: 'D',
@@ -1674,9 +1703,10 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       contrapartida: cuentaCaja
     });
 
-    let movPosicionRetencion = null;
     if (totalRetencion > 0) {
       movPosicionRetencion = uuidv4();
+      todosLosMovimientos.push(movPosicionRetencion);
+
       // Si no se obtuvo cuentaRetencion, intentar buscarla desde TiposRetencion con el porcentaje
       if (!cuentaRetencion || cuentaRetencion === '475100000') {
         let retencionValida = porcentajeRetencionPrincipal;
@@ -1712,6 +1742,7 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
           }
         }
       }
+
       await insertarMovimiento({
         movPosicion: movPosicionRetencion,
         cargoAbono: 'H',
@@ -1803,23 +1834,61 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       }
     }
 
-    // Documento asociado
+    // ============================================
+    // ACTUALIZACIÓN DE EFECTO (pago)
+    // ============================================
+    // Intentar obtener el MovPosicion del efecto original (el que se generó con la factura)
+    // Se asume que existe un efecto pendiente para este proveedor con el mismo número de factura
+    try {
+      const efectoResult = await transaction.request()
+        .input('codigoProveedor', sql.VarChar, proveedor.codigoProveedor)
+        .input('factura', sql.VarChar, numDocumento)
+        .input('ejercicio', sql.SmallInt, ejercicio)
+        .query(`
+          SELECT TOP 1 MovPosicion 
+          FROM CarteraEfectos 
+          WHERE CodigoClienteProveedor = @codigoProveedor
+            AND SuFacturaNo = @factura
+            AND Ejercicio = @ejercicio
+            AND ImportePendiente > 0
+            AND StatusBorrado = 0
+          ORDER BY FechaVencimiento
+        `);
+      if (efectoResult.recordset.length > 0) {
+        const movPosicionEfecto = efectoResult.recordset[0].MovPosicion;
+        await gestionarEfecto(transaction, {
+          movPosicion: movPosicionEfecto,
+          ejercicio: ejercicio,
+          esPago: true
+        });
+      }
+    } catch (error) {
+      console.warn('No se pudo actualizar efecto (puede que no exista):', error.message);
+    }
+
+    // ============================================
+    // DOCUMENTO ASOCIADO: SE INSERTA PARA CADA MOVIMIENTO
+    // ============================================
     if (archivo && archivo.trim() !== '') {
-      try {
-        await transaction.request()
-          .input('MovPosicion', sql.UniqueIdentifier, movPosicionProveedorHaber)
-          .input('PathUbicacion', sql.VarChar(500), archivo)
-          .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
-          .query(`
-            INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
-            VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
-          `);
-      } catch (error) {
-        console.error('Error al guardar documento asociado:', error);
+      for (const movPos of todosLosMovimientos) {
+        try {
+          await transaction.request()
+            .input('MovPosicion', sql.UniqueIdentifier, movPos)
+            .input('PathUbicacion', sql.VarChar(500), archivo)
+            .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
+            .query(`
+              INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
+              VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
+            `);
+        } catch (error) {
+          console.error(`Error al guardar documento asociado para movimiento ${movPos}:`, error);
+        }
       }
     }
 
+    // ============================================
     // AnaMovimientos (analítica)
+    // ============================================
     if (movimientosAnalitica.length > 0) {
       const contadorAnaResult = await transaction.request()
         .input('ejercicio', sql.Int, ejercicio)
@@ -1881,7 +1950,7 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
       success: true,
       asiento: siguienteAsiento,
       ejercicio: ejercicio,
-      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Pago Proveedor creado correctamente. Analítica generada para ${movimientosAnalitica.length} movimientos.`,
+      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Pago Proveedor creado correctamente. Documento asociado a ${todosLosMovimientos.length} movimientos. Analítica generada para ${movimientosAnalitica.length} movimientos.`,
       detalles: {
         lineas: totalRetencion > 0 ? 6 : 5,
         base: totalBase,
@@ -1894,7 +1963,8 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
         retencionInfo: {
           codigoRetencion: codigoRetencionFinal,
           porcentajeRetencion: porcentajeRetencionFinal
-        }
+        },
+        documentosAsociados: todosLosMovimientos.length
       }
     });
 
@@ -1913,7 +1983,7 @@ app.post('/api/asiento/pago-proveedor', requireAuth, async (req, res) => {
 
 
 // ============================================
-// 💰 ENDPOINT FORMPAGE6 - INGRESO EN CAJA (CON CAMPOS FIJOS)
+// 💰 ENDPOINT FORMPAGE6 - INGRESO EN CAJA 
 // ============================================
 
 app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
@@ -1981,12 +2051,18 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
     const cuentaIngresoFija = '51900000';
     const importeDecimal = round2(parseFloat(importe));
     const comentarioCorto = comentario || `${concepto}`.trim().substring(0, 40);
+    const cuentaCajaUsar = cuentaCajaBody || cuentaCaja;
+
+    // ============================================
+    // Array para almacenar todos los UUID de movimientos creados
+    // ============================================
+    const todosLosMovimientos = [];
 
     // ============================================
     // LÍNEA 1: CAJA (DEBE)
     // ============================================
     const movPosicionCaja = uuidv4();
-    const cuentaCajaUsar = cuentaCajaBody || cuentaCaja;
+    todosLosMovimientos.push(movPosicionCaja);
     
     await transaction.request()
       .input('MovPosicion', sql.UniqueIdentifier, movPosicionCaja)
@@ -2018,7 +2094,6 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('StatusTraspaso', sql.TinyInt, 0)
       .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, fechaGrabacion)
-      // Campos fijos según solicitud del cliente
       .input('TipoEntrada', sql.VarChar(2), 'EX')
       .input('TipoPlanCuenta', sql.SmallInt, 2008)
       .query(`
@@ -2040,6 +2115,7 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
     // LÍNEA 2: INGRESO (HABER) - Cuenta fija 51900000
     // ============================================
     const movPosicionIngreso = uuidv4();
+    todosLosMovimientos.push(movPosicionIngreso);
     
     await transaction.request()
       .input('MovPosicion', sql.UniqueIdentifier, movPosicionIngreso)
@@ -2071,7 +2147,6 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       .input('StatusTraspaso', sql.TinyInt, 0)
       .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, fechaGrabacion)
-      // Campos fijos
       .input('TipoEntrada', sql.VarChar(2), 'EX')
       .input('TipoPlanCuenta', sql.SmallInt, 2008)
       .query(`
@@ -2090,20 +2165,22 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       `);
 
     // ============================================
-    // DOCUMENTO ASOCIADO (si existe)
+    // DOCUMENTO ASOCIADO: SE INSERTA PARA CADA MOVIMIENTO
     // ============================================
-    if (archivo) {
-      try {
-        await transaction.request()
-          .input('MovPosicion', sql.UniqueIdentifier, movPosicionCaja)
-          .input('PathUbicacion', sql.VarChar(500), archivo)
-          .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
-          .query(`
-            INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
-            VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
-          `);
-      } catch (error) {
-        console.error('Error al guardar documento asociado:', error);
+    if (archivo && archivo.trim() !== '') {
+      for (const movPos of todosLosMovimientos) {
+        try {
+          await transaction.request()
+            .input('MovPosicion', sql.UniqueIdentifier, movPos)
+            .input('PathUbicacion', sql.VarChar(500), archivo)
+            .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
+            .query(`
+              INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
+              VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
+            `);
+        } catch (error) {
+          console.error(`Error al guardar documento asociado para movimiento ${movPos}:`, error);
+        }
       }
     }
 
@@ -2113,12 +2190,13 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
       success: true, 
       asiento: siguienteAsiento,
       ejercicio: ejercicio,
-      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Ingreso en Caja creado correctamente.`,
+      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Ingreso en Caja creado correctamente. Documento asociado a ${todosLosMovimientos.length} movimientos.`,
       detalles: {
         lineas: 2,
         debe: importeDecimal,
         haber: importeDecimal,
         documentoAsociado: archivo ? 'Sí' : 'No',
+        documentosAsociados: todosLosMovimientos.length,
         datosAnaliticos: {
           codigoCanal: codigoCanal || '',
           codigoDepartamento: codigoDepartamento || '',
@@ -2147,7 +2225,7 @@ app.post('/api/asiento/ingreso-caja', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// 💰 ENDPOINT FORMPAGE7 - GASTO DIRECTO EN CAJA (CON CAMPOS FIJOS)
+// 💰 ENDPOINT FORMPAGE7 - GASTO DIRECTO EN CAJA 
 // ============================================
 
 app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
@@ -2219,12 +2297,18 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
     const importeDecimal = round2(parseFloat(importe));
     const comentarioCorto = comentario || `${concepto}`.trim().substring(0, 40);
     const movimientosAnalitica = [];
+    const cuentaCajaUsar = cuentaCajaBody || cuentaCaja;
+
+    // ============================================
+    // Array para almacenar todos los UUID de movimientos creados
+    // ============================================
+    const todosLosMovimientos = [];
 
     // ============================================
     // LÍNEA 1: GASTO (DEBE) - ANALIZABLE (cuenta 6)
     // ============================================
     const movPosicionGasto = uuidv4();
-    const cuentaCajaUsar = cuentaCajaBody || cuentaCaja;
+    todosLosMovimientos.push(movPosicionGasto);
     
     await transaction.request()
       .input('MovPosicion', sql.UniqueIdentifier, movPosicionGasto)
@@ -2256,7 +2340,6 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('StatusTraspaso', sql.TinyInt, 0)
       .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, fechaGrabacion)
-      // Campos fijos según solicitud del cliente
       .input('TipoEntrada', sql.VarChar(2), 'EX')
       .input('TipoPlanCuenta', sql.SmallInt, 2008)
       .query(`
@@ -2289,6 +2372,7 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
     // LÍNEA 2: CAJA (HABER) - No analizable (cuenta 5)
     // ============================================
     const movPosicionCaja = uuidv4();
+    todosLosMovimientos.push(movPosicionCaja);
     
     await transaction.request()
       .input('MovPosicion', sql.UniqueIdentifier, movPosicionCaja)
@@ -2320,7 +2404,6 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       .input('StatusTraspaso', sql.TinyInt, 0)
       .input('CodigoUsuario', sql.TinyInt, 1)
       .input('FechaGrabacion', sql.DateTime, fechaGrabacion)
-      // Campos fijos
       .input('TipoEntrada', sql.VarChar(2), 'EX')
       .input('TipoPlanCuenta', sql.SmallInt, 2008)
       .query(`
@@ -2339,20 +2422,22 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       `);
 
     // ============================================
-    // DOCUMENTO ASOCIADO
+    // DOCUMENTO ASOCIADO: SE INSERTA PARA CADA MOVIMIENTO
     // ============================================
-    if (archivo) {
-      try {
-        await transaction.request()
-          .input('MovPosicion', sql.UniqueIdentifier, movPosicionGasto)
-          .input('PathUbicacion', sql.VarChar(500), archivo)
-          .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
-          .query(`
-            INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
-            VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
-          `);
-      } catch (error) {
-        console.error('Error al guardar documento asociado:', error);
+    if (archivo && archivo.trim() !== '') {
+      for (const movPos of todosLosMovimientos) {
+        try {
+          await transaction.request()
+            .input('MovPosicion', sql.UniqueIdentifier, movPos)
+            .input('PathUbicacion', sql.VarChar(500), archivo)
+            .input('CodigoTipoDocumento', sql.VarChar(50), 'PDF')
+            .query(`
+              INSERT INTO DocumentoAsociado (MovPosicion, PathUbicacion, CodigoTipoDocumento)
+              VALUES (@MovPosicion, @PathUbicacion, @CodigoTipoDocumento)
+            `);
+        } catch (error) {
+          console.error(`Error al guardar documento asociado para movimiento ${movPos}:`, error);
+        }
       }
     }
 
@@ -2420,12 +2505,13 @@ app.post('/api/asiento/gasto-directo-caja', requireAuth, async (req, res) => {
       success: true, 
       asiento: siguienteAsiento,
       ejercicio: ejercicio,
-      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Gasto Directo en Caja creado correctamente. Analítica generada para ${movimientosAnalitica.length} movimientos.`,
+      message: `Asiento #${siguienteAsiento} (Ejercicio ${ejercicio}) - Gasto Directo en Caja creado correctamente. Documento asociado a ${todosLosMovimientos.length} movimientos. Analítica generada para ${movimientosAnalitica.length} movimientos.`,
       detalles: {
         lineas: 2,
         debe: importeDecimal,
         haber: importeDecimal,
         documentoAsociado: archivo ? 'Sí' : 'No',
+        documentosAsociados: todosLosMovimientos.length,
         datosAnaliticos: {
           codigoCanal: codigoCanal || '',
           codigoDepartamento: codigoDepartamento || '',
@@ -2517,7 +2603,7 @@ app.get('/api/efectos/:codigoProveedor?', requireAuth, async (req, res) => {
 });
 
 // ============================================
-// 📋 ENDPOINTS PARA HISTORIAL DE ASIENTOS - TODOS LOS AÑOS
+// 📋 ENDPOINTS PARA HISTORIAL DE ASIENTOS - SOLO ASIENTOS DEL USUARIO Y TIPO EXTERNO ('EX')
 // ============================================
 
 app.get('/api/historial-asientos', requireAuth, async (req, res) => {
@@ -2554,11 +2640,13 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
         m.CodigoProyecto,
         m.IdDelegacion,
         m.FechaGrabacion,
+        m.TipoEntrada,
         COUNT(*) OVER() as TotalRegistros
       FROM Movimientos m
       WHERE m.codigoempresa = 1
         AND m.CodigoCanal = @CodigoCanal
         AND m.TipoMov = 0
+        AND m.TipoEntrada = 'EX'   -- ✅ SOLO ASIENTOS CREADOS DESDE EL FORMULARIO WEB
     `;
     
     let queryStats = `
@@ -2570,6 +2658,7 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
       WHERE codigoempresa = 1
         AND CodigoCanal = @CodigoCanal
         AND TipoMov = 0
+        AND TipoEntrada = 'EX'
     `;
     
     const request = pool.request()
@@ -2605,7 +2694,7 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
     const totalRegistros = result.recordset.length > 0 ? result.recordset[0].TotalRegistros : 0;
     const totalPaginas = Math.ceil(totalRegistros / porPagina);
     
-    // Obtener lista de años disponibles para este canal
+    // Obtener lista de años disponibles para este canal (solo asientos EX)
     const yearsResult = await pool.request()
       .input('CodigoCanal', sql.VarChar, codigoCanal)
       .query(`
@@ -2614,6 +2703,7 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
         WHERE codigoempresa = 1
           AND CodigoCanal = @CodigoCanal
           AND TipoMov = 0
+          AND TipoEntrada = 'EX'
         ORDER BY Ejercicio DESC
       `);
     
@@ -2657,9 +2747,9 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
     const asientos = Object.values(asientosAgrupados)
       .sort((a, b) => {
         if (a.ejercicio !== b.ejercicio) {
-          return b.ejercicio - a.ejercicio; // Ejercicio descendente
+          return b.ejercicio - a.ejercicio;
         }
-        return b.asiento - a.asiento; // Asiento descendente dentro del mismo ejercicio
+        return b.asiento - a.asiento;
       });
 
     res.json({
@@ -2678,7 +2768,8 @@ app.get('/api/historial-asientos', requireAuth, async (req, res) => {
         totalDebe: parseFloat(statsResult.recordset[0]?.TotalDebe || 0),
         totalHaber: parseFloat(statsResult.recordset[0]?.TotalHaber || 0)
       },
-      ordenamiento: 'Ejercicio DESC, Asiento DESC (más reciente primero)'
+      ordenamiento: 'Ejercicio DESC, Asiento DESC (más reciente primero)',
+      tipoEntradaFiltro: 'EX (solo asientos creados desde formulario web)'
     });
 
   } catch (err) {
@@ -2728,11 +2819,13 @@ app.get('/api/historial-asientos/buscar', requireAuth, async (req, res) => {
         m.CodigoSeccion,
         m.CodigoProyecto,
         m.IdDelegacion,
-        m.FechaGrabacion
+        m.FechaGrabacion,
+        m.TipoEntrada
       FROM Movimientos m
       WHERE m.codigoempresa = 1
         AND m.CodigoCanal = @CodigoCanal
         AND m.TipoMov = 0
+        AND m.TipoEntrada = 'EX'   -- ✅ SOLO ASIENTOS EXTERNOS (FORMULARIO)
     `;
 
     const request = pool.request()
@@ -2857,7 +2950,8 @@ app.get('/api/historial-asientos/buscar', requireAuth, async (req, res) => {
         totalHaber: totalHaberResultados,
         diferencia: Math.abs(totalDebeResultados - totalHaberResultados)
       },
-      ordenamiento: 'Ejercicio DESC, Asiento DESC (más reciente primero)'
+      ordenamiento: 'Ejercicio DESC, Asiento DESC (más reciente primero)',
+      tipoEntradaFiltro: 'EX (solo asientos creados desde formulario web)'
     });
 
   } catch (err) {

@@ -1,7 +1,6 @@
-// pages/FormPage6.jsx - VERSIÓN COMPLETA CORREGIDA
+// pages/FormPage6.jsx - VERSIÓN COMPLETA CORREGIDA (sin iconos)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaMoneyBillWave } from 'react-icons/fa';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
@@ -180,10 +179,7 @@ const FormPage6 = ({ user }) => {
   return (
     <div className={styles.fp6Container}>
       <div className={styles.fp6Header}>
-        <h2>
-          <FaMoneyBillWave />
-          Ingreso en Caja
-        </h2>
+        <h2>Ingreso en Caja</h2>
         <div className={styles.fp6AsientoInfo}>
           {/* ✅ MUESTRA CONTADOR + 1 */}
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -340,7 +336,7 @@ const FormPage6 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            ← Volver
+            Volver
           </button>
           <button 
             type="button" 
@@ -348,14 +344,14 @@ const FormPage6 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            🗑️ Limpiar
+            Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp6SubmitBtn} 
             disabled={loading || !importe || !concepto || !numDocumento}
           >
-            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Ingreso'}
+            {loading ? 'Procesando...' : 'Crear Asiento de Ingreso'}
           </button>
         </div>
       </form>
