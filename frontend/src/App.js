@@ -2,10 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
-import FormPage4 from './pages/FormPage4';
-import FormPage5 from './pages/FormPage5';
-import FormPage6 from './pages/FormPage6';
-import FormPage7 from './pages/FormPage7';
+import FormPage4 from './pages/forms/Form4';
+import FormPage5 from './pages/forms/Form5';
+import FormPage6 from './pages/forms/Form6';
+import FormPage7 from './pages/forms/Form7';
 import HistorialAsientos from './pages/HistorialAsientos';
 import Login from './pages/Login';
 

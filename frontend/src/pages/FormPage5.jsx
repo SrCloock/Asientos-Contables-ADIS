@@ -1,6 +1,7 @@
 // pages/FormPage5.jsx - VERSIÓN COMPLETA CORREGIDA (redondeo + retención)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaCashRegister, FaPlus, FaTrash } from 'react-icons/fa';
 import Select from 'react-select';
 import styles from '../styles/FormPage5.module.css';
 import config from '../config/config';
@@ -480,7 +481,7 @@ const FormPage5 = ({ user }) => {
   return (
     <div className={styles.fp5Container}>
       <div className={styles.fp5Header}>
-        <h2>Pago Proveedor/Acreedor</h2>
+        <h2><FaCashRegister /> Pago Proveedor/Acreedor</h2>
         <div className={styles.fp5AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Serie: <strong>{serie}</strong></span>
@@ -598,7 +599,7 @@ const FormPage5 = ({ user }) => {
                   <span>Línea {i + 1}</span>
                   {detalles.length > 1 && (
                     <button type="button" className={styles.fp5RemoveBtn} onClick={() => removeDetalleLine(i)}>
-                      Eliminar
+                      <FaTrash /> Eliminar
                     </button>
                   )}
                 </div>
@@ -646,7 +647,7 @@ const FormPage5 = ({ user }) => {
               </div>
             ))}
             <button type="button" className={styles.fp5AddBtn} onClick={addDetalleLine}>
-              Añadir línea
+              <FaPlus /> Añadir línea
             </button>
           </div>
 

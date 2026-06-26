@@ -1,6 +1,7 @@
-// pages/FormPage6.jsx - VERSIÓN COMPLETA CORREGIDA (sin iconos)
+// pages/FormPage6.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaMoneyBillWave } from 'react-icons/fa';
 import styles from '../styles/FormPage6.module.css';
 import config from '../config/config';
 
@@ -25,11 +26,11 @@ const FormPage6 = ({ user }) => {
   const [numDocumento, setNumDocumento] = useState('');
   const [fechaReg, setFechaReg] = useState(new Date().toISOString().split('T')[0]);
   const [concepto, setConcepto] = useState('');
-  const [archivo, setArchivo] = useState(''); // Cambiado de null a string vacío
+  const [archivo, setArchivo] = useState('');
   const [importe, setImporte] = useState('');
 
-  // CUENTA FIJA - Eliminamos el estado de selección de cuentas
-  const cuentaIngresoFija = '51900000';
+  const [cuentaIngreso, setCuentaIngreso] = useState('');
+  const [cuentasIngreso, setCuentasIngreso] = useState([]);
 
   // ✅ CORREGIDO: Efecto para cargar contador - CONTADOR + 1
   useEffect(() => {
@@ -87,6 +88,18 @@ const FormPage6 = ({ user }) => {
     fetchDatosMaestros();
   }, []);
 
+  useEffect(() => {
+    const fetchCuentasIngreso = async () => {
+      try {
+        const res = await axios.get(`${config.apiBaseUrl}/api/cuentas/ingresos`, { withCredentials: true });
+        setCuentasIngreso(res.data);
+      } catch (error) {
+        console.error('Error cargando cuentas de ingreso:', error);
+      }
+    };
+    fetchCuentasIngreso();
+  }, []);
+
   const formatFechaForBackend = (fechaString) => {
     if (!fechaString) return '';
     
@@ -105,6 +118,7 @@ const FormPage6 = ({ user }) => {
     if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
     if (!concepto.trim()) errores.push('El concepto es obligatorio');
     if (!importe || parseFloat(importe) <= 0) errores.push('El importe debe ser mayor a 0');
+    if (!cuentaIngreso) errores.push('La cuenta de ingreso es obligatoria');
     
     if (errores.length > 0) {
       alert('Errores en el formulario:\n• ' + errores.join('\n• '));
@@ -125,11 +139,10 @@ const FormPage6 = ({ user }) => {
         concepto,
         comentario: concepto,
         analitico,
-        // ELIMINADO: cuentaIngreso, // Ya no enviamos este campo
+        cuentaIngreso,
         cuentaCaja,
         importe: parseFloat(importe),
-        // ✅ CORREGIDO: Ruta completa del archivo (input text)
-        archivo: archivo
+        archivo
       };
 
       console.log('📤 Enviando datos FormPage6:', datosEnvio);
@@ -179,7 +192,10 @@ const FormPage6 = ({ user }) => {
   return (
     <div className={styles.fp6Container}>
       <div className={styles.fp6Header}>
-        <h2>Ingreso en Caja</h2>
+        <h2>
+          <FaMoneyBillWave />
+          Ingreso en Caja
+        </h2>
         <div className={styles.fp6AsientoInfo}>
           {/* ✅ MUESTRA CONTADOR + 1 */}
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -250,17 +266,20 @@ const FormPage6 = ({ user }) => {
                 readOnly
                 className={styles.fp6Readonly}
               />
-              <small>Valor fijo (igual a Serie)</small>
+              <small>Igual a Serie</small>
             </div>
             <div className={styles.fp6FormGroup}>
-              <label>Cuenta de Ingreso</label>
-              <input 
-                type="text" 
-                value="51900000 - Ingresos Varios"
-                readOnly
-                className={styles.fp6Readonly}
-              />
-              <small>Cuenta fija para todos los ingresos</small>
+              <label>Cuenta de Ingreso *</label>
+              <select
+                value={cuentaIngreso}
+                onChange={(e) => setCuentaIngreso(e.target.value)}
+                required
+              >
+                <option value="">-- Selecciona cuenta --</option>
+                {cuentasIngreso.map(c => (
+                  <option key={c.id} value={c.id}>{c.id} - {c.nombre}</option>
+                ))}
+              </select>
             </div>
             <div className={styles.fp6FormGroup}>
               <label>Importe *</label>
@@ -320,7 +339,9 @@ const FormPage6 = ({ user }) => {
             <div className={styles.fp6ResumenItem}>
               <span className={styles.fp6DebeHaber}>HABER</span>
               <span className={styles.fp6CuentaInfo}>
-                51900000 - Ingresos Varios
+                {cuentaIngreso
+                  ? `${cuentaIngreso} - ${cuentasIngreso.find(c => c.id === cuentaIngreso)?.nombre || ''}`
+                  : '-- Sin seleccionar --'}
               </span>
               <span className={styles.fp6Importe}>
                 {importe ? parseFloat(importe).toFixed(2) + ' €' : '0.00 €'}
@@ -336,7 +357,7 @@ const FormPage6 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            Volver
+            ← Volver
           </button>
           <button 
             type="button" 
@@ -344,14 +365,14 @@ const FormPage6 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            Limpiar
+            🗑️ Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp6SubmitBtn} 
-            disabled={loading || !importe || !concepto || !numDocumento}
+            disabled={loading || !importe || !concepto || !numDocumento || !cuentaIngreso}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento de Ingreso'}
+            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Ingreso'}
           </button>
         </div>
       </form>

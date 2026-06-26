@@ -1,6 +1,7 @@
-// pages/FormPage7.jsx - VERSIÓN COMPLETA CORREGIDA (sin iconos)
+// pages/FormPage7.jsx - VERSIÓN COMPLETA CORREGIDA
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaReceipt } from 'react-icons/fa';
 import Select from 'react-select';
 import styles from '../styles/FormPage7.module.css';
 import config from '../config/config';
@@ -253,7 +254,10 @@ const FormPage7 = ({ user }) => {
   return (
     <div className={styles.fp7Container}>
       <div className={styles.fp7Header}>
-        <h2>Gasto Directo en Caja</h2>
+        <h2>
+          <FaReceipt />
+          Gasto Directo en Caja
+        </h2>
         <div className={styles.fp7AsientoInfo}>
           {/* ✅ MUESTRA CONTADOR + 1 */}
           <span>Asiento: <strong>#{numAsiento}</strong></span>
@@ -402,7 +406,7 @@ const FormPage7 = ({ user }) => {
             onClick={() => window.history.back()}
             disabled={loading}
           >
-            Volver
+            ← Volver
           </button>
           <button 
             type="button" 
@@ -410,14 +414,14 @@ const FormPage7 = ({ user }) => {
             onClick={resetForm}
             disabled={loading}
           >
-            Limpiar
+            🗑️ Limpiar
           </button>
           <button 
             type="submit" 
             className={styles.fp7SubmitBtn} 
             disabled={loading || !importe || !cuentaGasto || !concepto || !numDocumento}
           >
-            {loading ? 'Procesando...' : 'Crear Asiento de Gasto'}
+            {loading ? '⏳ Procesando...' : '✅ Crear Asiento de Gasto'}
           </button>
         </div>
       </form>

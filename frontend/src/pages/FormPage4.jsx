@@ -1,6 +1,7 @@
 // pages/FormPage4.jsx - Cuota IVA editable (override manual)
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaFileInvoiceDollar, FaPlus, FaTrash } from 'react-icons/fa';
 import Select from 'react-select';
 import styles from '../styles/FormPage4.module.css';
 import config from '../config/config';
@@ -47,7 +48,7 @@ const FormPage4 = ({ user }) => {
   const [tiposRetencionLoaded, setTiposRetencionLoaded] = useState(false);
 
   // ----------------------------------------------------------------------
-  // Efectos (igual que antes, sin cambios)
+  // Efectos
   // ----------------------------------------------------------------------
   useEffect(() => {
     const fetchContador = async () => {
@@ -112,10 +113,15 @@ const FormPage4 = ({ user }) => {
         if (retencion0) setRetencionDefault('0');
         else if (tiposRetencionFormateados.length > 0) setRetencionDefault(tiposRetencionFormateados[0].PorcentajeRetencion);
         
+        // Filtrar proveedores reales que tengan código 40000000 o 41000000 (cuentas contables)
+        const proveedoresFiltrados = proveedoresRes.data.filter(
+          prov => prov.codigo !== '40000000' && prov.codigo !== '41000000'
+        );
+        
         const proveedoresOpts = [
           { value: '4000', label: '➕ NUEVO PROVEEDOR (40000000)', isNuevo: true, tipoCuenta: 'proveedor' },
           { value: '4100', label: '➕ NUEVO ACREEDOR (41000000)', isNuevo: true, tipoCuenta: 'acreedor' },
-          ...proveedoresRes.data.map(prov => {
+          ...proveedoresFiltrados.map(prov => {
             const cuentaProv = cuentasRes.data.find(p => p.codigo === prov.codigo);
             return {
               value: prov.codigo,
@@ -154,17 +160,36 @@ const FormPage4 = ({ user }) => {
     }
   }, [tiposIVALoaded, tiposRetencionLoaded, ivaDefault, retencionDefault]);
 
+  // Cargar datos del proveedor seleccionado (sin sobrescribir campos si es nuevo)
   useEffect(() => {
     if (cuentaP) {
-      if (cuentaP === '4000') setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '40000000' });
-      else if (cuentaP === '4100') setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '41000000' });
-      else {
+      if (cuentaP === '4000') {
+        setDatosCuentaP(prev => ({
+          ...prev,
+          cif: prev.cif !== undefined ? prev.cif : '',
+          nombre: prev.nombre !== undefined ? prev.nombre : '',
+          cp: prev.cp !== undefined ? prev.cp : '',
+          cuentaContable: '40000000'
+        }));
+      } else if (cuentaP === '4100') {
+        setDatosCuentaP(prev => ({
+          ...prev,
+          cif: prev.cif !== undefined ? prev.cif : '',
+          nombre: prev.nombre !== undefined ? prev.nombre : '',
+          cp: prev.cp !== undefined ? prev.cp : '',
+          cuentaContable: '41000000'
+        }));
+      } else {
         const proveedor = proveedores.find(p => p.codigo === cuentaP);
         const cuentaProv = proveedoresCuentas.find(p => p.codigo === cuentaP);
-        if (proveedor) setDatosCuentaP({
-          cif: proveedor.cif || '', nombre: proveedor.nombre || '', cp: proveedor.cp || '',
-          cuentaContable: cuentaProv?.cuenta || '40000000'
-        });
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '40000000'
+          });
+        }
       }
     }
   }, [cuentaP, proveedores, proveedoresCuentas]);
@@ -180,15 +205,22 @@ const FormPage4 = ({ user }) => {
     if (selectedOption) {
       setCuentaP(selectedOption.value);
       if (selectedOption.isNuevo) {
-        if (selectedOption.tipoCuenta === 'proveedor') setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '40000000' });
-        else if (selectedOption.tipoCuenta === 'acreedor') setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '41000000' });
+        if (selectedOption.tipoCuenta === 'proveedor') {
+          setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '40000000' });
+        } else if (selectedOption.tipoCuenta === 'acreedor') {
+          setDatosCuentaP({ cif: '', nombre: '', cp: '', cuentaContable: '41000000' });
+        }
       } else {
         const proveedor = selectedOption.proveedorData;
         const cuentaProv = selectedOption.cuentaData;
-        if (proveedor) setDatosCuentaP({
-          cif: proveedor.cif || '', nombre: proveedor.nombre || '', cp: proveedor.cp || '',
-          cuentaContable: cuentaProv?.cuenta || '40000000'
-        });
+        if (proveedor) {
+          setDatosCuentaP({
+            cif: proveedor.cif || '',
+            nombre: proveedor.nombre || '',
+            cp: proveedor.cp || '',
+            cuentaContable: cuentaProv?.cuenta || '40000000'
+          });
+        }
       }
     } else {
       setCuentaP('');
@@ -233,16 +265,13 @@ const FormPage4 = ({ user }) => {
     const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
     const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
     
-    // Si no se está editando la cuota IVA, la recalculamos (a menos que haya un override previo)
     if (field !== 'cuotaIVA') {
       let cuotaIVACalc = round2((baseNum * tipoIVANum) / 100);
-      // Si existe un override manual, lo respetamos (no se recalcula)
       if (newDetalles[index].ivaOverride !== null && newDetalles[index].ivaOverride !== undefined) {
         cuotaIVACalc = newDetalles[index].ivaOverride;
       }
       newDetalles[index].cuotaIVA = cuotaIVACalc;
     }
-    // Recalcular retención y total
     const cuotaRetencion = round2((baseNum * retencionNum) / 100);
     newDetalles[index].cuotaRetencion = cuotaRetencion;
     const totalLinea = round2(baseNum + newDetalles[index].cuotaIVA - cuotaRetencion);
@@ -251,7 +280,6 @@ const FormPage4 = ({ user }) => {
     setDetalles(newDetalles);
   };
 
-  // Manejo específico de cambio manual en Cuota IVA
   const handleCuotaIvaChange = (index, value) => {
     const newDetalles = [...detalles];
     const ivaNum = parseFloat(value);
@@ -259,14 +287,12 @@ const FormPage4 = ({ user }) => {
       newDetalles[index].cuotaIVA = ivaNum;
       newDetalles[index].ivaOverride = ivaNum;
     } else {
-      // Si se borra o inválido, recalcular automáticamente
       const baseNum = parseFloat(newDetalles[index].base) || 0;
       const tipoIVANum = parseFloat(newDetalles[index].tipoIVA) || 0;
       const ivaCalc = round2((baseNum * tipoIVANum) / 100);
       newDetalles[index].cuotaIVA = ivaCalc;
       newDetalles[index].ivaOverride = null;
     }
-    // Recalcular total con la nueva cuota IVA
     const baseNum = parseFloat(newDetalles[index].base) || 0;
     const retencionNum = parseFloat(newDetalles[index].retencion) || 0;
     const cuotaRetencion = round2((baseNum * retencionNum) / 100);
@@ -315,7 +341,7 @@ const FormPage4 = ({ user }) => {
 
   const validarFormulario = () => {
     const errores = [];
-    if (!vencimiento) errores.push('La fecha de vencimiento es obligatoria');
+    // ❌ Eliminada la validación de vencimiento obligatorio
     if (!numDocumento.trim()) errores.push('El número de documento es obligatorio');
     if (!concepto.trim()) errores.push('El concepto es obligatorio');
     if (!cuentaP) errores.push('Debe seleccionar un proveedor/acreedor');
@@ -350,7 +376,7 @@ const FormPage4 = ({ user }) => {
       const fechaRegFormatted = formatFechaForBackend(fechaReg);
       const fechaFacturaFormatted = formatFechaForBackend(fechaFactura);
       const fechaOperFormatted = formatFechaForBackend(fechaOper);
-      const vencimientoFormatted = formatFechaForBackend(vencimiento);
+      const vencimientoFormatted = vencimiento ? formatFechaForBackend(vencimiento) : ''; // puede estar vacío
       const comentarioCorto = concepto.trim().substring(0, 40);
 
       const detallesEnvio = detalles
@@ -371,7 +397,8 @@ const FormPage4 = ({ user }) => {
         vencimiento: vencimientoFormatted, concepto, comentario: comentarioCorto,
         proveedor: {
           cuentaProveedor: datosCuentaP.cuentaContable || (isNuevoAcreedor ? '41000000' : '40000000'),
-          codigoProveedor: cuentaP, cif: datosCuentaP.cif, nombre: datosCuentaP.nombre, cp: datosCuentaP.cp,
+          codigoProveedor: cuentaP,
+          cif: datosCuentaP.cif, nombre: datosCuentaP.nombre, cp: datosCuentaP.cp,
           esAcreedor: isNuevoAcreedor
         },
         cuentaGasto, analitico, detalles: detallesEnvio, archivo,
@@ -442,7 +469,7 @@ const FormPage4 = ({ user }) => {
   return (
     <div className={styles.fp4Container}>
       <div className={styles.fp4Header}>
-        <h2>Factura de Proveedor/Acreedor (IVA No Deducible)</h2>
+        <h2><FaFileInvoiceDollar /> Factura de Proveedor/Acreedor (IVA No Deducible)</h2>
         <div className={styles.fp4AsientoInfo}>
           <span>Asiento: <strong>#{numAsiento}</strong></span>
           <span>Serie: <strong>{serie}</strong></span>
@@ -488,8 +515,9 @@ const FormPage4 = ({ user }) => {
               <input type="date" value={fechaOper} onChange={(e) => setFechaOper(e.target.value)} />
             </div>
             <div className={styles.fp4FormGroup}>
-              <label>Vencimiento *</label>
-              <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} required />
+              {/* 🔽 Campo Vencimiento ya no es obligatorio */}
+              <label>Vencimiento</label>
+              <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
             </div>
           </div>
         </div>
@@ -562,7 +590,7 @@ const FormPage4 = ({ user }) => {
                   <span>Línea {i + 1}</span>
                   {detalles.length > 1 && (
                     <button type="button" className={styles.fp4RemoveBtn} onClick={() => removeDetalleLine(i)}>
-                      Eliminar
+                      <FaTrash /> Eliminar
                     </button>
                   )}
                 </div>
@@ -617,7 +645,7 @@ const FormPage4 = ({ user }) => {
               </div>
             ))}
             <button type="button" className={styles.fp4AddBtn} onClick={addDetalleLine}>
-              Añadir línea
+              <FaPlus /> Añadir línea
             </button>
           </div>
 
@@ -662,7 +690,8 @@ const FormPage4 = ({ user }) => {
         <div className={styles.fp4ButtonGroup}>
           <button type="button" className={styles.fp4CancelBtn} onClick={() => window.history.back()} disabled={loading}>Cancelar</button>
           <button type="button" className={styles.fp4ClearBtn} onClick={resetForm} disabled={loading}>Limpiar</button>
-          <button type="submit" className={styles.fp4SubmitBtn} disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !vencimiento || !cuentaGasto}>
+          {/* 🔽 Se ha eliminado !vencimiento de la condición disabled */}
+          <button type="submit" className={styles.fp4SubmitBtn} disabled={loading || !cuentaP || !numDocumento || !concepto || !detalles.some(d => d.base && parseFloat(d.base) > 0) || !cuentaGasto}>
             {loading ? 'Procesando...' : 'Crear Asiento'}
           </button>
         </div>
